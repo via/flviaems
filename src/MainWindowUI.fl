@@ -1,0 +1,40 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0305
+header_name {.h}
+code_name {.cxx}
+class MainWindowUI {open
+} {
+  Function {MainWindowUI()} {open
+  } {
+    Fl_Window m_main_window {
+      label mainWindow open
+      private xywh {1 20 1918 1059} type Double box THIN_DOWN_BOX hide non_modal
+    } {
+      Fl_Tree m_config_tree {
+        label Configuration
+        protected xywh {20 40 300 440}
+      }
+      Fl_Table m_status_table {
+        label Status
+        protected xywh {20 505 300 445}
+        code0 {\#include "StatusTable.h"}
+        class StatusTable
+      } {}
+      Fl_Group {} {open
+        private xywh {350 505 540 445} box DOWN_FRAME
+      } {
+        Fl_Dial m_rpm {
+          label RPM
+          protected xywh {405 530 160 160} type Line maximum 6000 step 500
+        }
+      }
+      Fl_Box chart {
+        label Chart selected
+        protected xywh {575 38 395 206}
+        code0 {\#include <FL/Fl_Chart.H>}
+        class Fl_Chart
+      }
+    }
+    code {m_main_window->show();} {}
+  }
+}

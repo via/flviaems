@@ -1,0 +1,3 @@
+[submodule "extern/cbor11"]
+	path = extern/cbor11
+	url = https://github.com/Cyp/cbor11
