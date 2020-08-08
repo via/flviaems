@@ -8,7 +8,7 @@ class MainWindowUI {open
   } {
     Fl_Window m_main_window {
       label mainWindow open
-      private xywh {1 20 1918 1059} type Double box THIN_DOWN_BOX hide non_modal
+      private xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX hide non_modal
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -21,15 +21,15 @@ class MainWindowUI {open
         class StatusTable
       } {}
       Fl_Group {} {open
-        private xywh {350 505 540 445} box DOWN_FRAME
+        private xywh {340 40 635 445} box DOWN_FRAME
       } {
         Fl_Dial m_rpm {
           label RPM
-          protected xywh {405 530 160 160} type Line maximum 6000 step 500
+          protected xywh {395 65 160 160} type Line maximum 6000 step 500
         }
       }
       Fl_Box chart {
-        label Chart selected
+        label Chart
         protected xywh {575 38 395 206}
         code0 {\#include <FL/Fl_Chart.H>}
         class Fl_Chart

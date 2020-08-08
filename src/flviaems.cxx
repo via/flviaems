@@ -15,9 +15,9 @@ MainWindow ui;
 
 static void feed_refresh_handler(void *_ptr) {
   auto updates = connector.FeedUpdates();
-  std::cout << "num updates: " << updates->size() << std::endl;
-  if (updates->size() > 0) {
-    ui.feed_update(updates->at(0));
+  std::cout << "num updates: " << updates.size() << std::endl;
+  if (updates.size() > 0) {
+    ui.feed_update(updates.at(0));
   }
   Fl::repeat_timeout(0.05, feed_refresh_handler);
 }

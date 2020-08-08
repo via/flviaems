@@ -4,9 +4,9 @@
 
 using namespace viaems;
 
-std::unique_ptr<std::vector<FeedUpdate>> ViaemsProtocol::FeedUpdates() {
-  auto updates = std::move(m_feed_updates);
-  m_feed_updates = std::make_unique<std::vector<FeedUpdate>>();
+std::vector<FeedUpdate> ViaemsProtocol::FeedUpdates() {
+  auto updates = m_feed_updates;
+  m_feed_updates.clear();
   return updates;
 }
 
@@ -30,7 +30,7 @@ void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
       update[m_feed_vars[i]] = FeedValue(static_cast<float>(val.to_float()));
     }
   }
-  m_feed_updates->push_back(update);
+  m_feed_updates.push_back(update);
 }
 
 void ViaemsProtocol::handle_message_from_ems(cbor msg) {

@@ -24,12 +24,12 @@ namespace viaems {
 
   class ViaemsProtocol {
     public:
-      std::unique_ptr<std::vector<FeedUpdate>> FeedUpdates();
+      std::vector<FeedUpdate> FeedUpdates();
       void NewData(std::string const & data);
 
     private:
       std::vector<std::string> m_feed_vars;
-      std::unique_ptr<std::vector<FeedUpdate>> m_feed_updates = std::make_unique<std::vector<FeedUpdate>>();
+      std::vector<FeedUpdate> m_feed_updates;
       std::string m_input_buffer;
 
       void handle_message_from_ems(cbor m);
