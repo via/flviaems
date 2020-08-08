@@ -10,12 +10,11 @@
 
 #include "viaems_protocol.h"
 
-static viaems::ViaemsProtocol connector{};
+static viaems::ViaemsProtocol connector{std::shared_ptr<std::ostream>(&std::cout)};
 MainWindow ui;
 
 static void feed_refresh_handler(void *_ptr) {
   auto updates = connector.FeedUpdates();
-  std::cout << "num updates: " << updates.size() << std::endl;
   if (updates.size() > 0) {
     ui.feed_update(updates.at(0));
   }
@@ -39,6 +38,7 @@ int main() {
   Fl::add_fd(0, FL_READ, stdin_ready_cb);
   Fl::add_timeout(0.05, feed_refresh_handler);
 
+  connector.Structure(0, 0);
 
   Fl::run();
   return 0;

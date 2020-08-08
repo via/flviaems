@@ -14,9 +14,18 @@ void StatusTable::feed_update(viaems::FeedUpdate const& update) {
   rows(update.size());
 
   m_current_values.clear();
+  std::string longest;
   for (auto i : update) {
     m_current_values.push_back(i);
+    if (i.first.size() > longest.size()) {
+      longest = i.first;
+    }
   }
+
+  int w = 0, h = 0;
+  fl_measure(longest.c_str(), w, h, 0);
+  col_width(0, w + 2);
+  row_height_all(h + 1);
 
   this->redraw();
 }
@@ -38,7 +47,7 @@ void draw_key_cell(std::string key, int X, int Y, int W, int H) {
   fl_color(FL_BLACK);
   fl_push_clip(X, Y, W, H);
 
-  fl_draw(key.c_str(), X, Y, W, H, FL_ALIGN_CENTER);
+  fl_draw(key.c_str(), X + 1, Y, W, H, FL_ALIGN_LEFT);
 
   fl_pop_clip();
 }

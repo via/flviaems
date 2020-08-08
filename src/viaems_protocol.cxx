@@ -4,6 +4,10 @@
 
 using namespace viaems;
 
+ViaemsProtocol::ViaemsProtocol(std::shared_ptr<std::ostream> o) {
+  m_out = o;
+}
+
 std::vector<FeedUpdate> ViaemsProtocol::FeedUpdates() {
   auto updates = m_feed_updates;
   m_feed_updates.clear();
@@ -32,6 +36,14 @@ void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
   }
   m_feed_updates.push_back(update);
 }
+void ViaemsProtocol::handle_response_message_from_ems(uint32_t id, cbor::map response) {
+  auto sreq = std::get<StructureRequest>(m_requests.front());
+  auto req = m_requests.erase(m_requests.begin());
+  if (id != sreq.id) {
+    std::cerr << "id did not match!" << std::endl;
+    return;
+  }
+}
 
 void ViaemsProtocol::handle_message_from_ems(cbor msg) {
   if (!msg.is_map()) {
@@ -45,6 +57,8 @@ void ViaemsProtocol::handle_message_from_ems(cbor msg) {
     handle_feed_message_from_ems(msg.to_map().at("values").to_array());
   } else if (type == "description") {
     handle_description_message_from_ems(msg.to_map().at("keys").to_array());
+  } else if (type == "response") {
+    handle_response_message_from_ems(msg.to_map().at("id"), msg.to_map().at("response"));
   }
 
 }
@@ -68,5 +82,18 @@ void ViaemsProtocol::NewData(std::string const & data) {
       m_input_buffer.clear();
     }
   }
-
 }
+
+void ViaemsProtocol::Structure(structure_cb cb, void *v) {
+  uint32_t id = 6;
+  m_requests.push_back(StructureRequest{6, cb, v});
+
+  cbor wire_request = cbor::map {
+    {"type", "request"},
+    {"method", "structure"},
+    {"id", id},
+  };
+  wire_request.write(*m_out);
+  m_out->flush();
+}
+
