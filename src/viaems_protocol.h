@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <deque>
 #include <map>
 #include <variant>
 #include <cstdint>
@@ -23,15 +24,22 @@ namespace viaems {
     std::variant<uint32_t, float, std::unique_ptr<ConfigNodeList>, std::unique_ptr<ConfigNodeMap>> contents;
   };
 
-  typedef void (*structure_cb)(ConfigNode node, void *ptr);
 
+  typedef void (*structure_cb)(std::unique_ptr<ConfigNode> top, void *ptr);
   struct StructureRequest {
     uint32_t id;
     structure_cb cb;
-    void *v;
+    void *ptr;
   };
 
-  typedef std::variant<StructureRequest> Request;
+  typedef void (*ping_cb)(void *ptr);
+  struct PingRequest {
+    uint32_t id;
+    ping_cb cb;
+    void *ptr;
+  };
+
+  typedef std::variant<StructureRequest, PingRequest> Request;
 
   class ViaemsProtocol {
     public:
@@ -41,13 +49,14 @@ namespace viaems {
       void NewData(std::string const & data);
 
       void Structure(structure_cb, void *);
+      void Ping(ping_cb, void *);
 
     private:
       std::vector<std::string> m_feed_vars;
       std::vector<FeedUpdate> m_feed_updates;
       std::string m_input_buffer;
-      std::vector<Request> m_requests;
       std::shared_ptr<std::ostream> m_out;
+      std::deque<Request> m_requests;
 
       void handle_message_from_ems(cbor m);
       void handle_feed_message_from_ems(cbor::array m);

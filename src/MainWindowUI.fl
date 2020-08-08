@@ -8,7 +8,7 @@ class MainWindowUI {open
   } {
     Fl_Window m_main_window {
       label mainWindow open
-      private xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX hide non_modal
+      protected xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX hide non_modal
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -33,6 +33,14 @@ class MainWindowUI {open
         protected xywh {575 38 395 206}
         code0 {\#include <FL/Fl_Chart.H>}
         class Fl_Chart
+      }
+      Fl_Box {} {
+        label {Status:}
+        xywh {10 968 990 24} box DOWN_BOX align 20
+      }
+      Fl_Box m_connection_status {
+        label Connection
+        xywh {195 968 40 24} box UP_BOX color 1 align 4
       }
     }
     code {m_main_window->show();} {}

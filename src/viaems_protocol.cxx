@@ -36,12 +36,24 @@ void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
   }
   m_feed_updates.push_back(update);
 }
+
 void ViaemsProtocol::handle_response_message_from_ems(uint32_t id, cbor::map response) {
-  auto sreq = std::get<StructureRequest>(m_requests.front());
-  auto req = m_requests.erase(m_requests.begin());
-  if (id != sreq.id) {
-    std::cerr << "id did not match!" << std::endl;
+  auto req = m_requests.front();
+  m_requests.pop_front();
+
+  auto req_id = std::visit([](const auto& a){return a.id;}, req);
+  if (req_id != id) {
+    std::cerr << "Request ID does not match Response ID!" << std::endl;
     return;
+  }
+
+  if (std::holds_alternative<PingRequest>(req)) {
+    auto pingreq = std::get<PingRequest>(req);
+    pingreq.cb(pingreq.ptr);
+  } else if (std::holds_alternative<StructureRequest>(req)) {
+    auto structurereq = std::get<StructureRequest>(req);
+    auto config = std::make_unique<ConfigNode>();
+    structurereq.cb(std::move(config), structurereq.ptr);
   }
 }
 
@@ -86,7 +98,7 @@ void ViaemsProtocol::NewData(std::string const & data) {
 
 void ViaemsProtocol::Structure(structure_cb cb, void *v) {
   uint32_t id = 6;
-  m_requests.push_back(StructureRequest{6, cb, v});
+  m_requests.push_back(StructureRequest{id, cb, v});
 
   cbor wire_request = cbor::map {
     {"type", "request"},
@@ -97,3 +109,15 @@ void ViaemsProtocol::Structure(structure_cb cb, void *v) {
   m_out->flush();
 }
 
+void ViaemsProtocol::Ping(ping_cb cb, void *v) {
+  uint32_t id = 6;
+  m_requests.push_back(PingRequest{id, cb, v});
+
+  cbor wire_request = cbor::map {
+    {"type", "request"},
+    {"method", "ping"},
+    {"id", id},
+  };
+  wire_request.write(*m_out);
+  m_out->flush();
+}

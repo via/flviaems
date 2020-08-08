@@ -3,7 +3,7 @@
 #include "MainWindowUI.h"
 
 MainWindowUI::MainWindowUI() {
-  { m_main_window = new Fl_Double_Window(1918, 1059, "mainWindow");
+  { m_main_window = new Fl_Double_Window(1054, 1059, "mainWindow");
     m_main_window->box(FL_THIN_DOWN_BOX);
     m_main_window->user_data((void*)(this));
     { m_config_tree = new Fl_Tree(20, 40, 300, 440, "Configuration");
@@ -20,9 +20,9 @@ MainWindowUI::MainWindowUI() {
       m_status_table->when(FL_WHEN_RELEASE);
       m_status_table->end();
     } // StatusTable* m_status_table
-    { Fl_Group* o = new Fl_Group(350, 505, 540, 445);
+    { Fl_Group* o = new Fl_Group(340, 40, 635, 445);
       o->box(FL_DOWN_FRAME);
-      { m_rpm = new Fl_Dial(405, 530, 160, 160, "RPM");
+      { m_rpm = new Fl_Dial(395, 65, 160, 160, "RPM");
         m_rpm->type(1);
         m_rpm->maximum(6000);
         m_rpm->step(500);
@@ -40,6 +40,15 @@ MainWindowUI::MainWindowUI() {
       chart->align(Fl_Align(FL_ALIGN_CENTER));
       chart->when(FL_WHEN_RELEASE);
     } // Fl_Chart* chart
+    { Fl_Box* o = new Fl_Box(10, 968, 990, 24, "Status:");
+      o->box(FL_DOWN_BOX);
+      o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
+    } // Fl_Box* o
+    { m_connection_status = new Fl_Box(195, 968, 40, 24, "Connection");
+      m_connection_status->box(FL_UP_BOX);
+      m_connection_status->color((Fl_Color)1);
+      m_connection_status->align(Fl_Align(FL_ALIGN_LEFT));
+    } // Fl_Box* m_connection_status
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window

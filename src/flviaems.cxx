@@ -32,13 +32,33 @@ static void set_stdin_nonblock() {
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK | fcntl(STDIN_FILENO, F_GETFL, 0));
 }
 
+static void failed_ping_callback(void *ptr) {
+  ui.update_connection_status(false);
+}
+
+static void ping_callback(void *ptr) {
+  Fl::remove_timeout(failed_ping_callback);
+  ui.update_connection_status(true);
+}
+
+static void pinger(void *ptr) {
+  connector.Ping(ping_callback, 0);
+  Fl::repeat_timeout(1, pinger);
+  Fl::add_timeout(0.5, failed_ping_callback);
+}
+
+static void structure_callback(std::unique_ptr<viaems::ConfigNode> top, void *ptr) {
+  std::cerr << "Got Structure!" << std::endl;
+}
+
 int main() {
 
   set_stdin_nonblock();
   Fl::add_fd(0, FL_READ, stdin_ready_cb);
   Fl::add_timeout(0.05, feed_refresh_handler);
 
-  connector.Structure(0, 0);
+  Fl::add_timeout(1, pinger);
+  connector.Structure(structure_callback, 0);
 
   Fl::run();
   return 0;

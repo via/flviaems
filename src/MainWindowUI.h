@@ -9,16 +9,18 @@
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Dial.H>
 #include <FL/Fl_Chart.H>
+#include <FL/Fl_Box.H>
 
 class MainWindowUI {
 public:
   MainWindowUI();
-private:
-  Fl_Double_Window *m_main_window;
 protected:
+  Fl_Double_Window *m_main_window;
   Fl_Tree *m_config_tree;
   StatusTable *m_status_table;
   Fl_Dial *m_rpm;
   Fl_Chart *chart;
+public:
+  Fl_Box *m_connection_status;
 };
 #endif
