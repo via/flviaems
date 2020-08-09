@@ -47,14 +47,12 @@ static void pinger(void *ptr) {
   Fl::add_timeout(0.8, failed_ping_callback);
 }
 
-static void debug_thing(viaems::ConfigNode c) {
-  if (std::holds_alternative<uint32_t>(c.contents)) {
-    std::cerr << " (int) ";
-  } else if (std::holds_alternative<float>(c.contents)) {
-    std::cerr << " (float) ";
-  } else if (std::holds_alternative<std::shared_ptr<viaems::ConfigNodeMap>>(c.contents)) {
+static void debug_thing(viaems::StructureNode c) {
+  if (std::holds_alternative<std::shared_ptr<viaems::ConfigNode>>(c.contents)) {
+    std::cerr << " (leaf) ";
+  } else if (std::holds_alternative<std::shared_ptr<viaems::StructureMap>>(c.contents)) {
     std::cerr << "{";
-    for (auto entry : *std::get<std::shared_ptr<viaems::ConfigNodeMap>>(c.contents)) {
+    for (auto entry : *std::get<std::shared_ptr<viaems::StructureMap>>(c.contents)) {
       std::cerr << "'" << entry.first << "': ";
       debug_thing(entry.second);
       std::cerr << ", ";
@@ -64,9 +62,8 @@ static void debug_thing(viaems::ConfigNode c) {
 }
 
 
-static void structure_callback(viaems::ConfigNode top, void *ptr) {
+static void structure_callback(viaems::StructureNode top, void *ptr) {
   debug_thing(top);
-  ui.update_config_structure(top);
 }
 
 int main() {

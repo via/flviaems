@@ -16,23 +16,33 @@ namespace viaems {
   typedef std::variant<uint32_t, float> FeedValue;
   typedef std::map<std::string, FeedValue> FeedUpdate;
 
-  struct ConfigNode;
-  typedef std::vector<ConfigNode> ConfigNodeList;
-  typedef std::map<std::string, ConfigNode> ConfigNodeMap;
+  typedef std::vector<std::variant<int, std::string>> StructurePath;
 
+  struct TableNode {
+  };
+
+  typedef std::variant<uint32_t, float, std::string, TableNode> ConfigValue;
 
   struct ConfigNode {
-    std::variant<uint32_t, float, std::shared_ptr<ConfigNodeList>, std::shared_ptr<ConfigNodeMap>> contents;
-  };
-
-
-  struct ConfigLeaf {
     std::string description;
-    std::vector<std::string> choices;
+    std::string type;
+    StructurePath path;
   };
 
 
-  typedef void (*structure_cb)(ConfigNode top, void *ptr);
+  struct StructureNode;
+  typedef std::vector<StructureNode> StructureList;
+  typedef std::map<std::string, StructureNode> StructureMap;
+
+
+  struct StructureNode {
+    std::variant<
+      std::shared_ptr<StructureList>,
+      std::shared_ptr<StructureMap>, 
+      std::shared_ptr<ConfigNode>> contents;
+  };
+
+  typedef void (*structure_cb)(StructureNode top, void *ptr);
   struct StructureRequest {
     uint32_t id;
     structure_cb cb;

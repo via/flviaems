@@ -34,37 +34,37 @@ void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
   m_feed_updates.push_back(update);
 }
 
-static ConfigNode generate_config_node_from_cbor(cbor entry) {
+static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
+  std::string type = entry.at("_type").to_string();
+
+  return ConfigNode{
+    .description = entry.at("description").to_string(),
+    .type = entry.at("_type").to_string(),
+    .path = path,
+  };
+}
+
+static StructureNode generate_structure_node_from_cbor(cbor entry, StructurePath curpath) {
   if (entry.is_map()) {
     if (entry.to_map().count("_type")) {
-      if (entry.to_map().at("_type").to_string() == "uint32") {
-        return ConfigNode{uint32_t(1)};
+      /* This is a leaf node */
+      return StructureNode{std::make_shared<ConfigNode>(generate_config_node(entry, curpath))};
       }
-      if (entry.to_map().at("_type").to_string() == "float") {
-        return ConfigNode{float(1)};
-      }
-      if (entry.to_map().at("_type").to_string() == "str") {
-        return ConfigNode{uint32_t(2)};
-      }
-    }
-    auto contents = std::make_shared<ConfigNodeMap>();
+
+    /* This is actually a map, we should descend */
+    auto contents = std::make_shared<StructureMap>();
     for (auto map_entry : entry.to_map()) {
-      auto child = generate_config_node_from_cbor(map_entry.second);
-      contents->insert(std::pair<std::string, ConfigNode>(map_entry.first.to_string(), child));
+      StructurePath new_path = curpath;
+      new_path.push_back(map_entry.first.to_string());
+
+      auto child = generate_structure_node_from_cbor(map_entry.second, new_path);
+      contents->insert(std::pair<std::string, StructureNode>(map_entry.first.to_string(), child));
     }
-    return ConfigNode{contents};
+    return StructureNode{contents};
   }
 
-  if (entry.is_array()) {
-    auto contents = std::make_shared<ConfigNodeList>();
-    for (auto array_entry : entry.to_array()) {
-      auto child = generate_config_node_from_cbor(array_entry);
-      contents->push_back(child);
-    }
-    return ConfigNode{contents};
-  }
   std::cerr << cbor::debug(entry) << std::endl;
-  return ConfigNode{uint32_t(0)};
+  return StructureNode{std::make_shared<ConfigNode>()};
 }
 
 void ViaemsProtocol::handle_response_message_from_ems(uint32_t id, cbor::map response) {
@@ -82,7 +82,7 @@ void ViaemsProtocol::handle_response_message_from_ems(uint32_t id, cbor::map res
     pingreq.cb(pingreq.ptr);
   } else if (std::holds_alternative<StructureRequest>(req)) {
     auto structurereq = std::get<StructureRequest>(req);
-    auto c = generate_config_node_from_cbor(response);
+    auto c = generate_structure_node_from_cbor(response, {});
     structurereq.cb(c, structurereq.ptr);
   }
 }
