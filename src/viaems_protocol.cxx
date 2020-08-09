@@ -37,9 +37,12 @@ void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
 
 static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
   std::string type = entry.at("_type").to_string();
-
+  std::string desc = "";
+  if (entry.count("description")) {
+    desc = entry.at("description").to_string();
+  }
   return ConfigNode{
-    .description = entry.at("description").to_string(),
+    .description = desc,
     .type = entry.at("_type").to_string(),
     .path = path,
   };
