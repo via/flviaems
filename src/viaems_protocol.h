@@ -16,16 +16,16 @@ namespace viaems {
   typedef std::variant<uint32_t, float> FeedValue;
   typedef std::map<std::string, FeedValue> FeedUpdate;
 
-  class ConfigNode;
+  struct ConfigNode;
   typedef std::vector<ConfigNode> ConfigNodeList;
   typedef std::map<std::string, ConfigNode> ConfigNodeMap;
 
-  class ConfigNode {
-    std::variant<uint32_t, float, std::unique_ptr<ConfigNodeList>, std::unique_ptr<ConfigNodeMap>> contents;
+  struct ConfigNode {
+    std::variant<uint32_t, float, std::shared_ptr<ConfigNodeList>, std::shared_ptr<ConfigNodeMap>> contents;
   };
 
 
-  typedef void (*structure_cb)(std::unique_ptr<ConfigNode> top, void *ptr);
+  typedef void (*structure_cb)(ConfigNode top, void *ptr);
   struct StructureRequest {
     uint32_t id;
     structure_cb cb;
@@ -43,7 +43,7 @@ namespace viaems {
 
   class ViaemsProtocol {
     public:
-      ViaemsProtocol(std::shared_ptr<std::ostream>);
+      ViaemsProtocol(std::ostream& out) : m_out(out) {}
 
       std::vector<FeedUpdate> FeedUpdates();
       void NewData(std::string const & data);
@@ -55,7 +55,7 @@ namespace viaems {
       std::vector<std::string> m_feed_vars;
       std::vector<FeedUpdate> m_feed_updates;
       std::string m_input_buffer;
-      std::shared_ptr<std::ostream> m_out;
+      std::ostream& m_out;
       std::deque<Request> m_requests;
 
       void handle_message_from_ems(cbor m);

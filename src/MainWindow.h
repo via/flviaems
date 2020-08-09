@@ -9,6 +9,7 @@ class MainWindow : public MainWindowUI {
     MainWindow();
     void feed_update(viaems::FeedUpdate const&);
     void update_connection_status(bool status);
+    void update_config_structure(viaems::ConfigNode top);
 };
 
 #endif

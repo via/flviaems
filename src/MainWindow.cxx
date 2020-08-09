@@ -16,3 +16,19 @@ void MainWindow::feed_update(viaems::FeedUpdate const& update) {
   m_status_table->feed_update(update);
 //  chart->add(std::get<uint32_t>(update.at("cputime")));
 }
+
+void MainWindow::update_config_structure(viaems::ConfigNode top) {
+  auto g = std::get<std::shared_ptr<viaems::ConfigNodeMap>>(top.contents);
+
+  for (auto child : *g) {
+    auto parent = m_config_tree->add(child.first.c_str());
+    auto h = std::get<std::shared_ptr<viaems::ConfigNodeMap>>(child.second.contents);
+    for (auto ochild : *h) {
+      m_config_tree->add(parent, ochild.first.c_str());
+    }
+
+
+  }
+
+  m_config_tree->redraw();
+}

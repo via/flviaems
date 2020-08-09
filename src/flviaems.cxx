@@ -10,7 +10,7 @@
 
 #include "viaems_protocol.h"
 
-static viaems::ViaemsProtocol connector{std::shared_ptr<std::ostream>(&std::cout)};
+static viaems::ViaemsProtocol connector{std::cout};
 MainWindow ui;
 
 static void feed_refresh_handler(void *_ptr) {
@@ -44,11 +44,11 @@ static void ping_callback(void *ptr) {
 static void pinger(void *ptr) {
   connector.Ping(ping_callback, 0);
   Fl::repeat_timeout(1, pinger);
-  Fl::add_timeout(0.5, failed_ping_callback);
+  Fl::add_timeout(0.8, failed_ping_callback);
 }
 
-static void structure_callback(std::unique_ptr<viaems::ConfigNode> top, void *ptr) {
-  std::cerr << "Got Structure!" << std::endl;
+static void structure_callback(viaems::ConfigNode top, void *ptr) {
+  ui.update_config_structure(top);
 }
 
 int main() {
