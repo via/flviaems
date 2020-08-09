@@ -34,20 +34,37 @@ void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
   m_feed_updates.push_back(update);
 }
 
-static ConfigNode generate_config_map_from_response(cbor::map structure) {
-
-  auto node = ConfigNode{};
-
-  auto contents = std::make_shared<ConfigNodeMap>();
-  for (auto entry : structure) {
-    if (entry.second.is_map()) {
-      auto child = generate_config_map_from_response(entry.second.to_map());
-      contents->insert(std::pair<std::string, ConfigNode>(entry.first.to_string(), std::move(child)));
+static ConfigNode generate_config_node_from_cbor(cbor entry) {
+  if (entry.is_map()) {
+    if (entry.to_map().count("_type")) {
+      if (entry.to_map().at("_type").to_string() == "uint32") {
+        return ConfigNode{uint32_t(1)};
+      }
+      if (entry.to_map().at("_type").to_string() == "float") {
+        return ConfigNode{float(1)};
+      }
+      if (entry.to_map().at("_type").to_string() == "str") {
+        return ConfigNode{uint32_t(2)};
+      }
     }
+    auto contents = std::make_shared<ConfigNodeMap>();
+    for (auto map_entry : entry.to_map()) {
+      auto child = generate_config_node_from_cbor(map_entry.second);
+      contents->insert(std::pair<std::string, ConfigNode>(map_entry.first.to_string(), child));
+    }
+    return ConfigNode{contents};
   }
 
-  node.contents = contents;
-  return node;
+  if (entry.is_array()) {
+    auto contents = std::make_shared<ConfigNodeList>();
+    for (auto array_entry : entry.to_array()) {
+      auto child = generate_config_node_from_cbor(array_entry);
+      contents->push_back(child);
+    }
+    return ConfigNode{contents};
+  }
+  std::cerr << cbor::debug(entry) << std::endl;
+  return ConfigNode{uint32_t(0)};
 }
 
 void ViaemsProtocol::handle_response_message_from_ems(uint32_t id, cbor::map response) {
@@ -65,7 +82,7 @@ void ViaemsProtocol::handle_response_message_from_ems(uint32_t id, cbor::map res
     pingreq.cb(pingreq.ptr);
   } else if (std::holds_alternative<StructureRequest>(req)) {
     auto structurereq = std::get<StructureRequest>(req);
-    auto c = generate_config_map_from_response(response);
+    auto c = generate_config_node_from_cbor(response);
     structurereq.cb(c, structurereq.ptr);
   }
 }

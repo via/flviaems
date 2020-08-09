@@ -20,8 +20,15 @@ namespace viaems {
   typedef std::vector<ConfigNode> ConfigNodeList;
   typedef std::map<std::string, ConfigNode> ConfigNodeMap;
 
+
   struct ConfigNode {
     std::variant<uint32_t, float, std::shared_ptr<ConfigNodeList>, std::shared_ptr<ConfigNodeMap>> contents;
+  };
+
+
+  struct ConfigLeaf {
+    std::string description;
+    std::vector<std::string> choices;
   };
 
 

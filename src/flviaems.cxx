@@ -47,7 +47,25 @@ static void pinger(void *ptr) {
   Fl::add_timeout(0.8, failed_ping_callback);
 }
 
+static void debug_thing(viaems::ConfigNode c) {
+  if (std::holds_alternative<uint32_t>(c.contents)) {
+    std::cerr << " (int) ";
+  } else if (std::holds_alternative<float>(c.contents)) {
+    std::cerr << " (float) ";
+  } else if (std::holds_alternative<std::shared_ptr<viaems::ConfigNodeMap>>(c.contents)) {
+    std::cerr << "{";
+    for (auto entry : *std::get<std::shared_ptr<viaems::ConfigNodeMap>>(c.contents)) {
+      std::cerr << "'" << entry.first << "': ";
+      debug_thing(entry.second);
+      std::cerr << ", ";
+    }
+    std::cerr << "} ";
+  }
+}
+
+
 static void structure_callback(viaems::ConfigNode top, void *ptr) {
+  debug_thing(top);
   ui.update_config_structure(top);
 }
 
