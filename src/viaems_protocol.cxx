@@ -24,9 +24,10 @@ void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
   }
   FeedUpdate update;
   for (int i = 0; i < a.size(); i++) {
-    cbor& val = a[i];
+    cbor &val = a[i];
     if (val.is_int()) {
-      update[m_feed_vars[i]] = FeedValue(static_cast<uint32_t>(val.to_unsigned()));
+      update[m_feed_vars[i]] =
+        FeedValue(static_cast<uint32_t>(val.to_unsigned()));
     } else if (val.is_float()) {
       update[m_feed_vars[i]] = FeedValue(static_cast<float>(val.to_float()));
     }
@@ -44,12 +45,14 @@ static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
   };
 }
 
-static StructureNode generate_structure_node_from_cbor(cbor entry, StructurePath curpath) {
+static StructureNode generate_structure_node_from_cbor(cbor entry,
+                                                       StructurePath curpath) {
   if (entry.is_map()) {
     if (entry.to_map().count("_type")) {
       /* This is a leaf node */
-      return StructureNode{std::make_shared<ConfigNode>(generate_config_node(entry, curpath))};
-      }
+      return StructureNode{ std::make_shared<ConfigNode>(
+        generate_config_node(entry, curpath)) };
+    }
 
     /* This is actually a map, we should descend */
     auto contents = std::make_shared<StructureMap>();
@@ -57,21 +60,24 @@ static StructureNode generate_structure_node_from_cbor(cbor entry, StructurePath
       StructurePath new_path = curpath;
       new_path.push_back(map_entry.first.to_string());
 
-      auto child = generate_structure_node_from_cbor(map_entry.second, new_path);
-      contents->insert(std::pair<std::string, StructureNode>(map_entry.first.to_string(), child));
+      auto child =
+        generate_structure_node_from_cbor(map_entry.second, new_path);
+      contents->insert(std::pair<std::string, StructureNode>(
+        map_entry.first.to_string(), child));
     }
-    return StructureNode{contents};
+    return StructureNode{ contents };
   }
 
   std::cerr << cbor::debug(entry) << std::endl;
-  return StructureNode{std::make_shared<ConfigNode>()};
+  return StructureNode{ std::make_shared<ConfigNode>() };
 }
 
-void ViaemsProtocol::handle_response_message_from_ems(uint32_t id, cbor::map response) {
+void ViaemsProtocol::handle_response_message_from_ems(uint32_t id,
+                                                      cbor::map response) {
   auto req = m_requests.front();
   m_requests.pop_front();
 
-  auto req_id = std::visit([](const auto& a){return a.id;}, req);
+  auto req_id = std::visit([](const auto &a) { return a.id; }, req);
   if (req_id != id) {
     std::cerr << "Request ID does not match Response ID!" << std::endl;
     return;
@@ -92,7 +98,6 @@ void ViaemsProtocol::handle_message_from_ems(cbor msg) {
     return;
   }
 
-
   std::string type;
   type = msg.to_map().at("type").to_string();
 
@@ -101,29 +106,22 @@ void ViaemsProtocol::handle_message_from_ems(cbor msg) {
   } else if (type == "description") {
     handle_description_message_from_ems(msg.to_map().at("keys").to_array());
   } else if (type == "response") {
-    handle_response_message_from_ems(msg.to_map().at("id"), msg.to_map().at("response").to_map());
+    handle_response_message_from_ems(msg.to_map().at("id"),
+                                     msg.to_map().at("response").to_map());
   }
-
 }
 
-struct OneShotReadBuf : public std::streambuf
-{
-    OneShotReadBuf(char* s, std::size_t n)
-    {
-        setg(s, s, s + n);
-    }
+struct OneShotReadBuf : public std::streambuf {
+  OneShotReadBuf(char *s, std::size_t n) { setg(s, s, s + n); }
 
-    size_t amt() {
-      return gptr() - eback();
-    }
+  size_t amt() { return gptr() - eback(); }
 };
 
-
-void ViaemsProtocol::NewData(std::string const & data) {
+void ViaemsProtocol::NewData(std::string const &data) {
   m_input_buffer.append(data);
 
   OneShotReadBuf osrb(m_input_buffer.data(), m_input_buffer.size());
-//  std::istringstream data_ss(m_input_buffer);
+  //  std::istringstream data_ss(m_input_buffer);
   std::istream data_ss(&osrb);
 
   cbor cbordata;
@@ -132,7 +130,7 @@ void ViaemsProtocol::NewData(std::string const & data) {
     /* do stuff */
     handle_message_from_ems(cbordata);
 
-//    m_input_buffer.erase(0, osrb.amt());
+    //    m_input_buffer.erase(0, osrb.amt());
     m_input_buffer = m_input_buffer.substr(osrb.amt());
   } else {
     /* Is our buffer massive? If so, reset it */
@@ -144,12 +142,12 @@ void ViaemsProtocol::NewData(std::string const & data) {
 
 void ViaemsProtocol::Structure(structure_cb cb, void *v) {
   uint32_t id = 6;
-  m_requests.push_back(StructureRequest{id, cb, v});
+  m_requests.push_back(StructureRequest{ id, cb, v });
 
-  cbor wire_request = cbor::map {
-    {"type", "request"},
-    {"method", "structure"},
-    {"id", id},
+  cbor wire_request = cbor::map{
+    { "type", "request" },
+    { "method", "structure" },
+    { "id", id },
   };
   wire_request.write(m_out);
   m_out.flush();
@@ -157,12 +155,12 @@ void ViaemsProtocol::Structure(structure_cb cb, void *v) {
 
 void ViaemsProtocol::Ping(ping_cb cb, void *v) {
   uint32_t id = 6;
-  m_requests.push_back(PingRequest{id, cb, v});
+  m_requests.push_back(PingRequest{ id, cb, v });
 
-  cbor wire_request = cbor::map {
-    {"type", "request"},
-    {"method", "ping"},
-    {"id", id},
+  cbor wire_request = cbor::map{
+    { "type", "request" },
+    { "method", "ping" },
+    { "id", id },
   };
   wire_request.write(m_out);
   m_out.flush();

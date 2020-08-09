@@ -2,24 +2,27 @@
 
 #ifndef MainWindowUI_h
 #define MainWindowUI_h
-#include <FL/Fl.H>
-#include <FL/Fl_Double_Window.H>
-#include <FL/Fl_Tree.H>
 #include "StatusTable.h"
-#include <FL/Fl_Group.H>
-#include <FL/Fl_Dial.H>
-#include <FL/Fl_Chart.H>
+#include <FL/Fl.H>
 #include <FL/Fl_Box.H>
+#include <FL/Fl_Chart.H>
+#include <FL/Fl_Dial.H>
+#include <FL/Fl_Double_Window.H>
+#include <FL/Fl_Group.H>
+#include <FL/Fl_Tree.H>
 
-class MainWindowUI {
+class MainWindowUI
+{
 public:
   MainWindowUI();
+
 protected:
   Fl_Double_Window *m_main_window;
   Fl_Tree *m_config_tree;
   StatusTable *m_status_table;
   Fl_Dial *m_rpm;
   Fl_Chart *chart;
+
 public:
   Fl_Box *m_connection_status;
 };

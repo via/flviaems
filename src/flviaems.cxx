@@ -1,16 +1,16 @@
 #include <cstdio>
+#include <fcntl.h>
 #include <iostream>
 #include <memory>
-#include <fcntl.h>
 #include <unistd.h>
 
+#include "MainWindow.h"
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
-#include "MainWindow.h"
 
 #include "viaems_protocol.h"
 
-static viaems::ViaemsProtocol connector{std::cout};
+static viaems::ViaemsProtocol connector{ std::cout };
 MainWindow ui;
 
 static void feed_refresh_handler(void *_ptr) {
@@ -26,7 +26,6 @@ static void stdin_ready_cb(int fd, void *ptr) {
   auto res = read(STDIN_FILENO, &buf[0], sizeof(buf));
   connector.NewData(std::string(buf, res));
 }
-
 
 static void set_stdin_nonblock() {
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK | fcntl(STDIN_FILENO, F_GETFL, 0));
@@ -50,9 +49,11 @@ static void pinger(void *ptr) {
 static void debug_thing(viaems::StructureNode c) {
   if (std::holds_alternative<std::shared_ptr<viaems::ConfigNode>>(c.contents)) {
     std::cerr << " (leaf) ";
-  } else if (std::holds_alternative<std::shared_ptr<viaems::StructureMap>>(c.contents)) {
+  } else if (std::holds_alternative<std::shared_ptr<viaems::StructureMap>>(
+               c.contents)) {
     std::cerr << "{";
-    for (auto entry : *std::get<std::shared_ptr<viaems::StructureMap>>(c.contents)) {
+    for (auto entry :
+         *std::get<std::shared_ptr<viaems::StructureMap>>(c.contents)) {
       std::cerr << "'" << entry.first << "': ";
       debug_thing(entry.second);
       std::cerr << ", ";
@@ -60,7 +61,6 @@ static void debug_thing(viaems::StructureNode c) {
     std::cerr << "} ";
   }
 }
-
 
 static void structure_callback(viaems::StructureNode top, void *ptr) {
   debug_thing(top);
@@ -77,5 +77,4 @@ int main() {
 
   Fl::run();
   return 0;
-
 }
