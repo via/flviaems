@@ -47,13 +47,16 @@ static void pinger(void *ptr) {
 }
 
 static void debug_thing(viaems::StructureNode c) {
-  if (std::holds_alternative<std::shared_ptr<viaems::ConfigNode>>(c.contents)) {
-    std::cerr << " (leaf) ";
-  } else if (std::holds_alternative<std::shared_ptr<viaems::StructureMap>>(
-               c.contents)) {
+  if (c.is_leaf()) {
+    std::cerr << " (leaf@";
+    for (auto p : c.leaf()->path) {
+      std::visit([](const auto&z) {std::cerr << z;}, p);
+    std::cerr << " ";
+    }
+    std::cerr << ") ";
+  } else if (c.is_map()) {
     std::cerr << "{";
-    for (auto entry :
-         *std::get<std::shared_ptr<viaems::StructureMap>>(c.contents)) {
+    for (auto entry : *c.map()) {
       std::cerr << "'" << entry.first << "': ";
       debug_thing(entry.second);
       std::cerr << ", ";

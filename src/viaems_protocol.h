@@ -37,6 +37,24 @@ struct StructureNode {
                std::shared_ptr<StructureMap>,
                std::shared_ptr<ConfigNode>>
     contents;
+  bool is_map() {
+    return std::holds_alternative<std::shared_ptr<StructureMap>>(this->contents);
+  }
+  std::shared_ptr<StructureMap> map() {
+    return std::get<std::shared_ptr<StructureMap>>(this->contents);
+  }
+  bool is_array() {
+    return std::holds_alternative<std::shared_ptr<StructureList>>(this->contents);
+  }
+  std::shared_ptr<StructureList> array() {
+    return std::get<std::shared_ptr<StructureList>>(this->contents);
+  }
+  bool is_leaf() {
+    return std::holds_alternative<std::shared_ptr<ConfigNode>>(this->contents);
+  }
+  std::shared_ptr<ConfigNode> leaf() {
+    return std::get<std::shared_ptr<ConfigNode>>(this->contents);
+  }
 };
 
 typedef void (*structure_cb)(StructureNode top, void *ptr);
