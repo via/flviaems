@@ -69,9 +69,20 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
         map_entry.first.to_string(), child));
     }
     return StructureNode{ contents };
+  } else if (entry.is_array()) {
+    auto contents = std::make_shared<StructureList>();
+    int index = 0;
+    for (auto list_entry : entry.to_array()) {
+      StructurePath new_path = curpath;
+      new_path.push_back(index);
+      index += 1;
+
+      auto child = generate_structure_node_from_cbor(list_entry, new_path);
+      contents->push_back(child);
+    }
+    return StructureNode{ contents };
   }
 
-  std::cerr << cbor::debug(entry) << std::endl;
   return StructureNode{ std::make_shared<ConfigNode>() };
 }
 
@@ -114,32 +125,37 @@ void ViaemsProtocol::handle_message_from_ems(cbor msg) {
   }
 }
 
-struct OneShotReadBuf : public std::streambuf {
-  OneShotReadBuf(char *s, std::size_t n) { setg(s, s, s + n); }
+struct SliceReader : public std::streambuf {
+  SliceReader(char *s, std::size_t n) { setg(s, s, s + n); }
 
-  size_t amt() { return gptr() - eback(); }
+  size_t bytes_read() { return gptr() - eback(); }
 };
 
 void ViaemsProtocol::NewData(std::string const &data) {
   m_input_buffer.append(data);
 
-  OneShotReadBuf osrb(m_input_buffer.data(), m_input_buffer.size());
-  //  std::istringstream data_ss(m_input_buffer);
-  std::istream data_ss(&osrb);
+  SliceReader reader(m_input_buffer.data(), m_input_buffer.size());
+  std::istream data_ss(&reader);
+  size_t bytes_to_remove = 0;
 
   cbor cbordata;
-  cbordata.read(data_ss);
-  if (!cbordata.is_undefined()) {
-    /* do stuff */
-    handle_message_from_ems(cbordata);
-
-    //    m_input_buffer.erase(0, osrb.amt());
-    m_input_buffer = m_input_buffer.substr(osrb.amt());
-  } else {
-    /* Is our buffer massive? If so, reset it */
-    if (m_input_buffer.length() > 65535) {
-      m_input_buffer.clear();
+  do {
+    if (!cbordata.read(data_ss)) {
+      break;
     }
+    if (cbordata.is_undefined()) {
+      break;
+    }
+    handle_message_from_ems(cbordata);
+    /* Only remove bytes we've successfully decoded */
+    bytes_to_remove = reader.bytes_read();
+  } while(true);
+
+  m_input_buffer.erase(0, bytes_to_remove);
+
+  /* Is our buffer massive? If so, reset it */
+  if (m_input_buffer.length() > 16384) {
+    m_input_buffer.clear();
   }
 }
 

@@ -43,10 +43,10 @@ struct StructureNode {
   std::shared_ptr<StructureMap> map() {
     return std::get<std::shared_ptr<StructureMap>>(this->contents);
   }
-  bool is_array() {
+  bool is_list() {
     return std::holds_alternative<std::shared_ptr<StructureList>>(this->contents);
   }
-  std::shared_ptr<StructureList> array() {
+  std::shared_ptr<StructureList> list() {
     return std::get<std::shared_ptr<StructureList>>(this->contents);
   }
   bool is_leaf() {
