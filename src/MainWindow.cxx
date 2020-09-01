@@ -22,25 +22,27 @@ void MainWindow::feed_update(viaems::FeedUpdate const &update) {
   //  chart->add(std::get<uint32_t>(update.at("cputime")));
 }
 
-void MainWindow::update_config_structure(viaems::StructureNode top) {
-  auto g = top.map();
-
-  for (auto child : *g) {
-    std::cerr << child.first << std::endl;
-    auto parent = m_config_tree->add(child.first.c_str());
-    if (child.second.is_map()) {
-      auto h = child.second.map();
-      for (auto ochild : *h) {
-        m_config_tree->add(parent, ochild.first.c_str());
-      }
-    } else if (child.second.is_list()) {
-      int index = 0;
-      for (auto ochild : *child.second.list()) {
-        m_config_tree->add(parent, std::to_string(index).c_str());
-        index += 1;
-      }
-
+static void add_config_structure_entry(Fl_Tree *tree, viaems::StructureNode node, Fl_Tree_Item *parent) {
+  if (node.is_map()) {
+    for (auto child : *node.map()) {
+      auto entry = tree->add(parent, child.first.c_str());
+      add_config_structure_entry(tree, child.second, entry);
     }
+  } else if (node.is_list()) {
+    int index = 0;
+    for (auto child : *node.list()) {
+      auto entry = tree->add(parent, std::to_string(index).c_str());
+      add_config_structure_entry(tree, child, entry);
+      index += 1;
+    }
+  }
+}
+
+void MainWindow::update_config_structure(viaems::StructureNode top) {
+  m_config_tree->showroot(0);
+  for (auto child : *top.map()) {
+    auto entry = m_config_tree->add(child.first.c_str());
+    add_config_structure_entry(m_config_tree, child.second, entry);
   }
 
   m_config_tree->redraw();

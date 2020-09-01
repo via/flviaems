@@ -143,7 +143,7 @@ void ViaemsProtocol::NewData(std::string const &data) {
     if (!cbordata.read(data_ss)) {
       break;
     }
-    if (cbordata.is_undefined()) {
+    if (!cbordata.is_map()) {
       break;
     }
     handle_message_from_ems(cbordata);
