@@ -12,28 +12,14 @@ class MainWindowUI {open
     } {
       Fl_Tree m_config_tree {
         label Configuration
-        protected xywh {20 40 300 440}
+        protected xywh {20 40 400 440}
       }
       Fl_Table m_status_table {
         label Status
-        protected xywh {20 505 300 445}
+        protected xywh {20 505 400 445}
         code0 {\#include "StatusTable.h"}
         class StatusTable
       } {}
-      Fl_Group {} {open
-        private xywh {340 40 635 445} box DOWN_FRAME
-      } {
-        Fl_Dial m_rpm {
-          label RPM
-          protected xywh {395 65 160 160} type Line maximum 6000 step 500
-        }
-      }
-      Fl_Box chart {
-        label Chart
-        protected xywh {575 38 395 206}
-        code0 {\#include <FL/Fl_Chart.H>}
-        class Fl_Chart
-      }
       Fl_Box {} {
         label {Status:}
         xywh {10 968 990 24} box DOWN_BOX align 20
@@ -42,7 +28,13 @@ class MainWindowUI {open
         label Connection
         xywh {195 968 40 24} box UP_BOX color 1 align 4
       }
+      Fl_Output m_rate {
+        label {Rate:}
+        protected xywh {298 968 50 25}
+      }
     }
     code {m_main_window->show();} {}
   }
+  Function {show()} {open selected
+  } {}
 }
