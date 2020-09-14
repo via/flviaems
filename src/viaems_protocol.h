@@ -25,6 +25,7 @@ typedef std::variant<uint32_t, float, std::string, TableNode> ConfigValue;
 struct ConfigNode {
   std::string description;
   std::string type;
+  std::vector<std::string> choices;
   StructurePath path;
 };
 

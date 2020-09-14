@@ -1,39 +1,51 @@
 #include <variant>
+#include <cstring>
 #include <FL/Fl_Tree.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Output.H>
+#include <FL/Fl_Choice.H>
 #include <FL/Fl_Button.H>
+
 
 #include "MainWindow.h"
 
-class My_Group : public Fl_Group {
-  Fl_Output output;
-  viaems::StructureNode node;
+class ConfigLeafTreeWidget : public Fl_Group {
+  Fl_Input output;
+  Fl_Choice choices;
+  viaems::ConfigNode node;
   std::string label;
 
   public:
-  My_Group(int X, int Y, int W, int H, viaems::StructureNode &_node)
-  : Fl_Group(X, Y, W, H), 
-  output(X, Y, W, H) {
+  ConfigLeafTreeWidget(int X, int Y, int W, int H, viaems::ConfigNode &_node)
+  : Fl_Group(X, Y, W, H),
+  choices(X, Y, 100, 18),
+  output(X, Y, 100, 18) {
 
     node = _node;
-    if (node.is_leaf()) {
-      output.value("Test");
-      auto id = node.leaf()->path.back();
-      if (std::holds_alternative<int>(id)) {
-        label = std::to_string(std::get<int>(id)).c_str();
-      } else {
-        label = std::get<std::string>(id).c_str();
+    auto id = node.path.back();
+    if (std::holds_alternative<int>(id)) {
+      label = std::to_string(std::get<int>(id)).c_str();
+    } else {
+      label = std::get<std::string>(id).c_str();
+    }
+
+    int w, h;
+    fl_measure(label.c_str(), w, h);
+
+    if (node.type == "string") {
+      output.hide();
+      choices.label(label.c_str());
+      for (auto choice : node.choices) {
+        choices.add(choice.c_str());
       }
+      choices.position(X + w, Y);
+    } else {
+      choices.hide();
       output.label(label.c_str());
+      output.resize(X + w, Y, output.w(), output.h());
+      output.value("Test");
     }
     end();
-  }
-  void draw() {
-    output.resize(220, y(), w(), h());
-    draw_child(output);
-    output.draw_label(x(), y(), 180, h(), FL_ALIGN_LEFT);
-    fl_line(200, y(), 200, y() + h());
   }
 };
 
@@ -54,7 +66,11 @@ void MainWindow::update_feed_hz(int hz) {
 
 void MainWindow::feed_update(viaems::FeedUpdate const &update) {
   m_status_table->feed_update(update);
-  //  chart->add(std::get<uint32_t>(update.at("cputime")));
+}
+
+
+void MainWindow::update_config_value(viaems::ConfigNode &node, viaems::ConfigValue &value) {
+
 }
 
 static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent, viaems::StructureNode node) {
@@ -64,8 +80,7 @@ static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent, viae
       item->label(child.first.c_str());
       parent->add(tree->prefs(), "", item);
       if (child.second.is_leaf()) {
-        auto leaf = child.second.leaf();
-        item->widget(new My_Group(0, 0, 100, 18, child.second));
+        item->widget(new ConfigLeafTreeWidget(0, 0, 100, 18, *child.second.leaf()));
       } else {
         add_config_structure_entry(tree, item, child.second);
       }

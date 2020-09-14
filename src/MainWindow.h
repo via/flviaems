@@ -12,6 +12,7 @@ public:
   void update_connection_status(bool status);
   void update_feed_hz(int hz);
   void update_config_structure(viaems::StructureNode top);
+  void update_config_value(viaems::ConfigNode &node, viaems::ConfigValue &value);
 };
 
 #endif

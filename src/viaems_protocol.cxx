@@ -41,9 +41,18 @@ static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
   if (entry.count("description")) {
     desc = entry.at("description").to_string();
   }
+
+  std::vector<std::string> choices;
+  if (entry.count("choices")) {
+    for (auto choice : entry.at("choices").to_array()) {
+      choices.push_back(choice.to_string());
+    }
+  }
+
   return ConfigNode{
     .description = desc,
     .type = entry.at("_type").to_string(),
+    .choices = choices,
     .path = path,
   };
 }
