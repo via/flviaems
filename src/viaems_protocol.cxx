@@ -95,8 +95,22 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
   return StructureNode{ std::make_shared<ConfigNode>() };
 }
 
+static ConfigValue generate_node_value_from_cbor(cbor value) {
+
+  if (value.is_int()) {
+    return (uint32_t)value.to_unsigned();
+  }
+  if (value.is_float()) {
+    return (float)value.to_float();
+  }
+  if (value.is_string()) {
+    return value.to_string();
+  }
+  return ConfigValue{5.0f};
+}
+
 void ViaemsProtocol::handle_response_message_from_ems(uint32_t id,
-                                                      cbor::map response) {
+                                                      cbor response) {
   auto req = m_requests.front();
   m_requests.pop_front();
 
@@ -111,8 +125,12 @@ void ViaemsProtocol::handle_response_message_from_ems(uint32_t id,
     pingreq.cb(pingreq.ptr);
   } else if (std::holds_alternative<StructureRequest>(req)) {
     auto structurereq = std::get<StructureRequest>(req);
-    auto c = generate_structure_node_from_cbor(response, {});
+    auto c = generate_structure_node_from_cbor(response.to_map(), {});
     structurereq.cb(c, structurereq.ptr);
+  } else if (std::holds_alternative<GetRequest>(req)) {
+    auto getreq = std::get<GetRequest>(req);
+    auto val = generate_node_value_from_cbor(response);
+    getreq.cb(getreq.path, val, getreq.ptr);
   }
 }
 
@@ -130,7 +148,7 @@ void ViaemsProtocol::handle_message_from_ems(cbor msg) {
     handle_description_message_from_ems(msg.to_map().at("keys").to_array());
   } else if (type == "response") {
     handle_response_message_from_ems(msg.to_map().at("id"),
-                                     msg.to_map().at("response").to_map());
+                                     msg.to_map().at("response"));
   }
 }
 
@@ -189,6 +207,29 @@ void ViaemsProtocol::Ping(ping_cb cb, void *v) {
     { "type", "request" },
     { "method", "ping" },
     { "id", id },
+  };
+  wire_request.write(m_out);
+  m_out.flush();
+}
+
+void ViaemsProtocol::Get(get_cb cb, viaems::StructurePath path, void *v) {
+  uint32_t id = 7;
+  m_requests.push_back(GetRequest{ id, cb, path, v });
+
+  cbor::array cbor_path;
+  for (auto p : path) {
+    if (std::holds_alternative<int>(p)) {
+      cbor_path.push_back(std::get<int>(p));
+    } else if (std::holds_alternative<std::string>(p)) {
+      cbor_path.push_back(std::get<std::string>(p));
+    }
+  }
+
+  cbor wire_request = cbor::map{
+    { "type", "request" },
+    { "method", "get" },
+    { "id", id },
+    { "path", cbor_path },
   };
   wire_request.write(m_out);
   m_out.flush();

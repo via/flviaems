@@ -49,6 +49,7 @@ class ConfigLeafTreeWidget : public Fl_Group {
   }
 };
 
+
 MainWindow::MainWindow()
   : MainWindowUI() {
 
@@ -68,9 +69,23 @@ void MainWindow::feed_update(viaems::FeedUpdate const &update) {
   m_status_table->feed_update(update);
 }
 
+void MainWindow::update_config_value(viaems::StructurePath &path, viaems::ConfigValue &value) {
 
-void MainWindow::update_config_value(viaems::ConfigNode &node, viaems::ConfigValue &value) {
-
+  for (auto p : path) {
+    if (std::holds_alternative<int>(p)) {
+      std::cerr << std::get<int>(p) << " ";
+    } else if (std::holds_alternative<std::string>(p)) {
+      std::cerr << std::get<std::string>(p) << " ";
+    }
+  }
+  if (std::holds_alternative<float>(value)) {
+    float f = std::get<float>(value);
+    std::cerr << f << std::endl;
+  }
+  if (std::holds_alternative<uint32_t>(value)) {
+    uint32_t u = std::get<uint32_t>(value);
+    std::cerr << u << std::endl;
+  }
 }
 
 static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent, viaems::StructureNode node) {

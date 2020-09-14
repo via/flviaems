@@ -58,6 +58,14 @@ struct StructureNode {
   }
 };
 
+typedef void (*get_cb)(StructurePath path, ConfigValue val, void *ptr);
+struct GetRequest {
+  uint32_t id;
+  get_cb cb;
+  StructurePath path;
+  void *ptr;
+};
+
 typedef void (*structure_cb)(StructureNode top, void *ptr);
 struct StructureRequest {
   uint32_t id;
@@ -72,7 +80,7 @@ struct PingRequest {
   void *ptr;
 };
 
-typedef std::variant<StructureRequest, PingRequest> Request;
+typedef std::variant<StructureRequest, GetRequest, PingRequest> Request;
 
 class ViaemsProtocol
 {
@@ -83,6 +91,7 @@ public:
   std::vector<FeedUpdate> FeedUpdates();
   void NewData(std::string const &data);
 
+  void Get(get_cb, StructurePath path, void *);
   void Structure(structure_cb, void *);
   void Ping(ping_cb, void *);
 
@@ -96,7 +105,7 @@ private:
   void handle_message_from_ems(cbor m);
   void handle_feed_message_from_ems(cbor::array m);
   void handle_description_message_from_ems(cbor::array m);
-  void handle_response_message_from_ems(uint32_t id, cbor::map response);
+  void handle_response_message_from_ems(uint32_t id, cbor response);
 };
 }
 

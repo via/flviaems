@@ -44,35 +44,27 @@ static void set_stdin_nonblock() {
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK | fcntl(STDIN_FILENO, F_GETFL, 0));
 }
 
-static void debug_thing(viaems::StructureNode c) {
-  if (c.is_leaf()) {
-    std::cerr << " (leaf@";
-    for (auto p : c.leaf()->path) {
-      std::visit([](const auto&z) {std::cerr << z;}, p);
-    std::cerr << " ";
+static void get_callback(viaems::StructurePath path, viaems::ConfigValue val, void *ptr) {
+  ui.update_config_value(path, val);
+}
+
+static void recurse_structure_leaves(viaems::StructureNode &node) {
+  if (node.is_leaf()) {
+    connector.Get(get_callback, node.leaf()->path, 0);
+  } else if (node.is_map()) {
+    for (auto child : *node.map()) {
+      recurse_structure_leaves(child.second);
     }
-    std::cerr << ") ";
-  } else if (c.is_map()) {
-    std::cerr << "{";
-    for (auto entry : *c.map()) {
-      std::cerr << "'" << entry.first << "': ";
-      debug_thing(entry.second);
-      std::cerr << ", ";
+  } else if (node.is_list()) {
+    for (auto child : *node.list()) {
+      recurse_structure_leaves(child);
     }
-    std::cerr << "} ";
-  } else if (c.is_list()) {
-    std::cerr << "[";
-    for (auto entry : *c.list()) {
-      debug_thing(entry);
-      std::cerr << ", ";
-    }
-    std::cerr << "] ";
   }
 }
 
 static void structure_callback(viaems::StructureNode top, void *ptr) {
-  debug_thing(top);
   ui.update_config_structure(top);
+  recurse_structure_leaves(top);
 }
 
 static void failed_ping_callback(void *ptr) {
