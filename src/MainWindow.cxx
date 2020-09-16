@@ -47,6 +47,23 @@ class ConfigLeafTreeWidget : public Fl_Group {
     }
     end();
   }
+
+  void set_value(std::string val) {
+    int index = choices.find_index(val.c_str());
+    std::cerr << "choices " << val << " " << index << std::endl;
+    choices.value(index);
+    redraw();
+  }
+  void set_value(float val) {
+    output.value(std::to_string(val).c_str());
+    redraw();
+  }
+  void set_value(uint32_t val) {
+    output.value(std::to_string(val).c_str());
+    redraw();
+  }
+
+
 };
 
 
@@ -69,23 +86,48 @@ void MainWindow::feed_update(viaems::FeedUpdate const &update) {
   m_status_table->feed_update(update);
 }
 
-void MainWindow::update_config_value(viaems::StructurePath &path, viaems::ConfigValue &value) {
-
-  for (auto p : path) {
-    if (std::holds_alternative<int>(p)) {
-      std::cerr << std::get<int>(p) << " ";
-    } else if (std::holds_alternative<std::string>(p)) {
-      std::cerr << std::get<std::string>(p) << " ";
+static Fl_Tree_Item *find_tree_item_by_path(Fl_Tree_Item *tree, viaems::StructurePath &path) {
+  if (path.empty()) {
+    return tree;
+  }
+  for (Fl_Tree_Item *item = tree->next(); item; item=item->next_sibling()) {
+    const auto element = path.front();
+    if (std::holds_alternative<std::string>(element)) {
+      if (item->label() == std::get<std::string>(element)) {
+        path.erase(path.begin());
+        return find_tree_item_by_path(item, path);
+      }
+    }
+    if (std::holds_alternative<int>(element)) {
+      if (item->label() == std::to_string(std::get<int>(element))) {
+        path.erase(path.begin());
+        return find_tree_item_by_path(item, path);
+      }
     }
   }
+  return NULL;
+}
+
+
+
+void MainWindow::update_config_value(viaems::StructurePath &path, viaems::ConfigValue &value) {
+
+  std::cerr << "start " << std::endl;
+  auto item = find_tree_item_by_path(m_config_tree->root(), path);
+  auto widget = (ConfigLeafTreeWidget *)item->widget();
+  if (!widget) {
+    return;
+  }
   if (std::holds_alternative<float>(value)) {
-    float f = std::get<float>(value);
-    std::cerr << f << std::endl;
+    widget->set_value(std::get<float>(value));
   }
   if (std::holds_alternative<uint32_t>(value)) {
-    uint32_t u = std::get<uint32_t>(value);
-    std::cerr << u << std::endl;
+    widget->set_value(std::get<uint32_t>(value));
   }
+  if (std::holds_alternative<std::string>(value)) {
+    widget->set_value(std::get<std::string>(value));
+  }
+  std::cerr << "stop " << std::endl;
 }
 
 static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent, viaems::StructureNode node) {
