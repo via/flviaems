@@ -1,5 +1,3 @@
-#include <variant>
-#include <cstring>
 #include <FL/Fl_Tree.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Output.H>
@@ -50,7 +48,6 @@ class ConfigLeafTreeWidget : public Fl_Group {
 
   void set_value(std::string val) {
     int index = choices.find_index(val.c_str());
-    std::cerr << "choices " << val << " " << index << std::endl;
     choices.value(index);
     redraw();
   }
@@ -112,7 +109,6 @@ static Fl_Tree_Item *find_tree_item_by_path(Fl_Tree_Item *tree, viaems::Structur
 
 void MainWindow::update_config_value(viaems::StructurePath &path, viaems::ConfigValue &value) {
 
-  std::cerr << "start " << std::endl;
   auto item = find_tree_item_by_path(m_config_tree->root(), path);
   auto widget = (ConfigLeafTreeWidget *)item->widget();
   if (!widget) {
@@ -127,7 +123,6 @@ void MainWindow::update_config_value(viaems::StructurePath &path, viaems::Config
   if (std::holds_alternative<std::string>(value)) {
     widget->set_value(std::get<std::string>(value));
   }
-  std::cerr << "stop " << std::endl;
 }
 
 static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent, viaems::StructureNode node) {

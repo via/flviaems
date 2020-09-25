@@ -1,5 +1,6 @@
 #include <exception>
 #include <streambuf>
+#include <cstdlib>
 
 #include "viaems_protocol.h"
 
@@ -111,24 +112,27 @@ static ConfigValue generate_node_value_from_cbor(cbor value) {
 
 void ViaemsProtocol::handle_response_message_from_ems(uint32_t id,
                                                       cbor response) {
+  if (m_requests.empty()) {
+    return;
+  }
   auto req = m_requests.front();
-  m_requests.pop_front();
 
-  auto req_id = std::visit([](const auto &a) { return a.id; }, req);
-  if (req_id != id) {
-    std::cerr << "Request ID does not match Response ID!" << std::endl;
+  if (id != req->id) {
     return;
   }
 
-  if (std::holds_alternative<PingRequest>(req)) {
-    auto pingreq = std::get<PingRequest>(req);
+  m_requests.pop_front();
+  ensure_sent();
+
+  if (std::holds_alternative<PingRequest>(req->request)) {
+    auto pingreq = std::get<PingRequest>(req->request);
     pingreq.cb(pingreq.ptr);
-  } else if (std::holds_alternative<StructureRequest>(req)) {
-    auto structurereq = std::get<StructureRequest>(req);
+  } else if (std::holds_alternative<StructureRequest>(req->request)) {
+    auto structurereq = std::get<StructureRequest>(req->request);
     auto c = generate_structure_node_from_cbor(response.to_map(), {});
     structurereq.cb(c, structurereq.ptr);
-  } else if (std::holds_alternative<GetRequest>(req)) {
-    auto getreq = std::get<GetRequest>(req);
+  } else if (std::holds_alternative<GetRequest>(req->request)) {
+    auto getreq = std::get<GetRequest>(req->request);
     auto val = generate_node_value_from_cbor(response);
     getreq.cb(getreq.path, val, getreq.ptr);
   }
@@ -140,7 +144,14 @@ void ViaemsProtocol::handle_message_from_ems(cbor msg) {
   }
 
   std::string type;
-  type = msg.to_map().at("type").to_string();
+  cbor::map val = msg.to_map();
+  if (val.count("type") != 1) {
+    return;
+  }
+  if ((val.count("success") == 1) && !val.at("success").to_bool()) {
+    return;
+  }
+  type = val.at("type").to_string();
 
   if (type == "feed") {
     handle_feed_message_from_ems(msg.to_map().at("values").to_array());
@@ -167,12 +178,26 @@ void ViaemsProtocol::NewData(std::string const &data) {
 
   cbor cbordata;
   do {
-    if (!cbordata.read(data_ss)) {
+    try {
+      if (!cbordata.read(data_ss)) {
+        break;
+      }
+    } catch(std::bad_alloc) {
+      std::cerr << "Bad alloc!" << std::endl;
+      break;
+    } catch(std::length_error) {
+      std::cerr << "length error" << std::endl;
       break;
     }
-    if (!cbordata.is_map()) {
-      break;
+
+    cbordata.write(m_log);
+    m_log.flush();
+    cbor::array array;
+    for (auto req : m_requests) {
+      array.push_back(req->id);
     }
+    cbor item = array;
+    item.write(m_log);
     handle_message_from_ems(cbordata);
     /* Only remove bytes we've successfully decoded */
     bytes_to_remove = reader.bytes_read();
@@ -186,35 +211,46 @@ void ViaemsProtocol::NewData(std::string const &data) {
   }
 }
 
-void ViaemsProtocol::Structure(structure_cb cb, void *v) {
-  uint32_t id = 6;
-  m_requests.push_back(StructureRequest{ id, cb, v });
+std::shared_ptr<Request> ViaemsProtocol::Structure(structure_cb cb, void *v) {
+  uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
     { "type", "request" },
     { "method", "structure" },
     { "id", id },
   };
-  wire_request.write(m_out);
-  m_out.flush();
+  auto req = std::make_shared<Request>(Request{
+    .id = id,
+    .request = StructureRequest{cb, v},
+    .repr = wire_request,
+  });
+  m_requests.push_back(req);
+  ensure_sent();
+  
+  return req;
 }
 
-void ViaemsProtocol::Ping(ping_cb cb, void *v) {
-  uint32_t id = 6;
-  m_requests.push_back(PingRequest{ id, cb, v });
+std::shared_ptr<Request> ViaemsProtocol::Ping(ping_cb cb, void *v) {
+  uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
     { "type", "request" },
     { "method", "ping" },
     { "id", id },
   };
-  wire_request.write(m_out);
-  m_out.flush();
+  auto req = std::make_shared<Request>(Request{
+    .id = id,
+    .request = PingRequest{cb, v},
+    .repr = wire_request,
+  });
+  m_requests.push_back(req);
+  ensure_sent();
+
+  return req;
 }
 
-void ViaemsProtocol::Get(get_cb cb, viaems::StructurePath path, void *v) {
-  uint32_t id = 7;
-  m_requests.push_back(GetRequest{ id, cb, path, v });
+std::shared_ptr<Request> ViaemsProtocol::Get(get_cb cb, viaems::StructurePath path, void *v) {
+  uint32_t id = rand() % 1024;
 
   cbor::array cbor_path;
   for (auto p : path) {
@@ -231,6 +267,40 @@ void ViaemsProtocol::Get(get_cb cb, viaems::StructurePath path, void *v) {
     { "id", id },
     { "path", cbor_path },
   };
-  wire_request.write(m_out);
+
+  auto req = std::make_shared<Request>(Request{
+    .id = id,
+    .request = GetRequest{cb, path, v},
+    .repr = wire_request,
+  });
+  m_requests.push_back(req);
+  ensure_sent();
+
+  return req;
+}
+
+bool ViaemsProtocol::Cancel(std::shared_ptr<Request> request) {
+  for (auto i = m_requests.begin(); i != m_requests.end(); i++) {
+    if ((*i)->id == request->id) {
+      m_requests.erase(i);
+      ensure_sent();
+      return true;
+    }
+  }
+  return false;
+}
+
+void ViaemsProtocol::ensure_sent() {
+  if (m_requests.empty()) {
+    return;
+  }
+
+  auto first = m_requests.front();
+  if (first->is_sent) {
+    return;
+  }
+  first->is_sent = true;
+  first->repr.write(m_out);
   m_out.flush();
+  first->repr.write(m_log);
 }

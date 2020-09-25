@@ -13,6 +13,7 @@
 
 static viaems::ViaemsProtocol connector{ std::cout };
 MainWindow ui;
+viaems::Model model(connector);
 
 static void feed_refresh_handler(void *_ptr) {
   auto updates = connector.FeedUpdates();
@@ -50,6 +51,7 @@ static void get_callback(viaems::StructurePath path, viaems::ConfigValue val, vo
 
 static void recurse_structure_leaves(viaems::StructureNode &node) {
   if (node.is_leaf()) {
+    //model.add(*node.leaf());
     connector.Get(get_callback, node.leaf()->path, 0);
   } else if (node.is_map()) {
     for (auto child : *node.map()) {
@@ -67,26 +69,44 @@ static void structure_callback(viaems::StructureNode top, void *ptr) {
   recurse_structure_leaves(top);
 }
 
+std::shared_ptr<viaems::Request> ping_req;
+
 static void failed_ping_callback(void *ptr) {
+  if (ping_req) {
+    connector.Cancel(ping_req);
+    ping_req.reset();
+  }
   std::cerr << "failed ping" << std::endl;
   ui.update_connection_status(false);
+}
+
+static void failed_structure_callback(void *ptr) {
+  auto is = model.interrogation_status();
+  if ((is.first == 0) || (is.first != is.second)) {
+    std::cerr << "redoing structure" << is.first << " " << is.second << std::endl;
+    model.interrogate();
+    Fl::add_timeout(5, failed_structure_callback);
+  }
 }
 
 static void ping_callback(void *ptr) {
   static bool first_pong = true;
   Fl::remove_timeout(failed_ping_callback);
   ui.update_connection_status(true);
+  auto is = model.interrogation_status();
+  std::cerr << "successful ping: " << is.first << " " << is.second << std::endl;
 
   if (first_pong) {
     first_pong = false;
-    connector.Structure(structure_callback, 0);
+    model.interrogate();
+    Fl::add_timeout(5, failed_structure_callback);
   }
 }
 
 static void pinger(void *ptr) {
   
   Fl::add_timeout(0.5, failed_ping_callback);
-  connector.Ping(ping_callback, 0);
+  ping_req = connector.Ping(ping_callback, 0);
   Fl::repeat_timeout(1, pinger);
 }
 
@@ -97,6 +117,7 @@ int main() {
   Fl::add_timeout(0.05, feed_refresh_handler);
 
   Fl::add_timeout(1, pinger);
+
 
   Fl::run();
   return 0;
