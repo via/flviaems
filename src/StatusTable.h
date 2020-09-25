@@ -3,10 +3,9 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Table.H>
 
-#include "viaems_protocol.h"
+#include "viaems.h"
 
-class StatusTable : public Fl_Table
-{
+class StatusTable : public Fl_Table {
 public:
   StatusTable(int X, int Y, int W, int H, const char *L);
 

@@ -4,7 +4,7 @@
 #include <FL/fl_draw.H>
 
 StatusTable::StatusTable(int X, int Y, int W, int H, const char *L = 0)
-  : Fl_Table(X, Y, W, H, L) {
+    : Fl_Table(X, Y, W, H, L) {
   rows(5);
   cols(2);
   col_width(0, 120);
@@ -53,16 +53,11 @@ void draw_key_cell(std::string key, int X, int Y, int W, int H) {
   fl_pop_clip();
 }
 
-void StatusTable::draw_cell(TableContext c,
-                            int R,
-                            int C,
-                            int X,
-                            int Y,
-                            int W,
+void StatusTable::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
                             int H) {
   switch (c) {
   case CONTEXT_CELL:
-    if (R >= m_current_values.size()) {
+    if (R >= static_cast<int>(m_current_values.size())) {
       return;
     }
     if (C == 1) {

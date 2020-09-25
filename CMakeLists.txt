@@ -4,7 +4,7 @@ project(flviaems VERSION 0.1
   DESCRIPTION "FLTK ViaEMS Editor"
   LANGUAGES CXX)
 
-add_executable(flviaems src/flviaems.cxx src/StatusTable.cxx src/MainWindow.cxx src/MainWindowUI.cxx src/viaems_protocol.cxx)
+add_executable(flviaems src/flviaems.cxx src/StatusTable.cxx src/MainWindow.cxx src/MainWindowUI.cxx src/viaems.cxx)
 target_compile_features(flviaems PUBLIC cxx_std_17)
 
 find_library(FLTK fltk)

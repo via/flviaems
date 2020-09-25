@@ -7,7 +7,7 @@ class MainWindowUI {open
   Function {MainWindowUI()} {open
   } {
     Fl_Window m_main_window {
-      label mainWindow open
+      label mainWindow open selected
       protected xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX hide non_modal
     } {
       Fl_Tree m_config_tree {
@@ -32,9 +32,13 @@ class MainWindowUI {open
         label {Rate:}
         protected xywh {298 968 50 25}
       }
+      Fl_Progress m_interrogation_progress {
+        label Interrogation
+        protected xywh {390 969 135 21}
+      }
     }
     code {m_main_window->show();} {}
   }
-  Function {show()} {open selected
+  Function {show()} {open
   } {}
 }
