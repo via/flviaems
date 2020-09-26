@@ -163,3 +163,13 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
 
   m_config_tree->redraw();
 }
+
+void MainWindow::update_interrogation(bool in_progress, int val, int max) {
+  m_interrogation_progress->maximum(max);
+  m_interrogation_progress->value(val);
+  if (in_progress) {
+    m_interrogation_progress->show();
+  } else {
+    m_interrogation_progress->hide();
+  }
+}

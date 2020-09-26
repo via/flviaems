@@ -8,6 +8,7 @@
 #include "StatusTable.h"
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>
+#include <FL/Fl_Progress.H>
 
 class MainWindowUI {
 public:
@@ -20,6 +21,7 @@ public:
   Fl_Box *m_connection_status;
 protected:
   Fl_Output *m_rate;
+  Fl_Progress *m_interrogation_progress;
 public:
   void show();
 };

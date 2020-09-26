@@ -31,6 +31,8 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Box* m_connection_status
     { m_rate = new Fl_Output(298, 968, 50, 25, "Rate:");
     } // Fl_Output* m_rate
+    { m_interrogation_progress = new Fl_Progress(390, 969, 135, 21, "Interrogation");
+    } // Fl_Progress* m_interrogation_progress
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window

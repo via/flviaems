@@ -9,9 +9,9 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 
-#include "viaems_protocol.h"
+#include "viaems.h"
 
-static viaems::ViaemsProtocol connector{ std::cout };
+static viaems::Protocol connector{ std::cout };
 MainWindow ui;
 viaems::Model model(connector);
 
@@ -80,11 +80,15 @@ static void failed_ping_callback(void *ptr) {
   ui.update_connection_status(false);
 }
 
+static void interrogate_update(viaems::InterrogationState s) {
+  ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
+}
+
 static void failed_structure_callback(void *ptr) {
   auto is = model.interrogation_status();
-  if ((is.first == 0) || (is.first != is.second)) {
-    std::cerr << "redoing structure" << is.first << " " << is.second << std::endl;
-    model.interrogate();
+  if (is.in_progress) {
+    std::cerr << "redoing structure" << is.complete_nodes << " " << is.total_nodes << std::endl;
+    model.interrogate(interrogate_update);
     Fl::add_timeout(5, failed_structure_callback);
   }
 }
@@ -93,12 +97,10 @@ static void ping_callback(void *ptr) {
   static bool first_pong = true;
   Fl::remove_timeout(failed_ping_callback);
   ui.update_connection_status(true);
-  auto is = model.interrogation_status();
-  std::cerr << "successful ping: " << is.first << " " << is.second << std::endl;
 
   if (first_pong) {
     first_pong = false;
-    model.interrogate();
+    model.interrogate(interrogate_update);
     Fl::add_timeout(5, failed_structure_callback);
   }
 }

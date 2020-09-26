@@ -87,10 +87,10 @@ struct Request {
 };
 
 
-class ViaemsProtocol
+class Protocol
 {
 public:
-  ViaemsProtocol(std::ostream &out)
+  Protocol(std::ostream &out)
     : m_out(out) {m_log.open("log");}
 
   std::vector<FeedUpdate> FeedUpdates();
@@ -137,76 +137,34 @@ class NodeModel {
 };
 
 
+struct InterrogationState {
+  bool in_progress;
+  int total_nodes;
+  int complete_nodes;
+};
+
+typedef void (*interrogate_cb)(InterrogationState s);
+
 class Model {
-  ViaemsProtocol &m_protocol;
+  Protocol &m_protocol;
   std::map<StructurePath, std::unique_ptr<NodeModel>> m_model;
   StructureNode root;
 
+  /* Interrogation members */
   std::shared_ptr<Request> structure_req;
   std::vector<std::shared_ptr<Request>> get_reqs;
+  interrogate_cb interrogation_callback;
 
-  static void handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
-    Model *model = (Model *)ptr;
-    model->m_model.at(path)->value = std::make_shared<ConfigValue>(val);
-  }
+  void recurse_model_structure(StructureNode node);
 
-  static void handle_model_structure(StructureNode root, void *ptr) {
-    Model *model = (Model *)ptr;
-    model->root = root;
-    model->recurse_model_structure(root);
-  }
+  static void handle_model_get(StructurePath path, ConfigValue val, void *ptr);
+  static void handle_model_structure(StructureNode root, void *ptr);
 
-  void recurse_model_structure(StructureNode node) {
-    if (node.is_leaf()) {
-      auto leaf = node.leaf();
-      auto nodemodel = std::make_unique<NodeModel>();
-      nodemodel->node = *leaf;
-      m_model.insert(std::make_pair(leaf->path, std::move(nodemodel)));
-      get_reqs.push_back(m_protocol.Get(handle_model_get, leaf->path, this));
-    } else if (node.is_map()) {
-      for (auto child : *node.map()) {
-        recurse_model_structure(child.second);
-      }
-    } else if (node.is_list()) {
-      for (auto child : *node.list()) {
-        recurse_model_structure(child);
-      }
-    }
-  }
+public:
 
-  public:
-  Model(ViaemsProtocol &protocol) : m_protocol(protocol) {};
-  std::pair<int, int> interrogation_status() {
-    int n_nodes = 0;
-    int n_complete = 0;
-
-    for (auto &x : m_model) {
-      n_nodes++;
-      if (x.second->is_valid()) {
-        n_complete++;
-      }
-    }
-    return {n_nodes, n_complete};
-  }
-    void interrogate() {
-      /* First clear any ongoing interrogation commands */
-      for (auto r = get_reqs.rbegin(); r != get_reqs.rend(); r++) {
-        m_protocol.Cancel(*r);
-      }
-      get_reqs.clear();
-      m_model.clear();
-      
-      if (structure_req) {
-        m_protocol.Cancel(structure_req);
-        structure_req.reset();
-      }
-
-      structure_req = m_protocol.Structure(handle_model_structure, this);
-    }
-
-    std::shared_ptr<ConfigValue> find(StructurePath path) {
-      return m_model.at(path)->value;
-    }
+  Model(Protocol &protocol) : m_protocol(protocol) {};
+  InterrogationState interrogation_status();
+  void interrogate(interrogate_cb);
 
 };
 

@@ -2,24 +2,24 @@
 #include <streambuf>
 #include <cstdlib>
 
-#include "viaems_protocol.h"
+#include "viaems.h"
 
 using namespace viaems;
 
-std::vector<FeedUpdate> ViaemsProtocol::FeedUpdates() {
+std::vector<FeedUpdate> Protocol::FeedUpdates() {
   auto updates = m_feed_updates;
   m_feed_updates.clear();
   return updates;
 }
 
-void ViaemsProtocol::handle_description_message_from_ems(cbor::array a) {
+void Protocol::handle_description_message_from_ems(cbor::array a) {
   m_feed_vars.clear();
   for (cbor i : a) {
     m_feed_vars.push_back(i);
   }
 }
 
-void ViaemsProtocol::handle_feed_message_from_ems(cbor::array a) {
+void Protocol::handle_feed_message_from_ems(cbor::array a) {
   if (a.size() != m_feed_vars.size()) {
     return;
   }
@@ -110,7 +110,7 @@ static ConfigValue generate_node_value_from_cbor(cbor value) {
   return ConfigValue{5.0f};
 }
 
-void ViaemsProtocol::handle_response_message_from_ems(uint32_t id,
+void Protocol::handle_response_message_from_ems(uint32_t id,
                                                       cbor response) {
   if (m_requests.empty()) {
     return;
@@ -138,7 +138,7 @@ void ViaemsProtocol::handle_response_message_from_ems(uint32_t id,
   }
 }
 
-void ViaemsProtocol::handle_message_from_ems(cbor msg) {
+void Protocol::handle_message_from_ems(cbor msg) {
   if (!msg.is_map()) {
     return;
   }
@@ -169,7 +169,7 @@ struct SliceReader : public std::streambuf {
   size_t bytes_read() { return gptr() - eback(); }
 };
 
-void ViaemsProtocol::NewData(std::string const &data) {
+void Protocol::NewData(std::string const &data) {
   m_input_buffer.append(data);
 
   SliceReader reader(m_input_buffer.data(), m_input_buffer.size());
@@ -211,7 +211,7 @@ void ViaemsProtocol::NewData(std::string const &data) {
   }
 }
 
-std::shared_ptr<Request> ViaemsProtocol::Structure(structure_cb cb, void *v) {
+std::shared_ptr<Request> Protocol::Structure(structure_cb cb, void *v) {
   uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
@@ -230,7 +230,7 @@ std::shared_ptr<Request> ViaemsProtocol::Structure(structure_cb cb, void *v) {
   return req;
 }
 
-std::shared_ptr<Request> ViaemsProtocol::Ping(ping_cb cb, void *v) {
+std::shared_ptr<Request> Protocol::Ping(ping_cb cb, void *v) {
   uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
@@ -249,7 +249,7 @@ std::shared_ptr<Request> ViaemsProtocol::Ping(ping_cb cb, void *v) {
   return req;
 }
 
-std::shared_ptr<Request> ViaemsProtocol::Get(get_cb cb, viaems::StructurePath path, void *v) {
+std::shared_ptr<Request> Protocol::Get(get_cb cb, viaems::StructurePath path, void *v) {
   uint32_t id = rand() % 1024;
 
   cbor::array cbor_path;
@@ -279,7 +279,7 @@ std::shared_ptr<Request> ViaemsProtocol::Get(get_cb cb, viaems::StructurePath pa
   return req;
 }
 
-bool ViaemsProtocol::Cancel(std::shared_ptr<Request> request) {
+bool Protocol::Cancel(std::shared_ptr<Request> request) {
   for (auto i = m_requests.begin(); i != m_requests.end(); i++) {
     if ((*i)->id == request->id) {
       m_requests.erase(i);
@@ -290,7 +290,7 @@ bool ViaemsProtocol::Cancel(std::shared_ptr<Request> request) {
   return false;
 }
 
-void ViaemsProtocol::ensure_sent() {
+void Protocol::ensure_sent() {
   if (m_requests.empty()) {
     return;
   }
@@ -303,4 +303,69 @@ void ViaemsProtocol::ensure_sent() {
   first->repr.write(m_out);
   m_out.flush();
   first->repr.write(m_log);
+}
+
+void Model::interrogate(interrogate_cb cb) {
+  interrogation_callback = cb;
+  /* First clear any ongoing interrogation commands */
+  for (auto r = get_reqs.rbegin(); r != get_reqs.rend(); r++) {
+    m_protocol.Cancel(*r);
+  }
+  get_reqs.clear();
+  m_model.clear();
+
+  if (structure_req) {
+    m_protocol.Cancel(structure_req);
+    structure_req.reset();
+  }
+
+  structure_req = m_protocol.Structure(handle_model_structure, this);
+}
+
+InterrogationState Model::interrogation_status() {
+  int n_nodes = 0;
+  int n_complete = 0;
+
+  for (auto &x : m_model) {
+    n_nodes++;
+    if (x.second->is_valid()) {
+      n_complete++;
+    }
+  }
+  return {
+    .in_progress = n_nodes == 0 || n_nodes != n_complete,
+    .total_nodes = n_nodes,
+    .complete_nodes = n_complete,
+  };
+}
+
+void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
+  Model *model = (Model *)ptr;
+  model->m_model.at(path)->value = std::make_shared<ConfigValue>(val);
+  model->interrogation_callback(model->interrogation_status());
+}
+
+void Model::handle_model_structure(StructureNode root, void *ptr) {
+  Model *model = (Model *)ptr;
+  model->root = root;
+  model->recurse_model_structure(root);
+  model->interrogation_callback(model->interrogation_status());
+}
+
+void Model::recurse_model_structure(StructureNode node) {
+  if (node.is_leaf()) {
+    auto leaf = node.leaf();
+    auto nodemodel = std::make_unique<NodeModel>();
+    nodemodel->node = *leaf;
+    m_model.insert(std::make_pair(leaf->path, std::move(nodemodel)));
+    get_reqs.push_back(m_protocol.Get(handle_model_get, leaf->path, this));
+  } else if (node.is_map()) {
+    for (auto child : *node.map()) {
+      recurse_model_structure(child.second);
+    }
+  } else if (node.is_list()) {
+    for (auto child : *node.list()) {
+      recurse_model_structure(child);
+    }
+  }
 }
