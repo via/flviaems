@@ -163,6 +163,9 @@ class Model {
 public:
 
   Model(Protocol &protocol) : m_protocol(protocol) {};
+
+  StructureNode& structure() {return root;};
+
   InterrogationState interrogation_status();
   void interrogate(interrogate_cb);
 

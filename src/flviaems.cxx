@@ -45,30 +45,6 @@ static void set_stdin_nonblock() {
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK | fcntl(STDIN_FILENO, F_GETFL, 0));
 }
 
-static void get_callback(viaems::StructurePath path, viaems::ConfigValue val, void *ptr) {
-  ui.update_config_value(path, val);
-}
-
-static void recurse_structure_leaves(viaems::StructureNode &node) {
-  if (node.is_leaf()) {
-    //model.add(*node.leaf());
-    connector.Get(get_callback, node.leaf()->path, 0);
-  } else if (node.is_map()) {
-    for (auto child : *node.map()) {
-      recurse_structure_leaves(child.second);
-    }
-  } else if (node.is_list()) {
-    for (auto child : *node.list()) {
-      recurse_structure_leaves(child);
-    }
-  }
-}
-
-static void structure_callback(viaems::StructureNode top, void *ptr) {
-  ui.update_config_structure(top);
-  recurse_structure_leaves(top);
-}
-
 std::shared_ptr<viaems::Request> ping_req;
 
 static void failed_ping_callback(void *ptr) {
@@ -82,6 +58,9 @@ static void failed_ping_callback(void *ptr) {
 
 static void interrogate_update(viaems::InterrogationState s) {
   ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
+  if (!s.in_progress) {
+    ui.update_model(std::shared_ptr<viaems::Model>(&model));
+  }
 }
 
 static void failed_structure_callback(void *ptr) {

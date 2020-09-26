@@ -41,7 +41,6 @@ class ConfigLeafTreeWidget : public Fl_Group {
       choices.hide();
       output.label(label.c_str());
       output.resize(X + w, Y, output.w(), output.h());
-      output.value("Test");
     }
     end();
   }
@@ -173,3 +172,10 @@ void MainWindow::update_interrogation(bool in_progress, int val, int max) {
     m_interrogation_progress->hide();
   }
 }
+
+void MainWindow::update_model(std::shared_ptr<viaems::Model> model) {
+  m_model = model;
+  update_config_structure(model->structure());
+}
+
+
