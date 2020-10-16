@@ -305,8 +305,9 @@ void Protocol::ensure_sent() {
   first->repr.write(m_log);
 }
 
-void Model::interrogate(interrogate_cb cb) {
+void Model::interrogate(interrogate_cb cb, void *ptr) {
   interrogation_callback = cb;
+  interrogation_callback_ptr = ptr;
   /* First clear any ongoing interrogation commands */
   for (auto r = get_reqs.rbegin(); r != get_reqs.rend(); r++) {
     m_protocol.Cancel(*r);
@@ -342,14 +343,14 @@ InterrogationState Model::interrogation_status() {
 void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
   model->m_model.at(path)->value = std::make_shared<ConfigValue>(val);
-  model->interrogation_callback(model->interrogation_status());
+  model->interrogation_callback(model->interrogation_status(), model->interrogation_callback_ptr);
 }
 
 void Model::handle_model_structure(StructureNode root, void *ptr) {
   Model *model = (Model *)ptr;
   model->root = root;
   model->recurse_model_structure(root);
-  model->interrogation_callback(model->interrogation_status());
+  model->interrogation_callback(model->interrogation_status(), model->interrogation_callback_ptr);
 }
 
 void Model::recurse_model_structure(StructureNode node) {

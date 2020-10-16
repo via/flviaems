@@ -119,8 +119,7 @@ private:
   void handle_response_message_from_ems(uint32_t id, cbor response);
 };
 
-class NodeModel {
-  public:
+struct NodeModel {
   struct ConfigNode node;
   std::shared_ptr<ConfigValue> value;
 
@@ -143,7 +142,7 @@ struct InterrogationState {
   int complete_nodes;
 };
 
-typedef void (*interrogate_cb)(InterrogationState s);
+typedef void (*interrogate_cb)(InterrogationState s, void *ptr);
 
 class Model {
   Protocol &m_protocol;
@@ -154,6 +153,7 @@ class Model {
   std::shared_ptr<Request> structure_req;
   std::vector<std::shared_ptr<Request>> get_reqs;
   interrogate_cb interrogation_callback;
+  void *interrogation_callback_ptr;
 
   void recurse_model_structure(StructureNode node);
 
@@ -165,9 +165,12 @@ public:
   Model(Protocol &protocol) : m_protocol(protocol) {};
 
   StructureNode& structure() {return root;};
+  std::shared_ptr<viaems::ConfigValue> get_value(StructurePath path) {
+    return m_model.at(path)->value;
+  }
 
   InterrogationState interrogation_status();
-  void interrogate(interrogate_cb);
+  void interrogate(interrogate_cb, void *ptr);
 
 };
 

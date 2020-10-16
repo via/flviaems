@@ -131,7 +131,8 @@ static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent, viae
       item->label(child.first.c_str());
       parent->add(tree->prefs(), "", item);
       if (child.second.is_leaf()) {
-        item->widget(new ConfigLeafTreeWidget(0, 0, 100, 18, *child.second.leaf()));
+        auto w = new ConfigLeafTreeWidget(0, 0, 100, 18, *child.second.leaf());
+        item->widget(w);
       } else {
         add_config_structure_entry(tree, item, child.second);
       }
@@ -157,6 +158,7 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
     item->label(child.first.c_str());
     root->add(m_config_tree->prefs(), "", item);
     add_config_structure_entry(m_config_tree, item, child.second);
+
   }
   m_config_tree->end();
 
@@ -173,7 +175,7 @@ void MainWindow::update_interrogation(bool in_progress, int val, int max) {
   }
 }
 
-void MainWindow::update_model(std::shared_ptr<viaems::Model> model) {
+void MainWindow::update_model(viaems::Model *model) {
   m_model = model;
   update_config_structure(model->structure());
 }
