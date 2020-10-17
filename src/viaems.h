@@ -20,8 +20,10 @@ typedef std::map<std::string, FeedValue> FeedUpdate;
 typedef std::vector<std::variant<int, std::string>> StructurePath;
 
 struct TableNode {};
+struct SensorNode {};
+struct OutputNode {};
 
-typedef std::variant<uint32_t, float, std::string, TableNode> ConfigValue;
+typedef std::variant<uint32_t, float, std::string, TableNode, SensorNode, OutputNode> ConfigValue;
 
 struct ConfigNode {
   std::string description;
