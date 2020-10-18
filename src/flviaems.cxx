@@ -106,7 +106,7 @@ class FLViaems {
   }
 
 public:
-  FLViaems(std::ostream& o, int infd) : connector(o), model(connector)  {
+  FLViaems(std::ostream& o, int infd) : connector{o}, model{connector}  {
     read_fd = infd;    
     set_stdin_nonblock(read_fd);
     Fl::add_fd(0, FL_READ, stdin_ready_cb, this);
@@ -116,7 +116,7 @@ public:
 };
 
 int main() {
-  FLViaems controller(std::cout, STDIN_FILENO);
+  FLViaems controller{std::cout, STDIN_FILENO};
   Fl::run();
   return 0;
 }

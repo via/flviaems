@@ -28,8 +28,8 @@ class ConfigLeafTreeWidget : public Fl_Group {
   public:
   ConfigLeafTreeWidget(int X, int Y, int W, int H, viaems::ConfigNode &_node, std::shared_ptr<viaems::ConfigValue> val)
   : Fl_Group(X, Y, W, H),
-  choices(X, Y, 100, 18),
-  output(X, Y, 100, 18) {
+  choices{X, Y, 100, 18},
+  output{X, Y, 100, 18} {
 
     node = _node;
     value = val;

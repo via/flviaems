@@ -172,8 +172,8 @@ struct SliceReader : public std::streambuf {
 void Protocol::NewData(std::string const &data) {
   m_input_buffer.append(data);
 
-  SliceReader reader(m_input_buffer.data(), m_input_buffer.size());
-  std::istream data_ss(&reader);
+  SliceReader reader{m_input_buffer.data(), m_input_buffer.size()};
+  std::istream data_ss{&reader};
   size_t bytes_to_remove = 0;
 
   cbor cbordata;
