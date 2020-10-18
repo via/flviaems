@@ -27,20 +27,20 @@ class FLViaems {
 
     auto updates = v->connector.FeedUpdates();
     static std::deque<int> rates;
-  
+
     /* Keep average over 1 second */
     rates.push_back(updates.size());
     if (rates.size() > 20) {
       rates.erase(rates.begin());
     }
-  
+
     if (updates.size() > 0) {
       v->ui.feed_update(updates.at(0));
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
     }
     Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
   }
-  
+
   static void stdin_ready_cb(int fd, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
@@ -51,7 +51,7 @@ class FLViaems {
     }
     v->connector.NewData(std::string(buf, res));
   }
-  
+
   static void failed_ping_callback(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
@@ -62,7 +62,7 @@ class FLViaems {
     std::cerr << "failed ping" << std::endl;
     v->ui.update_connection_status(false);
   }
-  
+
   static void interrogate_update(viaems::InterrogationState s, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
@@ -71,43 +71,44 @@ class FLViaems {
       v->ui.update_model(&v->model);
     }
   }
-  
+
   static void failed_structure_callback(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
     auto is = v->model.interrogation_status();
     if (is.in_progress) {
-      std::cerr << "redoing structure" << is.complete_nodes << " " << is.total_nodes << std::endl;
+      std::cerr << "redoing structure" << is.complete_nodes << " "
+                << is.total_nodes << std::endl;
       v->model.interrogate(v->interrogate_update, v);
       Fl::add_timeout(5, v->failed_structure_callback, v);
     }
   }
-  
+
   static void ping_callback(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
     static bool first_pong = true;
     Fl::remove_timeout(v->failed_ping_callback);
     v->ui.update_connection_status(true);
-  
+
     if (first_pong) {
       first_pong = false;
       v->model.interrogate(v->interrogate_update, v);
       Fl::add_timeout(5, v->failed_structure_callback, v);
     }
   }
-  
+
   static void pinger(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    
+
     Fl::add_timeout(0.5, v->failed_ping_callback, v);
     v->ping_req = v->connector.Ping(v->ping_callback, v);
     Fl::repeat_timeout(1, v->pinger, v);
   }
 
 public:
-  FLViaems(std::ostream& o, int infd) : connector{o}, model{connector}  {
-    read_fd = infd;    
+  FLViaems(std::ostream &o, int infd) : connector{o}, model{connector} {
+    read_fd = infd;
     set_stdin_nonblock(read_fd);
     Fl::add_fd(0, FL_READ, stdin_ready_cb, this);
     Fl::add_timeout(0.05, feed_refresh_handler, this);

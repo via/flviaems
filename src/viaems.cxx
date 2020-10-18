@@ -1,6 +1,6 @@
+#include <cstdlib>
 #include <exception>
 #include <streambuf>
-#include <cstdlib>
 
 #include "viaems.h"
 
@@ -28,7 +28,7 @@ void Protocol::handle_feed_message_from_ems(cbor::array a) {
     cbor &val = a[i];
     if (val.is_int()) {
       update[m_feed_vars[i]] =
-        FeedValue(static_cast<uint32_t>(val.to_unsigned()));
+          FeedValue(static_cast<uint32_t>(val.to_unsigned()));
     } else if (val.is_float()) {
       update[m_feed_vars[i]] = FeedValue(static_cast<float>(val.to_float()));
     }
@@ -51,10 +51,10 @@ static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
   }
 
   return ConfigNode{
-    .description = desc,
-    .type = entry.at("_type").to_string(),
-    .choices = choices,
-    .path = path,
+      .description = desc,
+      .type = entry.at("_type").to_string(),
+      .choices = choices,
+      .path = path,
   };
 }
 
@@ -63,8 +63,8 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
   if (entry.is_map()) {
     if (entry.to_map().count("_type")) {
       /* This is a leaf node */
-      return StructureNode{ std::make_shared<ConfigNode>(
-        generate_config_node(entry, curpath)) };
+      return StructureNode{
+          std::make_shared<ConfigNode>(generate_config_node(entry, curpath))};
     }
 
     /* This is actually a map, we should descend */
@@ -74,11 +74,11 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
       new_path.push_back(map_entry.first.to_string());
 
       auto child =
-        generate_structure_node_from_cbor(map_entry.second, new_path);
+          generate_structure_node_from_cbor(map_entry.second, new_path);
       contents->insert(std::pair<std::string, StructureNode>(
-        map_entry.first.to_string(), child));
+          map_entry.first.to_string(), child));
     }
-    return StructureNode{ contents };
+    return StructureNode{contents};
   } else if (entry.is_array()) {
     auto contents = std::make_shared<StructureList>();
     int index = 0;
@@ -90,10 +90,10 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
       auto child = generate_structure_node_from_cbor(list_entry, new_path);
       contents->push_back(child);
     }
-    return StructureNode{ contents };
+    return StructureNode{contents};
   }
 
-  return StructureNode{ std::make_shared<ConfigNode>() };
+  return StructureNode{std::make_shared<ConfigNode>()};
 }
 
 static ConfigValue generate_node_value_from_cbor(cbor value) {
@@ -110,8 +110,7 @@ static ConfigValue generate_node_value_from_cbor(cbor value) {
   return ConfigValue{5.0f};
 }
 
-void Protocol::handle_response_message_from_ems(uint32_t id,
-                                                      cbor response) {
+void Protocol::handle_response_message_from_ems(uint32_t id, cbor response) {
   if (m_requests.empty()) {
     return;
   }
@@ -182,10 +181,10 @@ void Protocol::NewData(std::string const &data) {
       if (!cbordata.read(data_ss)) {
         break;
       }
-    } catch(std::bad_alloc) {
+    } catch (std::bad_alloc) {
       std::cerr << "Bad alloc!" << std::endl;
       break;
-    } catch(std::length_error) {
+    } catch (std::length_error) {
       std::cerr << "length error" << std::endl;
       break;
     }
@@ -201,7 +200,7 @@ void Protocol::NewData(std::string const &data) {
     handle_message_from_ems(cbordata);
     /* Only remove bytes we've successfully decoded */
     bytes_to_remove = reader.bytes_read();
-  } while(true);
+  } while (true);
 
   m_input_buffer.erase(0, bytes_to_remove);
 
@@ -215,18 +214,18 @@ std::shared_ptr<Request> Protocol::Structure(structure_cb cb, void *v) {
   uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
-    { "type", "request" },
-    { "method", "structure" },
-    { "id", id },
+      {"type", "request"},
+      {"method", "structure"},
+      {"id", id},
   };
   auto req = std::make_shared<Request>(Request{
-    .id = id,
-    .request = StructureRequest{cb, v},
-    .repr = wire_request,
+      .id = id,
+      .request = StructureRequest{cb, v},
+      .repr = wire_request,
   });
   m_requests.push_back(req);
   ensure_sent();
-  
+
   return req;
 }
 
@@ -234,14 +233,14 @@ std::shared_ptr<Request> Protocol::Ping(ping_cb cb, void *v) {
   uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
-    { "type", "request" },
-    { "method", "ping" },
-    { "id", id },
+      {"type", "request"},
+      {"method", "ping"},
+      {"id", id},
   };
   auto req = std::make_shared<Request>(Request{
-    .id = id,
-    .request = PingRequest{cb, v},
-    .repr = wire_request,
+      .id = id,
+      .request = PingRequest{cb, v},
+      .repr = wire_request,
   });
   m_requests.push_back(req);
   ensure_sent();
@@ -249,7 +248,8 @@ std::shared_ptr<Request> Protocol::Ping(ping_cb cb, void *v) {
   return req;
 }
 
-std::shared_ptr<Request> Protocol::Get(get_cb cb, viaems::StructurePath path, void *v) {
+std::shared_ptr<Request> Protocol::Get(get_cb cb, viaems::StructurePath path,
+                                       void *v) {
   uint32_t id = rand() % 1024;
 
   cbor::array cbor_path;
@@ -262,16 +262,16 @@ std::shared_ptr<Request> Protocol::Get(get_cb cb, viaems::StructurePath path, vo
   }
 
   cbor wire_request = cbor::map{
-    { "type", "request" },
-    { "method", "get" },
-    { "id", id },
-    { "path", cbor_path },
+      {"type", "request"},
+      {"method", "get"},
+      {"id", id},
+      {"path", cbor_path},
   };
 
   auto req = std::make_shared<Request>(Request{
-    .id = id,
-    .request = GetRequest{cb, path, v},
-    .repr = wire_request,
+      .id = id,
+      .request = GetRequest{cb, path, v},
+      .repr = wire_request,
   });
   m_requests.push_back(req);
   ensure_sent();
@@ -334,23 +334,25 @@ InterrogationState Model::interrogation_status() {
     }
   }
   return {
-    .in_progress = n_nodes == 0 || n_nodes != n_complete,
-    .total_nodes = n_nodes,
-    .complete_nodes = n_complete,
+      .in_progress = n_nodes == 0 || n_nodes != n_complete,
+      .total_nodes = n_nodes,
+      .complete_nodes = n_complete,
   };
 }
 
 void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
   model->m_model.at(path)->value = std::make_shared<ConfigValue>(val);
-  model->interrogation_callback(model->interrogation_status(), model->interrogation_callback_ptr);
+  model->interrogation_callback(model->interrogation_status(),
+                                model->interrogation_callback_ptr);
 }
 
 void Model::handle_model_structure(StructureNode root, void *ptr) {
   Model *model = (Model *)ptr;
   model->root = root;
   model->recurse_model_structure(root);
-  model->interrogation_callback(model->interrogation_status(), model->interrogation_callback_ptr);
+  model->interrogation_callback(model->interrogation_status(),
+                                model->interrogation_callback_ptr);
 }
 
 void Model::recurse_model_structure(StructureNode node) {

@@ -5,8 +5,7 @@
 
 #include "viaems.h"
 
-class StatusTable : public Fl_Table
-{
+class StatusTable : public Fl_Table {
 public:
   StatusTable(int X, int Y, int W, int H, const char *L);
 

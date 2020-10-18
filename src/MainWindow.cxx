@@ -1,9 +1,8 @@
-#include <FL/Fl_Tree.H>
+#include <FL/Fl_Button.H>
+#include <FL/Fl_Choice.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Output.H>
-#include <FL/Fl_Choice.H>
-#include <FL/Fl_Button.H>
-
+#include <FL/Fl_Tree.H>
 
 #include "MainWindow.h"
 
@@ -25,11 +24,10 @@ class ConfigLeafTreeWidget : public Fl_Group {
     }
   }
 
-  public:
-  ConfigLeafTreeWidget(int X, int Y, int W, int H, viaems::ConfigNode &_node, std::shared_ptr<viaems::ConfigValue> val)
-  : Fl_Group(X, Y, W, H),
-  choices{X, Y, 100, 18},
-  output{X, Y, 100, 18} {
+public:
+  ConfigLeafTreeWidget(int X, int Y, int W, int H, viaems::ConfigNode &_node,
+                       std::shared_ptr<viaems::ConfigValue> val)
+      : Fl_Group(X, Y, W, H), choices{X, Y, 100, 18}, output{X, Y, 100, 18} {
 
     node = _node;
     value = val;
@@ -61,11 +59,7 @@ class ConfigLeafTreeWidget : public Fl_Group {
   }
 };
 
-
-MainWindow::MainWindow()
-  : MainWindowUI() {
-
-}
+MainWindow::MainWindow() : MainWindowUI() {}
 
 void MainWindow::update_connection_status(bool status) {
   m_connection_status->color(status ? FL_GREEN : FL_RED);
@@ -81,7 +75,9 @@ void MainWindow::feed_update(viaems::FeedUpdate const &update) {
   m_status_table->feed_update(update);
 }
 
-static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent, viaems::StructureNode node, viaems::Model *model) {
+static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent,
+                                       viaems::StructureNode node,
+                                       viaems::Model *model) {
   if (node.is_map()) {
     for (auto child : *node.map()) {
       auto item = new Fl_Tree_Item(tree->prefs());
@@ -117,7 +113,6 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
     item->label(child.first.c_str());
     root->add(m_config_tree->prefs(), "", item);
     add_config_structure_entry(m_config_tree, item, child.second, m_model);
-
   }
   m_config_tree->end();
 
@@ -138,5 +133,3 @@ void MainWindow::update_model(viaems::Model *model) {
   m_model = model;
   update_config_structure(model->structure());
 }
-
-

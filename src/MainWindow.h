@@ -4,12 +4,13 @@
 #include "MainWindowUI.h"
 #include "viaems.h"
 
-class MainWindow : public MainWindowUI
-{
+class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
 
   void update_config_structure(viaems::StructureNode top);
-  void update_config_value(viaems::StructurePath &path, viaems::ConfigValue &value);
+  void update_config_value(viaems::StructurePath &path,
+                           viaems::ConfigValue &value);
+
 public:
   MainWindow();
   void feed_update(viaems::FeedUpdate const &);

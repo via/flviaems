@@ -9,8 +9,8 @@
 #include <variant>
 #include <vector>
 
-#include <fstream>
 #include <cbor11.h>
+#include <fstream>
 
 namespace viaems {
 
@@ -23,7 +23,9 @@ struct TableNode {};
 struct SensorNode {};
 struct OutputNode {};
 
-typedef std::variant<uint32_t, float, std::string, TableNode, SensorNode, OutputNode> ConfigValue;
+typedef std::variant<uint32_t, float, std::string, TableNode, SensorNode,
+                     OutputNode>
+    ConfigValue;
 
 struct ConfigNode {
   std::string description;
@@ -32,24 +34,24 @@ struct ConfigNode {
   StructurePath path;
 };
 
-
 struct StructureNode;
 typedef std::vector<StructureNode> StructureList;
 typedef std::map<std::string, StructureNode> StructureMap;
 
 struct StructureNode {
-  std::variant<std::shared_ptr<StructureList>,
-               std::shared_ptr<StructureMap>,
+  std::variant<std::shared_ptr<StructureList>, std::shared_ptr<StructureMap>,
                std::shared_ptr<ConfigNode>>
-    contents;
+      contents;
   bool is_map() {
-    return std::holds_alternative<std::shared_ptr<StructureMap>>(this->contents);
+    return std::holds_alternative<std::shared_ptr<StructureMap>>(
+        this->contents);
   }
   std::shared_ptr<StructureMap> map() {
     return std::get<std::shared_ptr<StructureMap>>(this->contents);
   }
   bool is_list() {
-    return std::holds_alternative<std::shared_ptr<StructureList>>(this->contents);
+    return std::holds_alternative<std::shared_ptr<StructureList>>(
+        this->contents);
   }
   std::shared_ptr<StructureList> list() {
     return std::get<std::shared_ptr<StructureList>>(this->contents);
@@ -88,12 +90,9 @@ struct Request {
   cbor repr;
 };
 
-
-class Protocol
-{
+class Protocol {
 public:
-  Protocol(std::ostream &out)
-    : m_out(out) {m_log.open("log");}
+  Protocol(std::ostream &out) : m_out{out} { m_log.open("log"); }
 
   std::vector<FeedUpdate> FeedUpdates();
   void NewData(std::string const &data);
@@ -102,10 +101,8 @@ public:
   std::shared_ptr<Request> Structure(structure_cb, void *);
   std::shared_ptr<Request> Ping(ping_cb, void *);
   bool Cancel(std::shared_ptr<Request> req);
-  
 
 private:
-  void ensure_sent();
   std::vector<std::string> m_feed_vars;
   std::vector<FeedUpdate> m_feed_updates;
   std::string m_input_buffer;
@@ -113,30 +110,26 @@ private:
   std::deque<std::shared_ptr<Request>> m_requests;
   std::ofstream m_log;
 
-  int max_inflight_reqs = 1;
+  const int max_inflight_reqs = 1;
 
   void handle_message_from_ems(cbor m);
   void handle_feed_message_from_ems(cbor::array m);
   void handle_description_message_from_ems(cbor::array m);
   void handle_response_message_from_ems(uint32_t id, cbor response);
+  void ensure_sent();
 };
 
 struct NodeModel {
   struct ConfigNode node;
   std::shared_ptr<ConfigValue> value;
 
-//  ViaemsProtocol &m_protocol;
+  //  ViaemsProtocol &m_protocol;
   bool m_pending_write;
 
-  bool is_valid() {
-    return value != NULL;
-  }
+  bool is_valid() { return value != NULL; }
 
-  bool is_waiting() {
-    return (value == NULL) || m_pending_write;
-  }
+  bool is_waiting() { return (value == NULL) || m_pending_write; }
 };
-
 
 struct InterrogationState {
   bool in_progress;
@@ -163,20 +156,17 @@ class Model {
   static void handle_model_structure(StructureNode root, void *ptr);
 
 public:
+  Model(Protocol &protocol) : m_protocol{protocol} {};
 
-  Model(Protocol &protocol) : m_protocol(protocol) {};
-
-  StructureNode& structure() {return root;};
+  StructureNode &structure() { return root; };
   std::shared_ptr<viaems::ConfigValue> get_value(StructurePath path) {
     return m_model.at(path)->value;
   }
 
   InterrogationState interrogation_status();
   void interrogate(interrogate_cb, void *ptr);
-
 };
 
-
-}
+} // namespace viaems
 
 #endif
