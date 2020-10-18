@@ -3,15 +3,12 @@
 #include "MainWindowUI.h"
 
 MainWindowUI::MainWindowUI() {
-  {
-    m_main_window = new Fl_Double_Window(1054, 1059, "mainWindow");
+  { m_main_window = new Fl_Double_Window(1054, 1059, "mainWindow");
     m_main_window->box(FL_THIN_DOWN_BOX);
-    m_main_window->user_data((void *)(this));
-    {
-      m_config_tree = new Fl_Tree(20, 40, 400, 440, "Configuration");
+    m_main_window->user_data((void*)(this));
+    { m_config_tree = new Fl_Tree(20, 40, 400, 440, "Configuration");
     } // Fl_Tree* m_config_tree
-    {
-      m_status_table = new StatusTable(20, 505, 400, 445, "Status");
+    { m_status_table = new StatusTable(20, 505, 400, 445, "Status");
       m_status_table->box(FL_THIN_DOWN_FRAME);
       m_status_table->color(FL_BACKGROUND_COLOR);
       m_status_table->selection_color(FL_BACKGROUND_COLOR);
@@ -23,21 +20,18 @@ MainWindowUI::MainWindowUI() {
       m_status_table->when(FL_WHEN_RELEASE);
       m_status_table->end();
     } // StatusTable* m_status_table
-    {
-      Fl_Box *o = new Fl_Box(10, 968, 990, 24, "Status:");
+    { Fl_Box* o = new Fl_Box(10, 968, 990, 24, "Status:");
       o->box(FL_DOWN_BOX);
-      o->align(Fl_Align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE));
+      o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
     } // Fl_Box* o
-    {
-      m_connection_status = new Fl_Box(195, 968, 40, 24, "Connection");
+    { m_connection_status = new Fl_Box(195, 968, 40, 24, "Connection");
       m_connection_status->box(FL_UP_BOX);
       m_connection_status->color((Fl_Color)1);
       m_connection_status->align(Fl_Align(FL_ALIGN_LEFT));
     } // Fl_Box* m_connection_status
-    { m_rate = new Fl_Output(298, 968, 50, 25, "Rate:"); } // Fl_Output* m_rate
-    {
-      m_interrogation_progress =
-          new Fl_Progress(390, 969, 135, 21, "Interrogation");
+    { m_rate = new Fl_Output(298, 968, 50, 25, "Rate:");
+    } // Fl_Output* m_rate
+    { m_interrogation_progress = new Fl_Progress(390, 969, 135, 21, "Interrogation");
     } // Fl_Progress* m_interrogation_progress
     m_main_window->set_non_modal();
     m_main_window->end();

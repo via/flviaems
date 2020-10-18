@@ -2,30 +2,26 @@
 
 #ifndef MainWindowUI_h
 #define MainWindowUI_h
-#include "StatusTable.h"
 #include <FL/Fl.H>
-#include <FL/Fl_Box.H>
 #include <FL/Fl_Double_Window.H>
+#include <FL/Fl_Tree.H>
+#include "StatusTable.h"
+#include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>
 #include <FL/Fl_Progress.H>
-#include <FL/Fl_Tree.H>
 
 class MainWindowUI {
 public:
   MainWindowUI();
-
 protected:
   Fl_Double_Window *m_main_window;
   Fl_Tree *m_config_tree;
   StatusTable *m_status_table;
-
 public:
   Fl_Box *m_connection_status;
-
 protected:
   Fl_Output *m_rate;
   Fl_Progress *m_interrogation_progress;
-
 public:
   void show();
 };
