@@ -26,7 +26,7 @@ class ConfigLeafTreeWidget : public Fl_Group {
 
 public:
   ConfigLeafTreeWidget(int X, int Y, int W, int H, std::shared_ptr<viaems::NodeModel> _model)
-      : Fl_Group(X, Y, W, H), choices{X, Y, 100, 18}, output{X, Y, 100, 18} {
+      : Fl_Group(X, Y, W, H), output{X, Y, 100, 18}, choices{X, Y, 100, 18} {
 
     model = _model;
     auto node = model->node;

@@ -24,7 +24,7 @@ void Protocol::handle_feed_message_from_ems(cbor::array a) {
     return;
   }
   FeedUpdate update;
-  for (int i = 0; i < a.size(); i++) {
+  for (size_t i = 0; i < a.size(); i++) {
     cbor &val = a[i];
     if (val.is_int()) {
       update[m_feed_vars[i]] =
@@ -181,22 +181,19 @@ void Protocol::NewData(std::string const &data) {
       if (!cbordata.read(data_ss)) {
         break;
       }
-    } catch (std::bad_alloc) {
+    } catch (const std::bad_alloc&) {
       std::cerr << "Bad alloc!" << std::endl;
       break;
-    } catch (std::length_error) {
+    } catch (const std::length_error&) {
       std::cerr << "length error" << std::endl;
       break;
     }
 
-    cbordata.write(m_log);
-    m_log.flush();
     cbor::array array;
     for (auto req : m_requests) {
       array.push_back(req->id);
     }
     cbor item = array;
-    item.write(m_log);
     handle_message_from_ems(cbordata);
     /* Only remove bytes we've successfully decoded */
     bytes_to_remove = reader.bytes_read();
@@ -302,7 +299,6 @@ void Protocol::ensure_sent() {
   first->is_sent = true;
   first->repr.write(m_out);
   m_out.flush();
-  first->repr.write(m_log);
 }
 
 void Model::interrogate(interrogate_cb cb, void *ptr) {

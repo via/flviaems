@@ -57,7 +57,7 @@ void StatusTable::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
                             int H) {
   switch (c) {
   case CONTEXT_CELL:
-    if (R >= m_current_values.size()) {
+    if (R >= static_cast<int>(m_current_values.size())) {
       return;
     }
     if (C == 1) {
