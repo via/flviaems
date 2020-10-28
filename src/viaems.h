@@ -119,15 +119,14 @@ private:
   void ensure_sent();
 };
 
+class Model;
 struct NodeModel {
   struct ConfigNode node;
   std::shared_ptr<ConfigValue> value;
+  std::weak_ptr<Model> model;
 
-  //  ViaemsProtocol &m_protocol;
   bool m_pending_write;
-
   bool is_valid() { return value != NULL; }
-
   bool is_waiting() { return (value == NULL) || m_pending_write; }
 };
 
@@ -141,7 +140,7 @@ typedef void (*interrogate_cb)(InterrogationState s, void *ptr);
 
 class Model {
   Protocol &m_protocol;
-  std::map<StructurePath, std::unique_ptr<NodeModel>> m_model;
+  std::map<StructurePath, std::shared_ptr<NodeModel>> m_model;
   StructureNode root;
 
   /* Interrogation members */
@@ -159,8 +158,8 @@ public:
   Model(Protocol &protocol) : m_protocol{protocol} {};
 
   StructureNode &structure() { return root; };
-  std::shared_ptr<viaems::ConfigValue> get_value(StructurePath path) {
-    return m_model.at(path)->value;
+  std::shared_ptr<viaems::NodeModel> get_node(StructurePath path) {
+    return m_model.at(path);
   }
 
   InterrogationState interrogation_status();

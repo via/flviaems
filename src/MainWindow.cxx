@@ -9,11 +9,11 @@
 class ConfigLeafTreeWidget : public Fl_Group {
   Fl_Input output;
   Fl_Choice choices;
-  viaems::ConfigNode node;
-  std::shared_ptr<viaems::ConfigValue> value;
+  std::shared_ptr<viaems::NodeModel> model;
   std::string label;
 
   void update_value() {
+    auto value = model->value;
     if (std::holds_alternative<std::string>(*value)) {
       int index = choices.find_index(std::get<std::string>(*value).c_str());
       choices.value(index);
@@ -25,12 +25,11 @@ class ConfigLeafTreeWidget : public Fl_Group {
   }
 
 public:
-  ConfigLeafTreeWidget(int X, int Y, int W, int H, viaems::ConfigNode &_node,
-                       std::shared_ptr<viaems::ConfigValue> val)
+  ConfigLeafTreeWidget(int X, int Y, int W, int H, std::shared_ptr<viaems::NodeModel> _model)
       : Fl_Group(X, Y, W, H), choices{X, Y, 100, 18}, output{X, Y, 100, 18} {
 
-    node = _node;
-    value = val;
+    model = _model;
+    auto node = model->node;
     auto id = node.path.back();
     if (std::holds_alternative<int>(id)) {
       label = std::to_string(std::get<int>(id)).c_str();
@@ -85,8 +84,8 @@ static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent,
       parent->add(tree->prefs(), "", item);
       if (child.second.is_leaf()) {
         auto leaf = *child.second.leaf();
-        auto val = model->get_value(leaf.path);
-        auto w = new ConfigLeafTreeWidget(0, 0, 100, 18, leaf, val);
+        auto node = model->get_node(leaf.path);
+        auto w = new ConfigLeafTreeWidget(0, 0, 100, 18, node);
         item->widget(w);
       } else {
         add_config_structure_entry(tree, item, child.second, model);
