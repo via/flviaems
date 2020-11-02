@@ -7,7 +7,7 @@ class MainWindowUI {open
   Function {MainWindowUI()} {open
   } {
     Fl_Window m_main_window {
-      label mainWindow open selected
+      label mainWindow open
       protected xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX hide non_modal
     } {
       Fl_Tree m_config_tree {
@@ -36,6 +36,11 @@ class MainWindowUI {open
         label Interrogation
         protected xywh {390 969 135 21}
       }
+      Fl_Group m_table_editor {open
+        xywh {435 40 595 440}
+        code0 {\#include "TableEditorUI.h"}
+        class TableEditorUI
+      } {}
     }
     code {m_main_window->show();} {}
   }

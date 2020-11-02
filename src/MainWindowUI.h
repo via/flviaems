@@ -9,6 +9,7 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>
 #include <FL/Fl_Progress.H>
+#include "TableEditorUI.h"
 
 class MainWindowUI {
 public:
@@ -23,6 +24,7 @@ protected:
   Fl_Output *m_rate;
   Fl_Progress *m_interrogation_progress;
 public:
+  TableEditorUI *m_table_editor;
   void show();
 };
 #endif

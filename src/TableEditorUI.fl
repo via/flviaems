@@ -1,0 +1,17 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0305
+header_name {.h}
+code_name {.cxx}
+widget_class TableEditorUI {open
+  xywh {1 20 1054 1059} type Double hide position_relative
+} {
+  Fl_Table m_table {open selected
+    xywh {35 75 415 370}
+    code0 {\#include "TableEditor.h"}
+    class TableEditor
+  } {}
+  Fl_Input m_table_name {
+    label Name
+    xywh {75 45 55 25}
+  }
+}

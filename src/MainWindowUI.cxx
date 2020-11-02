@@ -33,6 +33,18 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Output* m_rate
     { m_interrogation_progress = new Fl_Progress(390, 969, 135, 21, "Interrogation");
     } // Fl_Progress* m_interrogation_progress
+    { m_table_editor = new TableEditorUI(435, 40, 595, 440);
+      m_table_editor->box(FL_NO_BOX);
+      m_table_editor->color(FL_BACKGROUND_COLOR);
+      m_table_editor->selection_color(FL_BACKGROUND_COLOR);
+      m_table_editor->labeltype(FL_NORMAL_LABEL);
+      m_table_editor->labelfont(0);
+      m_table_editor->labelsize(14);
+      m_table_editor->labelcolor(FL_FOREGROUND_COLOR);
+      m_table_editor->align(Fl_Align(FL_ALIGN_TOP));
+      m_table_editor->when(FL_WHEN_RELEASE);
+      m_table_editor->end();
+    } // TableEditorUI* m_table_editor
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window

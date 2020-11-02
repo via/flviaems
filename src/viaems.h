@@ -19,12 +19,24 @@ typedef std::map<std::string, FeedValue> FeedUpdate;
 
 typedef std::vector<std::variant<int, std::string>> StructurePath;
 
-struct TableNode {};
-struct SensorNode {};
-struct OutputNode {};
+struct TableValue {
+  std::string title;
+  uint32_t n_axis;
+  uint32_t n_rows;
+  uint32_t n_cols;
 
-typedef std::variant<uint32_t, float, std::string, TableNode, SensorNode,
-                     OutputNode>
+  std::vector<std::string> row_labels;
+  std::vector<std::string> col_labels;
+
+  std::vector<float> one;
+  std::vector<std::vector<float>> two;
+};
+
+struct SensorValue {};
+struct OutputValue {};
+
+typedef std::variant<uint32_t, float, std::string, TableValue, SensorValue,
+                     OutputValue>
     ConfigValue;
 
 struct ConfigNode {

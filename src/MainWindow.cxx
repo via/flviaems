@@ -75,6 +75,17 @@ void MainWindow::feed_update(viaems::FeedUpdate const &update) {
   m_status_table->feed_update(update);
 }
 
+static void bleh(Fl_Widget *w) {
+  std::cerr << "callback called" << std::endl;
+  Fl_Tree *tree = (Fl_Tree *)w;
+  auto item = tree->item_clicked();
+  std::cerr << item->label() << std::endl;
+}
+
+static void bleh2(Fl_Widget *w) {
+  std::cerr << "callback2 called" << std::endl;
+}
+
 static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent,
                                        viaems::StructureNode node,
                                        viaems::Model *model) {
@@ -86,8 +97,14 @@ static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent,
       if (child.second.is_leaf()) {
         auto leaf = *child.second.leaf();
         auto node = model->get_node(leaf.path);
-        auto w = new ConfigLeafTreeWidget(0, 0, 100, 18, node);
-        item->widget(w);
+        if (leaf.type == "table") {
+          auto table = std::get<viaems::TableValue>(*node->value);
+          item->label(table.title.c_str());
+        } else {
+          auto w = new ConfigLeafTreeWidget(0, 0, 100, 18, node);
+          w->callback(bleh2);
+          item->widget(w);
+        }
       } else {
         add_config_structure_entry(tree, item, child.second, model);
       }
@@ -116,6 +133,7 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
   }
   m_config_tree->end();
 
+  m_config_tree->callback(bleh);
   m_config_tree->redraw();
 }
 

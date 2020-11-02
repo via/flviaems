@@ -96,6 +96,14 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
   return StructureNode{std::make_shared<ConfigNode>()};
 }
 
+
+static ConfigValue generate_table_value_from_cbor(cbor::map map) {
+  TableValue table;
+  table.title = map.at("title").to_string();
+  table.n_axis = map.at("num-axis").to_unsigned();
+  return table;
+}
+
 static ConfigValue generate_node_value_from_cbor(cbor value) {
 
   if (value.is_int()) {
@@ -106,6 +114,12 @@ static ConfigValue generate_node_value_from_cbor(cbor value) {
   }
   if (value.is_string()) {
     return value.to_string();
+  }
+  if (value.is_map()) {
+    auto m = value.to_map();
+    if (m.count("num-axis") > 0) {
+      return generate_table_value_from_cbor(m);
+    }
   }
   return ConfigValue{5.0f};
 }
