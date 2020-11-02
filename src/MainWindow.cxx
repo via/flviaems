@@ -75,11 +75,15 @@ void MainWindow::feed_update(viaems::FeedUpdate const &update) {
   m_status_table->feed_update(update);
 }
 
-static void bleh(Fl_Widget *w) {
+void MainWindow::bleh(Fl_Widget *w, void *p) {
+  MainWindow *mw = (MainWindow *)p;
   std::cerr << "callback called" << std::endl;
   Fl_Tree *tree = (Fl_Tree *)w;
   auto item = tree->item_clicked();
   std::cerr << item->label() << std::endl;
+  mw->m_table_title->value(item->label());
+  mw->m_table_editor_box->hide();
+  mw->m_sensor_editor_box->show();
 }
 
 static void bleh2(Fl_Widget *w) {
@@ -133,7 +137,7 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
   }
   m_config_tree->end();
 
-  m_config_tree->callback(bleh);
+  m_config_tree->callback(bleh, this);
   m_config_tree->redraw();
 }
 

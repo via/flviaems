@@ -7,7 +7,7 @@ class MainWindowUI {open
   Function {MainWindowUI()} {open
   } {
     Fl_Window m_main_window {
-      label mainWindow open
+      label mainWindow open selected
       protected xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX hide non_modal
     } {
       Fl_Tree m_config_tree {
@@ -36,11 +36,25 @@ class MainWindowUI {open
         label Interrogation
         protected xywh {390 969 135 21}
       }
-      Fl_Group m_table_editor {open
-        xywh {435 40 595 440}
-        code0 {\#include "TableEditorUI.h"}
-        class TableEditorUI
-      } {}
+      Fl_Group m_table_editor_box {open
+        protected xywh {455 35 540 440} box DOWN_BOX
+      } {
+        Fl_Input m_table_title {
+          label Title
+          protected xywh {496 45 119 30}
+        }
+        Fl_Table m_table_editor {open
+          protected xywh {460 85 530 385}
+        } {}
+      }
+      Fl_Group m_sensor_editor_box {open
+        protected xywh {455 35 540 440} box DOWN_BOX hide
+      } {
+        Fl_Input m_sensor_pin {
+          label Pin
+          protected xywh {490 60 85 20}
+        }
+      }
     }
     code {m_main_window->show();} {}
   }

@@ -33,18 +33,22 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Output* m_rate
     { m_interrogation_progress = new Fl_Progress(390, 969, 135, 21, "Interrogation");
     } // Fl_Progress* m_interrogation_progress
-    { m_table_editor = new TableEditorUI(435, 40, 595, 440);
-      m_table_editor->box(FL_NO_BOX);
-      m_table_editor->color(FL_BACKGROUND_COLOR);
-      m_table_editor->selection_color(FL_BACKGROUND_COLOR);
-      m_table_editor->labeltype(FL_NORMAL_LABEL);
-      m_table_editor->labelfont(0);
-      m_table_editor->labelsize(14);
-      m_table_editor->labelcolor(FL_FOREGROUND_COLOR);
-      m_table_editor->align(Fl_Align(FL_ALIGN_TOP));
-      m_table_editor->when(FL_WHEN_RELEASE);
-      m_table_editor->end();
-    } // TableEditorUI* m_table_editor
+    { m_table_editor_box = new Fl_Group(455, 35, 540, 440);
+      m_table_editor_box->box(FL_DOWN_BOX);
+      { m_table_title = new Fl_Input(496, 45, 119, 30, "Title");
+      } // Fl_Input* m_table_title
+      { m_table_editor = new Fl_Table(460, 85, 530, 385);
+        m_table_editor->end();
+      } // Fl_Table* m_table_editor
+      m_table_editor_box->end();
+    } // Fl_Group* m_table_editor_box
+    { m_sensor_editor_box = new Fl_Group(455, 35, 540, 440);
+      m_sensor_editor_box->box(FL_DOWN_BOX);
+      m_sensor_editor_box->hide();
+      { m_sensor_pin = new Fl_Input(490, 60, 85, 20, "Pin");
+      } // Fl_Input* m_sensor_pin
+      m_sensor_editor_box->end();
+    } // Fl_Group* m_sensor_editor_box
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window

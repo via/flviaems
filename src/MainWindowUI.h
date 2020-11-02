@@ -9,7 +9,9 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>
 #include <FL/Fl_Progress.H>
-#include "TableEditorUI.h"
+#include <FL/Fl_Group.H>
+#include <FL/Fl_Input.H>
+#include <FL/Fl_Table.H>
 
 class MainWindowUI {
 public:
@@ -23,8 +25,12 @@ public:
 protected:
   Fl_Output *m_rate;
   Fl_Progress *m_interrogation_progress;
+  Fl_Group *m_table_editor_box;
+  Fl_Input *m_table_title;
+  Fl_Table *m_table_editor;
+  Fl_Group *m_sensor_editor_box;
+  Fl_Input *m_sensor_pin;
 public:
-  TableEditorUI *m_table_editor;
   void show();
 };
 #endif
