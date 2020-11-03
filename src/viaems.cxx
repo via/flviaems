@@ -96,12 +96,27 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
   return StructureNode{std::make_shared<ConfigNode>()};
 }
 
-
 static ConfigValue generate_table_value_from_cbor(cbor::map map) {
-  TableValue table;
-  table.title = map.at("title").to_string();
-  table.n_axis = map.at("num-axis").to_unsigned();
-  return table;
+  int n_axis = map.at("num-axis").to_unsigned();
+  if (n_axis == 1) {
+    OneAxisTableValue table;
+    table.title = map.at("title").to_string();
+    auto axis = map.at("horizontal-axis").to_map();
+    table.row_name = axis.at("name").to_string();
+    for (const auto label : axis.at("values").to_array()) {
+      table.row_labels.push_back(label.to_string());
+    }
+    for (const auto datum : map.at("data").to_array()) {
+      table.data.push_back(datum.to_float());
+    }
+    return table;
+  } else if (n_axis == 2) {
+    TwoAxisTableValue table;
+    table.title = map.at("title").to_string();
+    return table;
+  } else {
+    return OneAxisTableValue{};
+  }
 }
 
 static ConfigValue generate_node_value_from_cbor(cbor value) {

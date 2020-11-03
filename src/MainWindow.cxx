@@ -101,8 +101,8 @@ static void add_config_structure_entry(Fl_Tree *tree, Fl_Tree_Item *parent,
       if (child.second.is_leaf()) {
         auto leaf = *child.second.leaf();
         auto node = model->get_node(leaf.path);
-        if (leaf.type == "table") {
-          auto table = std::get<viaems::TableValue>(*node->value);
+        if (std::holds_alternative<viaems::OneAxisTableValue>(*node->value)) {
+          auto table = std::get<viaems::OneAxisTableValue>(*node->value);
           item->label(table.title.c_str());
         } else {
           auto w = new ConfigLeafTreeWidget(0, 0, 100, 18, node);
