@@ -11,7 +11,12 @@
 #include <FL/Fl_Progress.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Input.H>
-#include <FL/Fl_Table.H>
+#include "TableEditor.h"
+#include <FL/Fl_Spinner.H>
+#include <FL/Fl_Check_Button.H>
+#include <FL/Fl_Choice.H>
+#include <FL/Fl_Button.H>
+#include <FL/Fl_Menu_Bar.H>
 
 class MainWindowUI {
 public:
@@ -27,10 +32,40 @@ protected:
   Fl_Progress *m_interrogation_progress;
   Fl_Group *m_table_editor_box;
   Fl_Input *m_table_title;
-  Fl_Table *m_table_editor;
+  TableEditor *m_table_editor;
+  Fl_Spinner *m_table_rows;
+  Fl_Spinner *m_table_cols;
+  Fl_Check_Button *m_tracing;
   Fl_Group *m_sensor_editor_box;
+  Fl_Choice *m_sensor_source;
+  Fl_Choice *m_sensor_method;
   Fl_Input *m_sensor_pin;
+  Fl_Input *m_sensor_range_min;
+  Fl_Input *m_sensor_range_max;
+  Fl_Input *m_sensor_therm_bias;
+  Fl_Input *m_sensor_therm_A;
+  Fl_Input *m_sensor_therm_B;
+  Fl_Input *m_sensor_therm_C;
+  Fl_Input *m_sensor_window_width;
+  Fl_Input *m_sensor_window_total;
+  Fl_Input *m_sensor_window_offset;
+  Fl_Input *m_sensor_fault_min;
+  Fl_Input *m_sensor_fault_max;
+  Fl_Input *m_sensor_fault_value;
+  Fl_Button *m_save;
+  Fl_Button *m_reset;
 public:
+  Fl_Menu_Bar *m_bar;
+  static Fl_Menu_Item menu_m_bar[];
+protected:
+  static Fl_Menu_Item *m_file_menu;
+  static Fl_Menu_Item *m_file_connect;
+  static Fl_Menu_Item *m_file_connect_socket;
+  static Fl_Menu_Item *m_file_connect_file;
+  static Fl_Menu_Item *m_file_saveall;
+  static Fl_Menu_Item *m_file_flash;
+public:
+  Fl_Check_Button *m_autosave;
   void show();
 };
 #endif

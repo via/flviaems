@@ -19,26 +19,28 @@ typedef std::map<std::string, FeedValue> FeedUpdate;
 
 typedef std::vector<std::variant<int, std::string>> StructurePath;
 
-struct OneAxisTableValue {
-  std::string title;
-  std::string row_name;
-  std::vector<std::string> row_labels;
-  std::vector<float> data;
+struct TableAxis {
+  std::string name;
+  std::vector<std::string> labels;
 };
 
-struct TwoAxisTableValue {
+struct TableValue {
   std::string title;
-  std::vector<std::string> row_labels;
-  std::vector<std::string> col_labels;
+  std::vector<TableAxis> axis;
+  std::vector<float> one;
   std::vector<std::vector<float>> two;
 };
 
 struct SensorValue {};
 struct OutputValue {};
 
-typedef std::variant<uint32_t, float, std::string, OneAxisTableValue, TwoAxisTableValue, SensorValue,
-                     OutputValue>
-    ConfigValue;
+typedef std::variant<uint32_t, float, std::string, TableValue, SensorValue,
+                    OutputValue>
+    ConfigValueTypedef;
+struct ConfigValue : ConfigValueTypedef {
+  using ConfigValueTypedef::ConfigValueTypedef;
+
+};
 
 struct ConfigNode {
   std::string description;
@@ -96,6 +98,14 @@ struct PingRequest {
   void *ptr;
 };
 
+typedef void (*set_cb)(StructurePath path, ConfigValue val, void *ptr);
+struct SetRequest {
+  set_cb cb;
+  StructurePath path;
+  ConfigValue val;
+  void *ptr;
+};
+
 struct Request {
   uint32_t id;
   std::variant<StructureRequest, GetRequest, PingRequest> request;
@@ -113,6 +123,7 @@ public:
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
   std::shared_ptr<Request> Structure(structure_cb, void *);
   std::shared_ptr<Request> Ping(ping_cb, void *);
+  std::shared_ptr<Request> Set(set_cb, ConfigValue, void *);
   bool Cancel(std::shared_ptr<Request> req);
 
 private:
@@ -170,12 +181,13 @@ public:
   Model(Protocol &protocol) : m_protocol{protocol} {};
 
   StructureNode &structure() { return root; };
-  std::shared_ptr<viaems::NodeModel> get_node(StructurePath path) {
-    return m_model.at(path);
+  std::shared_ptr<viaems::ConfigValue> get_value(StructurePath path) {
+    return m_model.at(path)->value;
   }
 
   InterrogationState interrogation_status();
   void interrogate(interrogate_cb, void *ptr);
+
 };
 
 } // namespace viaems

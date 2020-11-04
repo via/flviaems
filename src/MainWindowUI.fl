@@ -7,8 +7,8 @@ class MainWindowUI {open
   Function {MainWindowUI()} {open
   } {
     Fl_Window m_main_window {
-      label mainWindow open selected
-      protected xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX hide non_modal
+      label mainWindow open
+      protected xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -36,24 +36,161 @@ class MainWindowUI {open
         label Interrogation
         protected xywh {390 969 135 21}
       }
-      Fl_Group m_table_editor_box {open
-        protected xywh {455 35 540 440} box DOWN_BOX
+      Fl_Group m_table_editor_box {open selected
+        protected xywh {455 35 545 400} box DOWN_BOX resizable
       } {
         Fl_Input m_table_title {
           label Title
           protected xywh {496 45 119 30}
         }
         Fl_Table m_table_editor {open
-          protected xywh {460 85 530 385}
+          protected xywh {460 75 530 355} resizable
+          code0 {\#include "TableEditor.h"}
+          class TableEditor
         } {}
+        Fl_Spinner m_table_rows {
+          label Rows
+          protected xywh {660 45 40 25}
+        }
+        Fl_Spinner m_table_cols {
+          label Columns
+          protected xywh {775 45 40 25}
+        }
+        Fl_Check_Button m_tracing {
+          label Tracing
+          protected xywh {930 55 70 15} down_box DOWN_BOX
+        }
       }
       Fl_Group m_sensor_editor_box {open
-        protected xywh {455 35 540 440} box DOWN_BOX hide
+        protected xywh {455 35 545 400} box DOWN_BOX hide
       } {
-        Fl_Input m_sensor_pin {
-          label Pin
-          protected xywh {490 60 85 20}
+        Fl_Group {} {
+          label Input open
+          protected xywh {490 60 155 90} box THIN_DOWN_BOX
+        } {
+          Fl_Choice m_sensor_source {
+            label Source open
+            protected xywh {560 65 72 15} down_box BORDER_BOX
+          } {}
+          Fl_Choice m_sensor_method {
+            label Method open
+            protected xywh {560 95 72 15} down_box BORDER_BOX
+          } {}
+          Fl_Input m_sensor_pin {
+            label Pin
+            protected xywh {560 120 70 20}
+          }
         }
+        Fl_Group {} {
+          label {Linear Mapping} open
+          protected xywh {795 60 155 65} box THIN_DOWN_BOX
+        } {
+          Fl_Input m_sensor_range_min {
+            label Minimum
+            protected xywh {885 65 50 25}
+          }
+          Fl_Input m_sensor_range_max {
+            label Maximum
+            protected xywh {885 90 50 25}
+          }
+        }
+        Fl_Group {} {
+          label Thermistor open
+          protected xywh {795 170 155 110} box THIN_DOWN_BOX
+        } {
+          Fl_Input m_sensor_therm_bias {
+            label Bias
+            protected xywh {865 175 55 25}
+          }
+          Fl_Input m_sensor_therm_A {
+            label A
+            protected xywh {865 200 55 25}
+          }
+          Fl_Input m_sensor_therm_B {
+            label B
+            protected xywh {865 225 55 25}
+          }
+          Fl_Input m_sensor_therm_C {
+            label C
+            protected xywh {865 250 55 25}
+          }
+        }
+        Fl_Group {} {
+          label Windowing open
+          protected xywh {755 315 195 95} box THIN_DOWN_BOX
+        } {
+          Fl_Input m_sensor_window_width {
+            label {Capture Width}
+            protected xywh {905 325 35 25}
+          }
+          Fl_Input m_sensor_window_total {
+            label {Total Width}
+            protected xywh {905 350 35 25}
+          }
+          Fl_Input m_sensor_window_offset {
+            label {Window Start Offset}
+            protected xywh {905 375 35 25}
+          }
+        }
+        Fl_Group {} {
+          label Fault open
+          protected xywh {490 240 155 95} box THIN_DOWN_BOX
+        } {
+          Fl_Input m_sensor_fault_min {
+            label Minimum
+            protected xywh {575 250 50 25}
+          }
+          Fl_Input m_sensor_fault_max {
+            label Maximum
+            protected xywh {575 275 50 25}
+          }
+          Fl_Input m_sensor_fault_value {
+            label Value
+            protected xywh {575 300 50 25}
+          }
+        }
+      }
+      Fl_Button m_save {
+        label Save
+        protected xywh {550 445 70 20}
+      }
+      Fl_Button m_reset {
+        label Reset
+        protected xywh {630 445 70 20}
+      }
+      Fl_Menu_Bar m_bar {open
+        xywh {0 0 1050 20}
+      } {
+        Submenu m_file_menu {
+          label File open
+          protected xywh {0 0 70 21}
+        } {
+          Submenu m_file_connect {
+            label {Connect...} open
+            protected xywh {0 0 70 21}
+          } {
+            MenuItem m_file_connect_socket {
+              label Socket
+              protected xywh {0 0 36 21}
+            }
+            MenuItem m_file_connect_file {
+              label File
+              protected xywh {0 0 36 21}
+            }
+          }
+          MenuItem m_file_saveall {
+            label {Save All}
+            protected xywh {5 5 36 21}
+          }
+          MenuItem m_file_flash {
+            label Flash
+            protected xywh {5 5 36 21}
+          }
+        }
+      }
+      Fl_Check_Button m_autosave {
+        label Autosave
+        xywh {460 450 70 15} down_box DOWN_BOX value 1
       }
     }
     code {m_main_window->show();} {}
