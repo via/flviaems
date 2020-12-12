@@ -21,12 +21,12 @@ Fl_Menu_Item* MainWindowUI::m_file_saveall = MainWindowUI::menu_m_bar + 5;
 Fl_Menu_Item* MainWindowUI::m_file_flash = MainWindowUI::menu_m_bar + 6;
 
 MainWindowUI::MainWindowUI() {
-  { m_main_window = new Fl_Double_Window(1054, 1059, "mainWindow");
+  { m_main_window = new Fl_Double_Window(1022, 751, "mainWindow");
     m_main_window->box(FL_THIN_DOWN_BOX);
     m_main_window->user_data((void*)(this));
-    { m_config_tree = new Fl_Tree(20, 40, 400, 440, "Configuration");
+    { m_config_tree = new Fl_Tree(20, 40, 400, 345, "Configuration");
     } // Fl_Tree* m_config_tree
-    { m_status_table = new StatusTable(20, 505, 400, 445, "Status");
+    { m_status_table = new StatusTable(20, 415, 405, 270, "Status");
       m_status_table->box(FL_THIN_DOWN_FRAME);
       m_status_table->color(FL_BACKGROUND_COLOR);
       m_status_table->selection_color(FL_BACKGROUND_COLOR);
@@ -38,24 +38,24 @@ MainWindowUI::MainWindowUI() {
       m_status_table->when(FL_WHEN_RELEASE);
       m_status_table->end();
     } // StatusTable* m_status_table
-    { Fl_Box* o = new Fl_Box(10, 968, 990, 24, "Status:");
+    { Fl_Box* o = new Fl_Box(5, 721, 1010, 24, "Status:");
       o->box(FL_DOWN_BOX);
-      o->align(Fl_Align(FL_ALIGN_LEFT|FL_ALIGN_INSIDE));
+      o->align(Fl_Align(68|FL_ALIGN_INSIDE));
     } // Fl_Box* o
-    { m_connection_status = new Fl_Box(195, 968, 40, 24, "Connection");
+    { m_connection_status = new Fl_Box(170, 721, 40, 24, "Connection");
       m_connection_status->box(FL_UP_BOX);
       m_connection_status->color((Fl_Color)1);
       m_connection_status->align(Fl_Align(FL_ALIGN_LEFT));
     } // Fl_Box* m_connection_status
-    { m_rate = new Fl_Output(298, 968, 50, 25, "Rate:");
+    { m_rate = new Fl_Output(270, 720, 50, 25, "Rate:");
     } // Fl_Output* m_rate
-    { m_interrogation_progress = new Fl_Progress(390, 969, 135, 21, "Interrogation");
+    { m_interrogation_progress = new Fl_Progress(875, 724, 135, 21, "Interrogation");
     } // Fl_Progress* m_interrogation_progress
-    { m_table_editor_box = new Fl_Group(455, 35, 545, 400);
+    { m_table_editor_box = new Fl_Group(455, 35, 525, 360);
       m_table_editor_box->box(FL_DOWN_BOX);
       { m_table_title = new Fl_Input(496, 45, 119, 30, "Title");
       } // Fl_Input* m_table_title
-      { m_table_editor = new TableEditor(460, 75, 530, 355);
+      { m_table_editor = new TableEditor(460, 75, 510, 310);
         m_table_editor->box(FL_THIN_DOWN_FRAME);
         m_table_editor->color(FL_BACKGROUND_COLOR);
         m_table_editor->selection_color(FL_BACKGROUND_COLOR);
@@ -72,7 +72,7 @@ MainWindowUI::MainWindowUI() {
       } // Fl_Spinner* m_table_rows
       { m_table_cols = new Fl_Spinner(775, 45, 40, 25, "Columns");
       } // Fl_Spinner* m_table_cols
-      { m_tracing = new Fl_Check_Button(930, 55, 70, 15, "Tracing");
+      { m_tracing = new Fl_Check_Button(880, 50, 50, 15, "Tracing");
         m_tracing->down_box(FL_DOWN_BOX);
       } // Fl_Check_Button* m_tracing
       m_table_editor_box->end();
@@ -135,14 +135,14 @@ MainWindowUI::MainWindowUI() {
       } // Fl_Group* o
       m_sensor_editor_box->end();
     } // Fl_Group* m_sensor_editor_box
-    { m_save = new Fl_Button(550, 445, 70, 20, "Save");
+    { m_save = new Fl_Button(550, 400, 70, 20, "Save");
     } // Fl_Button* m_save
-    { m_reset = new Fl_Button(630, 445, 70, 20, "Reset");
+    { m_reset = new Fl_Button(630, 400, 70, 20, "Reset");
     } // Fl_Button* m_reset
     { m_bar = new Fl_Menu_Bar(0, 0, 1050, 20);
       m_bar->menu(menu_m_bar);
     } // Fl_Menu_Bar* m_bar
-    { m_autosave = new Fl_Check_Button(460, 450, 70, 15, "Autosave");
+    { m_autosave = new Fl_Check_Button(460, 400, 70, 15, "Autosave");
       m_autosave->down_box(FL_DOWN_BOX);
       m_autosave->value(1);
     } // Fl_Check_Button* m_autosave

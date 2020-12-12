@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <exception>
 #include <streambuf>
+#include <chrono>
 
 #include "viaems.h"
 
@@ -100,7 +101,7 @@ static TableAxis generate_table_axis_from_cbor(cbor::map axis) {
   TableAxis res{};
   res.name = axis.at("name").to_string();
   for (const auto label : axis.at("values").to_array()) {
-    res.labels.push_back(label.to_string());
+    res.labels.push_back(label.to_float());
   }
   return res;
 }
@@ -283,29 +284,51 @@ std::shared_ptr<Request> Protocol::Ping(ping_cb cb, void *v) {
   return req;
 }
 
+cbor::array cbor_path_from_structure_path(viaems::StructurePath path) {
+  cbor::array result;
+  for (const auto &p : path) {
+    std::visit([&](const auto &v){result.push_back(v);}, p);
+  }
+  return result;
+}
+
 std::shared_ptr<Request> Protocol::Get(get_cb cb, viaems::StructurePath path,
                                        void *v) {
   uint32_t id = rand() % 1024;
-
-  cbor::array cbor_path;
-  for (auto p : path) {
-    if (std::holds_alternative<int>(p)) {
-      cbor_path.push_back(std::get<int>(p));
-    } else if (std::holds_alternative<std::string>(p)) {
-      cbor_path.push_back(std::get<std::string>(p));
-    }
-  }
 
   cbor wire_request = cbor::map{
       {"type", "request"},
       {"method", "get"},
       {"id", id},
-      {"path", cbor_path},
+      {"path", cbor_path_from_structure_path(path)},
   };
 
   auto req = std::make_shared<Request>(Request{
       .id = id,
       .request = GetRequest{cb, path, v},
+      .repr = wire_request,
+  });
+  m_requests.push_back(req);
+  ensure_sent();
+
+  return req;
+}
+
+std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
+                                       viaems::ConfigValue value, void *v) {
+  uint32_t id = rand() % 1024;
+
+  cbor wire_request = cbor::map{
+      {"type", "request"},
+      {"method", "set"},
+      {"id", id},
+      {"path", cbor_path_from_structure_path(path)},
+      {"value", nullptr},
+  };
+
+  auto req = std::make_shared<Request>(Request{
+      .id = id,
+      .request = SetRequest{cb, path, value, v},
       .repr = wire_request,
   });
   m_requests.push_back(req);

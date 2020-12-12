@@ -35,7 +35,7 @@ class FLViaems {
     }
 
     if (updates.size() > 0) {
-      v->ui.feed_update(updates.at(0));
+      v->ui.feed_update(updates);
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
     }
     Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);

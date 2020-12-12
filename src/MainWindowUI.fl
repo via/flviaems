@@ -7,44 +7,44 @@ class MainWindowUI {open
   Function {MainWindowUI()} {open
   } {
     Fl_Window m_main_window {
-      label mainWindow open
-      protected xywh {1 20 1054 1059} type Double box THIN_DOWN_BOX resizable non_modal visible
+      label mainWindow open selected
+      protected xywh {1 16 1022 751} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
       Fl_Tree m_config_tree {
         label Configuration
-        protected xywh {20 40 400 440}
+        protected xywh {20 40 400 345}
       }
       Fl_Table m_status_table {
         label Status
-        protected xywh {20 505 400 445}
+        protected xywh {20 415 405 270}
         code0 {\#include "StatusTable.h"}
         class StatusTable
       } {}
       Fl_Box {} {
         label {Status:}
-        xywh {10 968 990 24} box DOWN_BOX align 20
+        xywh {5 721 1010 24} box DOWN_BOX align 84
       }
       Fl_Box m_connection_status {
         label Connection
-        xywh {195 968 40 24} box UP_BOX color 1 align 4
+        xywh {170 721 40 24} box UP_BOX color 1 align 4
       }
       Fl_Output m_rate {
         label {Rate:}
-        protected xywh {298 968 50 25}
+        protected xywh {270 720 50 25}
       }
       Fl_Progress m_interrogation_progress {
         label Interrogation
-        protected xywh {390 969 135 21}
+        protected xywh {875 724 135 21}
       }
-      Fl_Group m_table_editor_box {open selected
-        protected xywh {455 35 545 400} box DOWN_BOX resizable
+      Fl_Group m_table_editor_box {open
+        protected xywh {455 35 525 360} box DOWN_BOX resizable
       } {
         Fl_Input m_table_title {
           label Title
           protected xywh {496 45 119 30}
         }
         Fl_Table m_table_editor {open
-          protected xywh {460 75 530 355} resizable
+          protected xywh {460 75 510 310} resizable
           code0 {\#include "TableEditor.h"}
           class TableEditor
         } {}
@@ -58,7 +58,7 @@ class MainWindowUI {open
         }
         Fl_Check_Button m_tracing {
           label Tracing
-          protected xywh {930 55 70 15} down_box DOWN_BOX
+          protected xywh {880 50 50 15} down_box DOWN_BOX
         }
       }
       Fl_Group m_sensor_editor_box {open
@@ -152,11 +152,11 @@ class MainWindowUI {open
       }
       Fl_Button m_save {
         label Save
-        protected xywh {550 445 70 20}
+        protected xywh {550 400 70 20}
       }
       Fl_Button m_reset {
         label Reset
-        protected xywh {630 445 70 20}
+        protected xywh {630 400 70 20}
       }
       Fl_Menu_Bar m_bar {open
         xywh {0 0 1050 20}
@@ -190,7 +190,7 @@ class MainWindowUI {open
       }
       Fl_Check_Button m_autosave {
         label Autosave
-        xywh {460 450 70 15} down_box DOWN_BOX value 1
+        xywh {460 400 70 15} down_box DOWN_BOX value 1
       }
     }
     code {m_main_window->show();} {}

@@ -118,8 +118,9 @@ void MainWindow::update_feed_hz(int hz) {
   m_rate->redraw();
 }
 
-void MainWindow::feed_update(viaems::FeedUpdate const &update) {
-  m_status_table->feed_update(update);
+void MainWindow::feed_update(std::vector<viaems::FeedUpdate> const &updates) {
+  m_status_table->feed_update(updates.at(0));
+  log.Update(updates);
 }
 
 void MainWindow::select_table(Fl_Widget *w, void *p) {

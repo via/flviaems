@@ -8,20 +8,31 @@
 #include <sstream>
 #include <variant>
 #include <vector>
+#include <chrono>
 
 #include <cbor11.h>
 #include <fstream>
 
 namespace viaems {
 
+typedef std::chrono::time_point<std::chrono::system_clock> FeedTime;
 typedef std::variant<uint32_t, float> FeedValue;
-typedef std::map<std::string, FeedValue> FeedUpdate;
+typedef std::map<std::string, FeedValue> FeedUpdateTypedef;
+
+struct FeedUpdate : public std::map<std::string, FeedValue> {
+  std::chrono::system_clock::time_point time;
+
+  FeedUpdate(std::chrono::system_clock::time_point t) : std::map<std::string, FeedValue>(), time(t) {};
+
+  FeedUpdate() : FeedUpdate{std::chrono::system_clock::now()} {};
+
+};
 
 typedef std::vector<std::variant<int, std::string>> StructurePath;
 
 struct TableAxis {
   std::string name;
-  std::vector<std::string> labels;
+  std::vector<float> labels;
 };
 
 struct TableValue {
@@ -108,7 +119,7 @@ struct SetRequest {
 
 struct Request {
   uint32_t id;
-  std::variant<StructureRequest, GetRequest, PingRequest> request;
+  std::variant<StructureRequest, GetRequest, SetRequest, PingRequest> request;
   bool is_sent;
   cbor repr;
 };
@@ -123,7 +134,7 @@ public:
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
   std::shared_ptr<Request> Structure(structure_cb, void *);
   std::shared_ptr<Request> Ping(ping_cb, void *);
-  std::shared_ptr<Request> Set(set_cb, ConfigValue, void *);
+  std::shared_ptr<Request> Set(set_cb, StructurePath, ConfigValue, void *);
   bool Cancel(std::shared_ptr<Request> req);
 
 private:

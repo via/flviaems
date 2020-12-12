@@ -2,12 +2,12 @@
 #define MainWindow_h
 
 #include "MainWindowUI.h"
+#include "Log.h"
 #include "viaems.h"
 
 class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
-
-  std::weak_ptr<viaems::NodeModel> m_current_table;
+  Log log;
 
   void update_config_structure(viaems::StructureNode top);
   void update_config_value(viaems::StructurePath &path,
@@ -21,7 +21,7 @@ class MainWindow : public MainWindowUI {
   void add_config_structure_entry(Fl_Tree_Item *, viaems::StructureNode);
 public:
   MainWindow();
-  void feed_update(viaems::FeedUpdate const &);
+  void feed_update(std::vector<viaems::FeedUpdate> const &);
   void update_connection_status(bool status);
   void update_feed_hz(int hz);
   void update_model(viaems::Model *model);
