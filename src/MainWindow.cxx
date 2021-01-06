@@ -7,7 +7,8 @@
 #include "MainWindow.h"
 
 class ConfigLeafTreeWidget;
-typedef void (*Value_Change_Callback)(ConfigLeafTreeWidget *w, std::string value);
+typedef void (*Value_Change_Callback)(ConfigLeafTreeWidget *w,
+                                      std::string value);
 
 class SelectableTreeWidget : public Fl_Group {
 protected:
@@ -28,10 +29,8 @@ protected:
     return Fl_Group::handle(e);
   }
 
-
 public:
-  SelectableTreeWidget(int X, int Y, int W, int H,
-                       viaems::StructurePath path)
+  SelectableTreeWidget(int X, int Y, int W, int H, viaems::StructurePath path)
       : Fl_Group(X, Y, W, H) {
 
     this->path = path;
@@ -62,17 +61,14 @@ public:
   }
 
   viaems::StructurePath path;
-
 };
 
-template<typename T>
-class NumericTreeWidget : public SelectableTreeWidget {
+template <typename T> class NumericTreeWidget : public SelectableTreeWidget {
   Fl_Input *field;
 
-  public:
-  NumericTreeWidget(int X, int Y, int W, int H,
-                       viaems::StructurePath path,
-                       viaems::ConfigValue &value)
+public:
+  NumericTreeWidget(int X, int Y, int W, int H, viaems::StructurePath path,
+                    viaems::ConfigValue &value)
       : SelectableTreeWidget(X, Y, W, H, path) {
 
     begin();
@@ -85,11 +81,9 @@ class NumericTreeWidget : public SelectableTreeWidget {
 class ChoiceTreeWidget : public SelectableTreeWidget {
   Fl_Choice *chooser;
 
-  public:
-  ChoiceTreeWidget(int X, int Y, int W, int H,
-                       viaems::StructurePath path,
-                       std::vector<std::string> choices,
-                       viaems::ConfigValue &value)
+public:
+  ChoiceTreeWidget(int X, int Y, int W, int H, viaems::StructurePath path,
+                   std::vector<std::string> choices, viaems::ConfigValue &value)
       : SelectableTreeWidget(X, Y, W, H, path) {
 
     begin();
@@ -162,7 +156,7 @@ void MainWindow::bleh(Fl_Widget *w, void *p) {
 }
 
 void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
-                                       viaems::StructureNode node) {
+                                            viaems::StructureNode node) {
   if (node.is_map()) {
     for (auto child : *node.map()) {
       auto item = new Fl_Tree_Item(m_config_tree->prefs());
@@ -172,15 +166,18 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
         auto leaf = *child.second.leaf();
         auto value = m_model->get_value(leaf.path);
         if (std::holds_alternative<float>(*value)) {
-          auto w = new NumericTreeWidget<float>(0, 0, 300, 18, leaf.path, *value);
+          auto w =
+              new NumericTreeWidget<float>(0, 0, 300, 18, leaf.path, *value);
           w->select_callback(bleh, this);
           item->widget(w);
         } else if (std::holds_alternative<uint32_t>(*value)) {
-          auto w = new NumericTreeWidget<uint32_t>(0, 0, 300, 18, leaf.path, *value);
+          auto w =
+              new NumericTreeWidget<uint32_t>(0, 0, 300, 18, leaf.path, *value);
           w->select_callback(bleh, this);
           item->widget(w);
         } else if (std::holds_alternative<std::string>(*value)) {
-          auto w = new ChoiceTreeWidget(0, 0, 300, 18, leaf.path, leaf.choices, *value);
+          auto w = new ChoiceTreeWidget(0, 0, 300, 18, leaf.path, leaf.choices,
+                                        *value);
           w->select_callback(bleh, this);
           item->widget(w);
         } else if (std::holds_alternative<viaems::TableValue>(*value)) {

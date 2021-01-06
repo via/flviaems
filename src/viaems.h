@@ -1,6 +1,7 @@
 #ifndef VIAEMS_PROTOCOL_H
 #define VIAEMS_PROTOCOL_H
 
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -8,7 +9,6 @@
 #include <sstream>
 #include <variant>
 #include <vector>
-#include <chrono>
 
 #include <cbor11.h>
 #include <fstream>
@@ -22,10 +22,10 @@ typedef std::map<std::string, FeedValue> FeedUpdateTypedef;
 struct FeedUpdate : public std::map<std::string, FeedValue> {
   std::chrono::system_clock::time_point time;
 
-  FeedUpdate(std::chrono::system_clock::time_point t) : std::map<std::string, FeedValue>(), time(t) {};
+  FeedUpdate(std::chrono::system_clock::time_point t)
+      : std::map<std::string, FeedValue>(), time(t){};
 
   FeedUpdate() : FeedUpdate{std::chrono::system_clock::now()} {};
-
 };
 
 typedef std::vector<std::variant<int, std::string>> StructurePath;
@@ -46,11 +46,10 @@ struct SensorValue {};
 struct OutputValue {};
 
 typedef std::variant<uint32_t, float, std::string, TableValue, SensorValue,
-                    OutputValue>
+                     OutputValue>
     ConfigValueTypedef;
 struct ConfigValue : ConfigValueTypedef {
   using ConfigValueTypedef::ConfigValueTypedef;
-
 };
 
 struct ConfigNode {
@@ -198,7 +197,6 @@ public:
 
   InterrogationState interrogation_status();
   void interrogate(interrogate_cb, void *ptr);
-
 };
 
 } // namespace viaems

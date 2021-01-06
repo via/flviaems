@@ -1,7 +1,7 @@
+#include <chrono>
 #include <cstdlib>
 #include <exception>
 #include <streambuf>
-#include <chrono>
 
 #include "viaems.h"
 
@@ -110,14 +110,16 @@ static ConfigValue generate_table_value_from_cbor(cbor::map map) {
   TableValue table;
   int n_axis = map.at("num-axis").to_unsigned();
   table.title = map.at("title").to_string();
-  table.axis.push_back(generate_table_axis_from_cbor(map.at("horizontal-axis").to_map()));
+  table.axis.push_back(
+      generate_table_axis_from_cbor(map.at("horizontal-axis").to_map()));
 
   if (n_axis == 1) {
     for (const auto datum : map.at("data").to_array()) {
       table.one.push_back(datum.to_float());
     }
   } else if (n_axis == 2) {
-    table.axis.push_back(generate_table_axis_from_cbor(map.at("vertical-axis").to_map()));
+    table.axis.push_back(
+        generate_table_axis_from_cbor(map.at("vertical-axis").to_map()));
     for (const auto outter : map.at("data").to_array()) {
       std::vector<float> values;
       for (const auto value : outter.to_array()) {
@@ -287,7 +289,7 @@ std::shared_ptr<Request> Protocol::Ping(ping_cb cb, void *v) {
 cbor::array cbor_path_from_structure_path(viaems::StructurePath path) {
   cbor::array result;
   for (const auto &p : path) {
-    std::visit([&](const auto &v){result.push_back(v);}, p);
+    std::visit([&](const auto &v) { result.push_back(v); }, p);
   }
   return result;
 }
@@ -319,10 +321,8 @@ std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
   uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
-      {"type", "request"},
-      {"method", "set"},
-      {"id", id},
-      {"path", cbor_path_from_structure_path(path)},
+      {"type", "request"}, {"method", "set"},
+      {"id", id},          {"path", cbor_path_from_structure_path(path)},
       {"value", nullptr},
   };
 

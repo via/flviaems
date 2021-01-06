@@ -1,8 +1,8 @@
 #ifndef MainWindow_h
 #define MainWindow_h
 
-#include "MainWindowUI.h"
 #include "Log.h"
+#include "MainWindowUI.h"
 #include "viaems.h"
 
 class MainWindow : public MainWindowUI {
@@ -19,6 +19,7 @@ class MainWindow : public MainWindowUI {
   static void bleh(Fl_Widget *w, void *p);
 
   void add_config_structure_entry(Fl_Tree_Item *, viaems::StructureNode);
+
 public:
   MainWindow();
   void feed_update(std::vector<viaems::FeedUpdate> const &);
@@ -26,7 +27,6 @@ public:
   void update_feed_hz(int hz);
   void update_model(viaems::Model *model);
   void update_interrogation(bool in_progress, int value, int max);
-
 };
 
 #endif

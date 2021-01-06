@@ -9,4 +9,3 @@ void Log::Update(std::vector<viaems::FeedUpdate> list) {
   }
 #endif
 }
-

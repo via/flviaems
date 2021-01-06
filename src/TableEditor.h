@@ -10,6 +10,7 @@ public:
   TableEditor(int X, int Y, int W, int H);
 
   void setTable(viaems::TableValue table);
+
 private:
   viaems::TableValue table;
   void draw_cell(TableContext c, int R, int C, int X, int Y, int W, int H);
