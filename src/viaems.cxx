@@ -37,7 +37,7 @@ void Protocol::handle_feed_message_from_ems(cbor::array a) {
   m_feed_updates.push_back(update);
 }
 
-static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
+static StructureLeaf generate_config_node(cbor::map entry, StructurePath path) {
   std::string type = entry.at("_type").to_string();
   std::string desc = "";
   if (entry.count("description")) {
@@ -51,7 +51,7 @@ static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
     }
   }
 
-  return ConfigNode{
+  return StructureLeaf{
       .description = desc,
       .type = entry.at("_type").to_string(),
       .choices = choices,
@@ -62,39 +62,39 @@ static ConfigNode generate_config_node(cbor::map entry, StructurePath path) {
 static StructureNode generate_structure_node_from_cbor(cbor entry,
                                                        StructurePath curpath) {
   if (entry.is_map()) {
-    if (entry.to_map().count("_type")) {
+    auto map = entry.to_map();
+    if (map.count("_type")) {
       /* This is a leaf node */
-      return StructureNode{
-          std::make_shared<ConfigNode>(generate_config_node(entry, curpath))};
+      return StructureNode{generate_config_node(map, curpath)};
     }
 
     /* This is actually a map, we should descend */
-    auto contents = std::make_shared<StructureMap>();
-    for (auto map_entry : entry.to_map()) {
+    auto result = StructureMap{};
+    for (const auto &map_entry : entry.to_map()) {
       StructurePath new_path = curpath;
       new_path.push_back(map_entry.first.to_string());
 
       auto child =
           generate_structure_node_from_cbor(map_entry.second, new_path);
-      contents->insert(std::pair<std::string, StructureNode>(
+      result.insert(std::pair<std::string, StructureNode>(
           map_entry.first.to_string(), child));
     }
-    return StructureNode{contents};
+    return StructureNode{result};
   } else if (entry.is_array()) {
-    auto contents = std::make_shared<StructureList>();
+    auto result = StructureList{};
     int index = 0;
-    for (auto list_entry : entry.to_array()) {
+    for (const auto &list_entry : entry.to_array()) {
       StructurePath new_path = curpath;
       new_path.push_back(index);
       index += 1;
 
       auto child = generate_structure_node_from_cbor(list_entry, new_path);
-      contents->push_back(child);
+      result.push_back(child);
     }
-    return StructureNode{contents};
+    return StructureNode{result};
   }
 
-  return StructureNode{std::make_shared<ConfigNode>()};
+  return StructureNode{StructureLeaf{}};
 }
 
 static TableAxis generate_table_axis_from_cbor(cbor::map axis) {
@@ -386,7 +386,7 @@ InterrogationState Model::interrogation_status() {
 
   for (auto &x : m_model) {
     n_nodes++;
-    if (x.second->is_valid()) {
+    if (x.second->valid) {
       n_complete++;
     }
   }
@@ -399,7 +399,8 @@ InterrogationState Model::interrogation_status() {
 
 void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
-  model->m_model.at(path)->value = std::make_shared<ConfigValue>(val);
+  model->m_model.at(path)->value = val;
+  model->m_model.at(path)->valid = true;
   model->interrogation_callback(model->interrogation_status(),
                                 model->interrogation_callback_ptr);
 }
@@ -416,15 +417,15 @@ void Model::recurse_model_structure(StructureNode node) {
   if (node.is_leaf()) {
     auto leaf = node.leaf();
     auto nodemodel = std::make_unique<NodeModel>();
-    nodemodel->node = *leaf;
-    m_model.insert(std::make_pair(leaf->path, std::move(nodemodel)));
-    get_reqs.push_back(m_protocol.Get(handle_model_get, leaf->path, this));
+    nodemodel->node = leaf;
+    m_model.insert(std::make_pair(leaf.path, std::move(nodemodel)));
+    get_reqs.push_back(m_protocol.Get(handle_model_get, leaf.path, this));
   } else if (node.is_map()) {
-    for (auto child : *node.map()) {
+    for (auto child : node.map()) {
       recurse_model_structure(child.second);
     }
   } else if (node.is_list()) {
-    for (auto child : *node.list()) {
+    for (auto child : node.list()) {
       recurse_model_structure(child);
     }
   }

@@ -122,7 +122,7 @@ void MainWindow::select_table(Fl_Widget *w, void *p) {
   auto s = (SelectableTreeWidget *)w;
 
   auto value = mw->m_model->get_value(s->path);
-  mw->update_tree_editor(std::get<viaems::TableValue>(*value));
+  mw->update_tree_editor(std::get<viaems::TableValue>(value));
 }
 
 void MainWindow::update_tree_editor(viaems::TableValue val) {
@@ -155,32 +155,33 @@ void MainWindow::bleh(Fl_Widget *w, void *p) {
 #endif
 }
 
+
 void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
                                             viaems::StructureNode node) {
   if (node.is_map()) {
-    for (auto child : *node.map()) {
+    for (auto child : node.map()) {
       auto item = new Fl_Tree_Item(m_config_tree->prefs());
       item->label(child.first.c_str());
       parent->add(m_config_tree->prefs(), "", item);
       if (child.second.is_leaf()) {
-        auto leaf = *child.second.leaf();
+        auto leaf = child.second.leaf();
         auto value = m_model->get_value(leaf.path);
-        if (std::holds_alternative<float>(*value)) {
+        if (std::holds_alternative<float>(value)) {
           auto w =
-              new NumericTreeWidget<float>(0, 0, 300, 18, leaf.path, *value);
+              new NumericTreeWidget<float>(0, 0, 300, 18, leaf.path, value);
           w->select_callback(bleh, this);
           item->widget(w);
-        } else if (std::holds_alternative<uint32_t>(*value)) {
+        } else if (std::holds_alternative<uint32_t>(value)) {
           auto w =
-              new NumericTreeWidget<uint32_t>(0, 0, 300, 18, leaf.path, *value);
+              new NumericTreeWidget<uint32_t>(0, 0, 300, 18, leaf.path, value);
           w->select_callback(bleh, this);
           item->widget(w);
-        } else if (std::holds_alternative<std::string>(*value)) {
+        } else if (std::holds_alternative<std::string>(value)) {
           auto w = new ChoiceTreeWidget(0, 0, 300, 18, leaf.path, leaf.choices,
-                                        *value);
+                                        value);
           w->select_callback(bleh, this);
           item->widget(w);
-        } else if (std::holds_alternative<viaems::TableValue>(*value)) {
+        } else if (std::holds_alternative<viaems::TableValue>(value)) {
           auto w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
           w->select_callback(select_table, this);
           item->widget(w);
@@ -195,7 +196,7 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
     }
   } else if (node.is_list()) {
     int index = 0;
-    for (auto child : *node.list()) {
+    for (auto child : node.list()) {
       auto item = new Fl_Tree_Item(m_config_tree->prefs());
       item->label(std::to_string(index).c_str());
       parent->add(m_config_tree->prefs(), "", item);
@@ -210,7 +211,7 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
   m_config_tree->selectmode(FL_TREE_SELECT_NONE);
   auto root = m_config_tree->root();
   m_config_tree->begin();
-  for (auto child : *top.map()) {
+  for (auto child : top.map()) {
     auto item = new Fl_Tree_Item(m_config_tree->prefs());
     item->label(child.first.c_str());
     root->add(m_config_tree->prefs(), "", item);

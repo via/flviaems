@@ -52,7 +52,7 @@ struct ConfigValue : ConfigValueTypedef {
   using ConfigValueTypedef::ConfigValueTypedef;
 };
 
-struct ConfigNode {
+struct StructureLeaf {
   std::string description;
   std::string type;
   std::vector<std::string> choices;
@@ -63,29 +63,27 @@ struct StructureNode;
 typedef std::vector<StructureNode> StructureList;
 typedef std::map<std::string, StructureNode> StructureMap;
 
-struct StructureNode {
-  std::variant<std::shared_ptr<StructureList>, std::shared_ptr<StructureMap>,
-               std::shared_ptr<ConfigNode>>
-      contents;
+typedef std::variant<StructureList, StructureMap, StructureLeaf> StructureNodeTypedef;
+struct StructureNode : StructureNodeTypedef {
   bool is_map() {
-    return std::holds_alternative<std::shared_ptr<StructureMap>>(
-        this->contents);
+    return std::holds_alternative<StructureMap>(*this);
   }
-  std::shared_ptr<StructureMap> map() {
-    return std::get<std::shared_ptr<StructureMap>>(this->contents);
+
+  StructureMap map() {
+    return std::get<StructureMap>(*this);
   }
+
   bool is_list() {
-    return std::holds_alternative<std::shared_ptr<StructureList>>(
-        this->contents);
+    return std::holds_alternative<StructureList>(*this);
   }
-  std::shared_ptr<StructureList> list() {
-    return std::get<std::shared_ptr<StructureList>>(this->contents);
+  StructureList list() {
+    return std::get<StructureList>(*this);
   }
   bool is_leaf() {
-    return std::holds_alternative<std::shared_ptr<ConfigNode>>(this->contents);
+    return std::holds_alternative<StructureLeaf>(*this);
   }
-  std::shared_ptr<ConfigNode> leaf() {
-    return std::get<std::shared_ptr<ConfigNode>>(this->contents);
+  StructureLeaf leaf() {
+    return std::get<StructureLeaf>(*this);
   }
 };
 
@@ -154,13 +152,11 @@ private:
 
 class Model;
 struct NodeModel {
-  struct ConfigNode node;
-  std::shared_ptr<ConfigValue> value;
-  std::weak_ptr<Model> model;
+  struct StructureLeaf node;
+  ConfigValue value;
 
   bool m_pending_write;
-  bool is_valid() { return value != NULL; }
-  bool is_waiting() { return (value == NULL) || m_pending_write; }
+  bool valid;
 };
 
 struct InterrogationState {
@@ -191,7 +187,7 @@ public:
   Model(Protocol &protocol) : m_protocol{protocol} {};
 
   StructureNode &structure() { return root; };
-  std::shared_ptr<viaems::ConfigValue> get_value(StructurePath path) {
+  viaems::ConfigValue get_value(StructurePath path) {
     return m_model.at(path)->value;
   }
 
