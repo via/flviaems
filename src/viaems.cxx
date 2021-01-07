@@ -151,6 +151,51 @@ static ConfigValue generate_node_value_from_cbor(cbor value) {
   return ConfigValue{5.0f};
 }
 
+template <typename T> static cbor cbor_from_value(T v) { return cbor{v}; }
+
+static cbor cbor_from_table_axis(TableAxis axis) {
+  cbor::array labels;
+  for (const auto l : axis.labels) {
+    labels.push_back(l);
+  }
+  auto result = cbor::map{
+      {"name", axis.name},
+      {"labels", labels},
+  };
+  return result;
+}
+
+static cbor cbor_from_value(const TableValue &v) {
+  auto result = cbor::map{
+      {"num-axis", v.axis.size()},
+      {"title", v.title},
+      {"horizontal-axis", cbor_from_table_axis(v.axis[0])},
+  };
+  if (v.axis.size() == 1) {
+    auto data = cbor::array{};
+    for (const auto d : v.one) {
+      data.push_back(d);
+    }
+    result.insert(std::pair("data", data));
+  } else {
+    auto data = cbor::array{};
+    for (const auto row : v.two) {
+      auto cbor_row = cbor::array{};
+      for (const auto val : row) {
+        cbor_row.push_back(val);
+      }
+      data.push_back(cbor_row);
+    }
+    result.insert(std::pair("data", data));
+    result.insert(std::pair("vertical-axis", cbor_from_table_axis(v.axis[1])));
+  }
+  return result;
+}
+
+static cbor cbor_from_value(const OutputValue &v) { return cbor{}; }
+
+static cbor cbor_from_value(const SensorValue &v) { return cbor{}; }
+
 void Protocol::handle_response_message_from_ems(uint32_t id, cbor response) {
   if (m_requests.empty()) {
     return;
@@ -321,9 +366,13 @@ std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
   uint32_t id = rand() % 1024;
 
   cbor wire_request = cbor::map{
-      {"type", "request"}, {"method", "set"},
-      {"id", id},          {"path", cbor_path_from_structure_path(path)},
-      {"value", nullptr},
+      {"type", "request"},
+      {"method", "set"},
+      {"id", id},
+      {"path", cbor_path_from_structure_path(path)},
+      {"value",
+       std::visit([](const auto &v) -> cbor { return cbor_from_value(v); },
+                  value)},
   };
 
   auto req = std::make_shared<Request>(Request{
@@ -362,9 +411,7 @@ void Protocol::ensure_sent() {
   m_out.flush();
 }
 
-void Model::interrogate(interrogate_cb cb, void *ptr) {
-  interrogation_callback = cb;
-  interrogation_callback_ptr = ptr;
+void Model::interrogate() {
   /* First clear any ongoing interrogation commands */
   for (auto r = get_reqs.rbegin(); r != get_reqs.rend(); r++) {
     m_protocol.Cancel(*r);
@@ -401,16 +448,14 @@ void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
   model->m_model.at(path)->value = val;
   model->m_model.at(path)->valid = true;
-  model->interrogation_callback(model->interrogation_status(),
-                                model->interrogation_callback_ptr);
+  model->change_callback(model->change_callback_ptr);
 }
 
 void Model::handle_model_structure(StructureNode root, void *ptr) {
   Model *model = (Model *)ptr;
   model->root = root;
   model->recurse_model_structure(root);
-  model->interrogation_callback(model->interrogation_status(),
-                                model->interrogation_callback_ptr);
+  model->change_callback(model->change_callback_ptr);
 }
 
 void Model::recurse_model_structure(StructureNode node) {

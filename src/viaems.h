@@ -47,10 +47,7 @@ struct OutputValue {};
 
 typedef std::variant<uint32_t, float, std::string, TableValue, SensorValue,
                      OutputValue>
-    ConfigValueTypedef;
-struct ConfigValue : ConfigValueTypedef {
-  using ConfigValueTypedef::ConfigValueTypedef;
-};
+    ConfigValue;
 
 struct StructureLeaf {
   std::string description;
@@ -154,18 +151,19 @@ struct InterrogationState {
   int complete_nodes;
 };
 
-typedef void (*interrogate_cb)(InterrogationState s, void *ptr);
+typedef void (*model_change_cb)(void *ptr);
 
 class Model {
   Protocol &m_protocol;
+  model_change_cb change_callback;
+  void *change_callback_ptr;
+
   std::map<StructurePath, std::shared_ptr<NodeModel>> m_model;
   StructureNode root;
 
   /* Interrogation members */
   std::shared_ptr<Request> structure_req;
   std::vector<std::shared_ptr<Request>> get_reqs;
-  interrogate_cb interrogation_callback;
-  void *interrogation_callback_ptr;
 
   void recurse_model_structure(StructureNode node);
 
@@ -173,7 +171,8 @@ class Model {
   static void handle_model_structure(StructureNode root, void *ptr);
 
 public:
-  Model(Protocol &protocol) : m_protocol{protocol} {};
+  Model(Protocol &protocol, model_change_cb cb, void *p)
+      : m_protocol{protocol}, change_callback(cb), change_callback_ptr(p){};
 
   StructureNode &structure() { return root; };
   viaems::ConfigValue get_value(StructurePath path) {
@@ -181,7 +180,7 @@ public:
   }
 
   InterrogationState interrogation_status();
-  void interrogate(interrogate_cb, void *ptr);
+  void interrogate();
 };
 
 } // namespace viaems
