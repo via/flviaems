@@ -155,7 +155,6 @@ void MainWindow::bleh(Fl_Widget *w, void *p) {
 #endif
 }
 
-
 void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
                                             viaems::StructureNode node) {
   if (node.is_map()) {

@@ -63,28 +63,17 @@ struct StructureNode;
 typedef std::vector<StructureNode> StructureList;
 typedef std::map<std::string, StructureNode> StructureMap;
 
-typedef std::variant<StructureList, StructureMap, StructureLeaf> StructureNodeTypedef;
+typedef std::variant<StructureList, StructureMap, StructureLeaf>
+    StructureNodeTypedef;
 struct StructureNode : StructureNodeTypedef {
-  bool is_map() {
-    return std::holds_alternative<StructureMap>(*this);
-  }
+  bool is_map() { return std::holds_alternative<StructureMap>(*this); }
 
-  StructureMap map() {
-    return std::get<StructureMap>(*this);
-  }
+  StructureMap map() { return std::get<StructureMap>(*this); }
 
-  bool is_list() {
-    return std::holds_alternative<StructureList>(*this);
-  }
-  StructureList list() {
-    return std::get<StructureList>(*this);
-  }
-  bool is_leaf() {
-    return std::holds_alternative<StructureLeaf>(*this);
-  }
-  StructureLeaf leaf() {
-    return std::get<StructureLeaf>(*this);
-  }
+  bool is_list() { return std::holds_alternative<StructureList>(*this); }
+  StructureList list() { return std::get<StructureList>(*this); }
+  bool is_leaf() { return std::holds_alternative<StructureLeaf>(*this); }
+  StructureLeaf leaf() { return std::get<StructureLeaf>(*this); }
 };
 
 typedef void (*get_cb)(StructurePath path, ConfigValue val, void *ptr);
