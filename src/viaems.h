@@ -151,36 +151,47 @@ struct InterrogationState {
   int complete_nodes;
 };
 
-typedef void (*model_change_cb)(void *ptr);
+typedef void (*interrogation_change_cb)(InterrogationState, void *ptr);
+typedef void (*value_change_cb)(StructurePath path, void *ptr);
 
 class Model {
   Protocol &m_protocol;
-  model_change_cb change_callback;
-  void *change_callback_ptr;
+
+  value_change_cb value_cb = nullptr;
+  void *value_cb_ptr;
 
   std::map<StructurePath, std::shared_ptr<NodeModel>> m_model;
   StructureNode root;
 
   /* Interrogation members */
+  interrogation_change_cb interrogate_cb;
+  void *interrogate_cb_ptr;
   std::shared_ptr<Request> structure_req;
   std::vector<std::shared_ptr<Request>> get_reqs;
 
   void recurse_model_structure(StructureNode node);
 
   static void handle_model_get(StructurePath path, ConfigValue val, void *ptr);
+  static void handle_model_set(StructurePath path, ConfigValue val, void *ptr);
   static void handle_model_structure(StructureNode root, void *ptr);
 
 public:
-  Model(Protocol &protocol, model_change_cb cb, void *p)
-      : m_protocol{protocol}, change_callback(cb), change_callback_ptr(p){};
+  Model(Protocol &protocol) : m_protocol{protocol}{};
 
   StructureNode &structure() { return root; };
+
   viaems::ConfigValue get_value(StructurePath path) {
     return m_model.at(path)->value;
   }
 
+  void set_value_change_callback(value_change_cb cb, void *ptr) {
+    value_cb = cb;
+    value_cb_ptr = ptr;
+  }
+
   InterrogationState interrogation_status();
-  void interrogate();
+  void interrogate(interrogation_change_cb cb, void *ptr);
+  void set_value(StructurePath path, ConfigValue value);
 };
 
 } // namespace viaems

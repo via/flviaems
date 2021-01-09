@@ -34,7 +34,11 @@ void TableEditor::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
     fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H, fl_inactive(FL_WHITE));
     fl_color(FL_BLACK);
     fl_push_clip(X, Y, W, H);
-    snprintf(buf, sizeof(buf), "%.4g", this->table.axis[0].labels[R]);
+    if (this->table.axis.size() == 2) {
+      snprintf(buf, sizeof(buf), "%.4g", this->table.axis[1].labels[R]);
+    } else {
+      snprintf(buf, sizeof(buf), "%.4g", this->table.axis[0].labels[R]);
+    }
     fl_draw(buf, X, Y, W, H, FL_ALIGN_CENTER);
     fl_pop_clip();
     break;
@@ -42,7 +46,7 @@ void TableEditor::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
     fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H, fl_inactive(FL_WHITE));
     fl_color(FL_BLACK);
     fl_push_clip(X, Y, W, H);
-    snprintf(buf, sizeof(buf), "%.4g", this->table.axis[1].labels[C]);
+    snprintf(buf, sizeof(buf), "%.4g", this->table.axis[0].labels[C]);
     fl_draw(buf, X, Y, W, H, FL_ALIGN_CENTER);
     fl_pop_clip();
     break;

@@ -27,6 +27,7 @@ public:
   void update_feed_hz(int hz);
   void update_model(viaems::Model *model);
   void update_interrogation(bool in_progress, int value, int max);
+  void update_node(viaems::StructurePath);
 };
 
 #endif

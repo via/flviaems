@@ -63,14 +63,18 @@ class FLViaems {
     v->ui.update_connection_status(false);
   }
 
-  static void model_changed(void *ptr) {
+  static void interrogate_update(viaems::InterrogationState s, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
-    auto s = v->model.interrogation_status();
     v->ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
     if (!s.in_progress) {
       v->ui.update_model(&v->model);
     }
+  }
+
+  static void value_update(viaems::StructurePath path, void *ptr) {
+    auto v = static_cast<FLViaems *>(ptr);
+    v->ui.update_node(path);
   }
 
   static void failed_structure_callback(void *ptr) {
@@ -80,8 +84,8 @@ class FLViaems {
     if (is.in_progress) {
       std::cerr << "redoing structure" << is.complete_nodes << " "
                 << is.total_nodes << std::endl;
-      v->model.interrogate();
-      Fl::add_timeout(5, v->failed_structure_callback, v);
+      v->model.interrogate(interrogate_update, v);
+      Fl::add_timeout(60, v->failed_structure_callback, v);
     }
   }
 
@@ -94,8 +98,8 @@ class FLViaems {
 
     if (first_pong) {
       first_pong = false;
-      v->model.interrogate();
-      Fl::add_timeout(5, v->failed_structure_callback, v);
+      v->model.interrogate(interrogate_update, v);
+      Fl::add_timeout(60, v->failed_structure_callback, v);
     }
   }
 
@@ -109,7 +113,8 @@ class FLViaems {
 
 public:
   FLViaems(std::ostream &o, int infd)
-      : connector{o}, model{connector, this->model_changed, this} {
+      : connector{o}, model{connector} {
+    model.set_value_change_callback(value_update, this);
     read_fd = infd;
     set_stdin_nonblock(read_fd);
     Fl::add_fd(0, FL_READ, stdin_ready_cb, this);

@@ -60,6 +60,9 @@ public:
     select_cb_userdata = p;
   }
 
+  virtual void update_value(viaems::ConfigValue v) {}
+  virtual viaems::ConfigValue get_value() {return (uint32_t)0;}
+
   viaems::StructurePath path;
 };
 
@@ -73,13 +76,27 @@ public:
 
     begin();
     this->field = new Fl_Input{X + id_box->w(), Y, 100, H};
-    this->field->value(std::to_string(std::get<T>(value)).c_str());
+    update_value(value);
     end();
+  }
+
+  void update_value(viaems::ConfigValue value) {
+    this->field->value(std::to_string(std::get<T>(value)).c_str());
+  }
+
+  viaems::ConfigValue get_value() {
+    return std::string{field->value()};
   }
 };
 
 class ChoiceTreeWidget : public SelectableTreeWidget {
   Fl_Choice *chooser;
+
+protected:
+  static void changed_callback(Fl_Widget *fl, void *p) {
+    auto ctw = static_cast<ChoiceTreeWidget *>(p);
+    ctw->callback()(ctw, ctw->user_data());
+  }
 
 public:
   ChoiceTreeWidget(int X, int Y, int W, int H, viaems::StructurePath path,
@@ -89,14 +106,23 @@ public:
     begin();
 
     this->chooser = new Fl_Choice{X + id_box->w(), Y, 100, H};
+    this->chooser->callback(changed_callback, this);
     for (auto choice : choices) {
       this->chooser->add(choice.c_str());
     }
 
-    int index = this->chooser->find_index(std::get<std::string>(value).c_str());
-    this->chooser->value(index);
+    update_value(value);
 
     end();
+  }
+
+  void update_value(viaems::ConfigValue value) {
+    int index = this->chooser->find_index(std::get<std::string>(value).c_str());
+    this->chooser->value(index);
+  }
+
+  viaems::ConfigValue get_value() {
+    return std::string{chooser->text()};
   }
 };
 
@@ -141,7 +167,6 @@ void MainWindow::update_tree_editor(viaems::TableValue val) {
 }
 
 void MainWindow::bleh(Fl_Widget *w, void *p) {
-  std::cerr << "callback called" << std::endl;
   auto leaf = dynamic_cast<SelectableTreeWidget *>(w);
   if (!leaf) {
     return;
@@ -178,7 +203,12 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
         } else if (std::holds_alternative<std::string>(value)) {
           auto w = new ChoiceTreeWidget(0, 0, 300, 18, leaf.path, leaf.choices,
                                         value);
-          w->select_callback(bleh, this);
+          w->callback([](Fl_Widget *w, void *p) { 
+            auto c = dynamic_cast<ChoiceTreeWidget *>(w);  
+            auto m = static_cast<MainWindow *>(p);  
+            auto val = c->get_value();
+            m->m_model->set_value(c->path, val);
+              }, this );
           item->widget(w);
         } else if (std::holds_alternative<viaems::TableValue>(value)) {
           auto w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
@@ -233,4 +263,14 @@ void MainWindow::update_interrogation(bool in_progress, int val, int max) {
 void MainWindow::update_model(viaems::Model *model) {
   m_model = model;
   update_config_structure(model->structure());
+}
+
+void MainWindow::update_node(viaems::StructurePath path) {
+  auto new_value = m_model->get_value(path);
+  for (Fl_Tree_Item *item = m_config_tree->first(); item; item = item->next()) {
+    auto w = dynamic_cast<SelectableTreeWidget *>(item->widget());
+    if (w && w->path == path) {
+      w->update_value(new_value);
+    }
+  }
 }
