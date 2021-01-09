@@ -176,7 +176,7 @@ class Model {
   static void handle_model_structure(StructureNode root, void *ptr);
 
 public:
-  Model(Protocol &protocol) : m_protocol{protocol}{};
+  Model(Protocol &protocol) : m_protocol{protocol} {};
 
   StructureNode &structure() { return root; };
 

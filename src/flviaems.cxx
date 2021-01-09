@@ -113,8 +113,7 @@ class FLViaems {
   }
 
 public:
-  FLViaems(std::ostream &o, int infd)
-      : connector{o}, model{connector} {
+  FLViaems(std::ostream &o, int infd) : connector{o}, model{connector} {
     model.set_value_change_callback(value_update, this);
     read_fd = infd;
     set_stdin_nonblock(read_fd);

@@ -8,7 +8,6 @@
 
 #include "MainWindow.h"
 
-
 class ConfigLeafTreeWidget;
 typedef void (*Value_Change_Callback)(ConfigLeafTreeWidget *w,
                                       std::string value);
@@ -64,7 +63,7 @@ public:
   }
 
   virtual void update_value(viaems::ConfigValue v) {}
-  virtual viaems::ConfigValue get_value() {return (uint32_t)0;}
+  virtual viaems::ConfigValue get_value() { return (uint32_t)0; }
 
   viaems::StructurePath path;
 };
@@ -129,9 +128,7 @@ public:
     this->chooser->value(index);
   }
 
-  viaems::ConfigValue get_value() {
-    return std::string{chooser->text()};
-  }
+  viaems::ConfigValue get_value() { return std::string{chooser->text()}; }
 };
 
 MainWindow::MainWindow() : MainWindowUI() {}
@@ -175,8 +172,8 @@ void MainWindow::update_tree_editor(viaems::TableValue val) {
 }
 
 void MainWindow::structure_value_update_callback(Fl_Widget *w, void *p) {
-  auto c = dynamic_cast<SelectableTreeWidget *>(w);  
-  auto m = static_cast<MainWindow *>(p);  
+  auto c = dynamic_cast<SelectableTreeWidget *>(w);
+  auto m = static_cast<MainWindow *>(p);
   auto val = c->get_value();
   m->m_model->set_value(c->path, val);
 }
@@ -261,7 +258,8 @@ void MainWindow::update_model(viaems::Model *model) {
   update_config_structure(model->structure());
 }
 
-void MainWindow::update_config_value(viaems::StructurePath path, viaems::ConfigValue value) {
+void MainWindow::update_config_value(viaems::StructurePath path,
+                                     viaems::ConfigValue value) {
   for (Fl_Tree_Item *item = m_config_tree->first(); item; item = item->next()) {
     auto w = dynamic_cast<SelectableTreeWidget *>(item->widget());
     if (w && w->path == path) {
