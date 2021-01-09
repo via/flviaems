@@ -220,6 +220,10 @@ void Protocol::handle_response_message_from_ems(uint32_t id, cbor response) {
     auto getreq = std::get<GetRequest>(req->request);
     auto val = generate_node_value_from_cbor(response);
     getreq.cb(getreq.path, val, getreq.ptr);
+  } else if (std::holds_alternative<SetRequest>(req->request)) {
+    auto setreq = std::get<SetRequest>(req->request);
+    auto val = generate_node_value_from_cbor(response);
+    setreq.cb(setreq.path, val, setreq.ptr);
   }
 }
 
@@ -365,14 +369,12 @@ std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
                                        viaems::ConfigValue value, void *v) {
   uint32_t id = rand() % 1024;
 
+  cbor cval = std::visit(
+      [](const auto &v) -> cbor { return cbor_from_value(v); }, value);
   cbor wire_request = cbor::map{
-      {"type", "request"},
-      {"method", "set"},
-      {"id", id},
-      {"path", cbor_path_from_structure_path(path)},
-      {"value",
-       std::visit([](const auto &v) -> cbor { return cbor_from_value(v); },
-                  value)},
+      {"type", "request"}, {"method", "set"},
+      {"id", id},          {"path", cbor_path_from_structure_path(path)},
+      {"value", cval},
   };
 
   auto req = std::make_shared<Request>(Request{
@@ -411,7 +413,10 @@ void Protocol::ensure_sent() {
   m_out.flush();
 }
 
-void Model::interrogate() {
+void Model::interrogate(interrogation_change_cb cb, void *ptr) {
+  interrogate_cb = cb;
+  interrogate_cb_ptr = ptr;
+
   /* First clear any ongoing interrogation commands */
   for (auto r = get_reqs.rbegin(); r != get_reqs.rend(); r++) {
     m_protocol.Cancel(*r);
@@ -448,14 +453,25 @@ void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
   model->m_model.at(path)->value = val;
   model->m_model.at(path)->valid = true;
-  model->change_callback(model->change_callback_ptr);
+  model->interrogate_cb(model->interrogation_status(),
+                        model->interrogate_cb_ptr);
+}
+
+void Model::handle_model_set(StructurePath path, ConfigValue val, void *ptr) {
+  Model *model = (Model *)ptr;
+  model->m_model.at(path)->value = val;
+  model->m_model.at(path)->valid = true;
+  if (model->value_cb) {
+    model->value_cb(path, model->value_cb_ptr);
+  }
 }
 
 void Model::handle_model_structure(StructureNode root, void *ptr) {
   Model *model = (Model *)ptr;
   model->root = root;
   model->recurse_model_structure(root);
-  model->change_callback(model->change_callback_ptr);
+  model->interrogate_cb(model->interrogation_status(),
+                        model->interrogate_cb_ptr);
 }
 
 void Model::recurse_model_structure(StructureNode node) {
@@ -474,4 +490,8 @@ void Model::recurse_model_structure(StructureNode node) {
       recurse_model_structure(child);
     }
   }
+}
+
+void Model::set_value(StructurePath path, ConfigValue value) {
+  m_protocol.Set(handle_model_set, path, value, this);
 }
