@@ -368,16 +368,17 @@ std::shared_ptr<Request> Protocol::Get(get_cb cb, viaems::StructurePath path,
 std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
                                        viaems::ConfigValue value, void *v) {
   uint32_t id = rand() % 1024;
-
+  
+  cbor cval = std::visit([](const auto &v) -> cbor { return cbor_from_value(v); }, value);
   cbor wire_request = cbor::map{
       {"type", "request"},
       {"method", "set"},
       {"id", id},
       {"path", cbor_path_from_structure_path(path)},
-      {"value",
-       std::visit([](const auto &v) -> cbor { return cbor_from_value(v); },
-                  value)},
+      {"value", cval},
   };
+
+  std::cerr << cbor::debug(wire_request) << std::endl;
 
   auto req = std::make_shared<Request>(Request{
       .id = id,

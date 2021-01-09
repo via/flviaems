@@ -74,7 +74,8 @@ class FLViaems {
 
   static void value_update(viaems::StructurePath path, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    v->ui.update_node(path);
+    auto value = v->model.get_value(path);
+    v->ui.update_config_value(path, value);
   }
 
   static void failed_structure_callback(void *ptr) {
