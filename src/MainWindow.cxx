@@ -31,6 +31,7 @@ protected:
     return Fl_Group::handle(e);
   }
 
+
 public:
   SelectableTreeWidget(int X, int Y, int W, int H, viaems::StructurePath path)
       : Fl_Group(X, Y, W, H) {
@@ -62,6 +63,11 @@ public:
     select_cb_userdata = p;
   }
 
+  void dirty(bool d) {
+    id_box->color(d ? FL_RED : FL_WHITE);
+    id_box->redraw();
+  }
+
   virtual void update_value(viaems::ConfigValue v) {}
   virtual viaems::ConfigValue get_value() { return (uint32_t)0; }
 
@@ -74,6 +80,7 @@ template <typename T> class NumericTreeWidget : public SelectableTreeWidget {
   static void changed_callback(Fl_Widget *fl, void *p) {
     auto ctw = static_cast<NumericTreeWidget *>(p);
     ctw->callback()(ctw, ctw->user_data());
+    ctw->dirty(true);
   }
 
 public:
@@ -88,6 +95,7 @@ public:
 
   void update_value(viaems::ConfigValue value) {
     this->field->value(std::to_string(std::get<T>(value)).c_str());
+    dirty(false);
   }
 
   viaems::ConfigValue get_value() {
@@ -105,6 +113,7 @@ protected:
   static void changed_callback(Fl_Widget *fl, void *p) {
     auto ctw = static_cast<ChoiceTreeWidget *>(p);
     ctw->callback()(ctw, ctw->user_data());
+    ctw->dirty(true);
   }
 
 public:
@@ -126,6 +135,7 @@ public:
   void update_value(viaems::ConfigValue value) {
     int index = this->chooser->find_index(std::get<std::string>(value).c_str());
     this->chooser->value(index);
+    dirty(false);
   }
 
   viaems::ConfigValue get_value() { return std::string{chooser->text()}; }
