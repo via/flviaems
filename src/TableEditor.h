@@ -24,6 +24,7 @@ private:
   void start_editor(int R, int C);
   void stop_editor();
 
-  bool editing = false;
+
+  //int handle(int ev);
   int edit_r, edit_c;
 };

@@ -13,4 +13,3 @@ target_link_libraries(flviaems ${FLTK})
 add_subdirectory(extern/cbor11)
 target_link_libraries(flviaems cbor11)
 target_include_directories(flviaems PRIVATE "extern/cbor11/include")
-

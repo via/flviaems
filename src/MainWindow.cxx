@@ -162,6 +162,7 @@ void MainWindow::select_table(Fl_Widget *w, void *p) {
   auto s = (SelectableTreeWidget *)w;
 
   auto value = mw->m_model->get_value(s->path);
+  mw->m_table_editor->take_focus();
   mw->update_tree_editor(std::get<viaems::TableValue>(value));
 }
 

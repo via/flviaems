@@ -2,12 +2,12 @@
 #include <iostream>
 
 #include <FL/fl_draw.H>
+#include <FL/Fl_Window.H>
 
 void TableEditor::cell_select_callback(Fl_Widget *w, void *ptr) {
   auto editor = static_cast<TableEditor *>(w);
   int R = editor->callback_row();
   int C = editor->callback_col();
-
   switch (editor->callback_context()) {
     case CONTEXT_TABLE:
     case CONTEXT_ROW_HEADER:
@@ -19,6 +19,13 @@ void TableEditor::cell_select_callback(Fl_Widget *w, void *ptr) {
         case FL_PUSH:
           editor->stop_editor();
           editor->start_editor(R, C);
+          break;
+        case FL_KEYBOARD:
+          editor->stop_editor();
+          auto x = Fl::event_key();
+          if (x == FL_Enter) {
+            editor->start_editor(R, C);
+          }
           break;
       }
     default:
@@ -34,8 +41,8 @@ void TableEditor::cell_value_callback(Fl_Widget *w, void *ptr) {
 
 void TableEditor::stop_editor() {
   input->hide();
+  take_focus();
   window()->cursor(FL_CURSOR_DEFAULT);
-  editing = false;
 }
 
 void TableEditor::start_editor(int r, int c) {
@@ -51,7 +58,6 @@ void TableEditor::start_editor(int r, int c) {
   input->take_focus();
   edit_r = r;
   edit_c = c;
-  editing = true;
 }
 
 TableEditor::TableEditor(int X, int Y, int W, int H) : Fl_Table(X, Y, W, H) {
@@ -59,10 +65,13 @@ TableEditor::TableEditor(int X, int Y, int W, int H) : Fl_Table(X, Y, W, H) {
   col_header(0);
   rows(0);
   cols(0);
+  set_selection(0, 0, 0, 0);
   callback(cell_select_callback);
+  when(FL_WHEN_NOT_CHANGED | when());
 
   input = new Fl_Float_Input(0, 0, 0, 0);
   input->callback(cell_value_callback, this);
+  input->color(FL_YELLOW);
   input->when(FL_WHEN_ENTER_KEY_ALWAYS);
   input->hide();
   end();
@@ -118,8 +127,10 @@ void TableEditor::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
     fl_pop_clip();
     break;
   case CONTEXT_CELL: {
-    if (editing && (R == edit_r) && (C == edit_c)) return;
-    fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H, FL_WHITE);
+    if (input->visible() && (R == edit_r) && (C == edit_c)) {
+      return;
+    }
+    fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H, is_selected(R, C) ? FL_YELLOW : FL_WHITE);
     fl_color(FL_BLACK);
     fl_push_clip(X, Y, W, H);
 

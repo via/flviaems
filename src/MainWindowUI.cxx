@@ -65,6 +65,7 @@ MainWindowUI::MainWindowUI() {
         m_table_editor->labelcolor(FL_FOREGROUND_COLOR);
         m_table_editor->align(Fl_Align(FL_ALIGN_TOP));
         m_table_editor->when(FL_WHEN_RELEASE);
+        m_table_editor->when(FL_WHEN_RELEASE | FL_WHEN_NOT_CHANGED);
         m_table_editor->end();
         Fl_Group::current()->resizable(m_table_editor);
       } // TableEditor* m_table_editor

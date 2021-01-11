@@ -7,8 +7,8 @@ class MainWindowUI {open
   Function {MainWindowUI()} {open
   } {
     Fl_Window m_main_window {
-      label mainWindow open selected
-      protected xywh {1 16 1022 751} type Double box THIN_DOWN_BOX resizable non_modal visible
+      label mainWindow open
+      protected xywh {1 16 1022 751} type Double box THIN_DOWN_BOX hide resizable non_modal
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -43,9 +43,10 @@ class MainWindowUI {open
           label Title
           protected xywh {496 45 119 30}
         }
-        Fl_Table m_table_editor {open
+        Fl_Table m_table_editor {open selected
           protected xywh {460 75 510 310} resizable
           code0 {\#include "TableEditor.h"}
+          code1 {m_table_editor->when(FL_WHEN_RELEASE | FL_WHEN_NOT_CHANGED);}
           class TableEditor
         } {}
         Fl_Spinner m_table_rows {
@@ -162,7 +163,7 @@ class MainWindowUI {open
         xywh {0 0 1050 20}
       } {
         Submenu m_file_menu {
-          label File open
+          label File
           protected xywh {0 0 70 21}
         } {
           Submenu m_file_connect {
