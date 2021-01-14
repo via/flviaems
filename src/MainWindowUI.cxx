@@ -147,6 +147,9 @@ MainWindowUI::MainWindowUI() {
       m_autosave->down_box(FL_DOWN_BOX);
       m_autosave->value(1);
     } // Fl_Check_Button* m_autosave
+    { m_status_text = new Fl_Output(335, 720, 530, 25);
+      m_status_text->box(FL_NO_BOX);
+    } // Fl_Output* m_status_text
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window

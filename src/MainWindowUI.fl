@@ -7,8 +7,9 @@ class MainWindowUI {open
   Function {MainWindowUI()} {open
   } {
     Fl_Window m_main_window {
-      label mainWindow open
+      label mainWindow open selected
       protected xywh {1 16 1022 751} type Double box THIN_DOWN_BOX hide resizable non_modal
+
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -43,7 +44,7 @@ class MainWindowUI {open
           label Title
           protected xywh {496 45 119 30}
         }
-        Fl_Table m_table_editor {open selected
+        Fl_Table m_table_editor {open
           protected xywh {460 75 510 310} resizable
           code0 {\#include "TableEditor.h"}
           code1 {m_table_editor->when(FL_WHEN_RELEASE | FL_WHEN_NOT_CHANGED);}
@@ -192,6 +193,9 @@ class MainWindowUI {open
       Fl_Check_Button m_autosave {
         label Autosave
         xywh {460 400 70 15} down_box DOWN_BOX value 1
+      }
+      Fl_Output m_status_text {
+        protected xywh {335 720 530 25} box NO_BOX
       }
     }
     code {m_main_window->show();} {}

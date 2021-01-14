@@ -66,6 +66,9 @@ protected:
   static Fl_Menu_Item *m_file_flash;
 public:
   Fl_Check_Button *m_autosave;
+protected:
+  Fl_Output *m_status_text;
+public:
   void show();
 };
 #endif

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include <FL/Fl.H>
 #include <FL/Fl_Float_Input.H>
 #include <FL/Fl_Table.H>
@@ -17,6 +19,9 @@ private:
   Fl_Float_Input *input;
   viaems::TableValue table;
 
+  int edit_r, edit_c;
+  std::set<std::pair<int, int>> edit_changes;
+
   void draw_cell(TableContext c, int R, int C, int X, int Y, int W, int H);
   std::string cell_value(int r, int c);
 
@@ -25,5 +30,4 @@ private:
   void start_editor(int R, int C);
   void stop_editor();
 
-  int edit_r, edit_c;
 };

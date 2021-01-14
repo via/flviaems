@@ -45,11 +45,13 @@ void TableEditor::cell_value_callback(Fl_Widget *w, void *ptr) {
 
   if (editor->table.axis.size() == 1) {
     for (int r = row_top; r <= row_bot; r++) {
+      editor->edit_changes.insert(std::make_pair(r, 0));
       editor->table.one[r] = value;
     }
   } else {
     for (int r = row_top; r <= row_bot; r++) {
       for (int c = col_left; c <= col_right; c++) {
+        editor->edit_changes.insert(std::make_pair(r, c));
         editor->table.two[r][c] = value;
       }
     }
@@ -110,7 +112,7 @@ void TableEditor::setTable(viaems::TableValue t) {
   }
   col_width_all(40);
   row_height_all(25);
-  set_selection(0, 0, 0, 0);
+  edit_changes.clear();
 }
 
 std::string TableEditor::cell_value(int r, int c) {
@@ -151,8 +153,13 @@ void TableEditor::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
     if (input->visible() && (R == edit_r) && (C == edit_c)) {
       return;
     }
-    fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H,
-                is_selected(R, C) ? FL_YELLOW : FL_WHITE);
+    if (edit_changes.count(std::make_pair(R, C)) > 0) {
+      fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H,
+          is_selected(R, C) ? FL_DARK_YELLOW : FL_RED);
+    } else {
+      fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H,
+          is_selected(R, C) ? FL_YELLOW : FL_WHITE);
+    }
     fl_color(FL_BLACK);
     fl_push_clip(X, Y, W, H);
 

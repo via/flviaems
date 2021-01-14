@@ -289,4 +289,8 @@ void MainWindow::update_config_value(viaems::StructurePath path,
       w->update_value(value);
     }
   }
+
+  if (path == detail_path) {
+    update_table_editor(std::get<viaems::TableValue>(value));
+  }
 }
