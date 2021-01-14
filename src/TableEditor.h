@@ -1,8 +1,8 @@
 #pragma once
 
 #include <FL/Fl.H>
-#include <FL/Fl_Table.H>
 #include <FL/Fl_Float_Input.H>
+#include <FL/Fl_Table.H>
 
 #include "viaems.h"
 

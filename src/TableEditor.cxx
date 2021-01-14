@@ -1,35 +1,35 @@
 #include "TableEditor.h"
 #include <iostream>
 
-#include <FL/fl_draw.H>
 #include <FL/Fl_Window.H>
+#include <FL/fl_draw.H>
 
 void TableEditor::cell_select_callback(Fl_Widget *w, void *ptr) {
   auto editor = static_cast<TableEditor *>(w);
   int R = editor->callback_row();
   int C = editor->callback_col();
   switch (editor->callback_context()) {
-    case CONTEXT_TABLE:
-    case CONTEXT_ROW_HEADER:
-    case CONTEXT_COL_HEADER:
+  case CONTEXT_TABLE:
+  case CONTEXT_ROW_HEADER:
+  case CONTEXT_COL_HEADER:
+    editor->stop_editor();
+    break;
+  case CONTEXT_CELL:
+    switch (Fl::event()) {
+    case FL_PUSH:
       editor->stop_editor();
+      editor->start_editor(R, C);
       break;
-    case CONTEXT_CELL:
-      switch (Fl::event()) {
-        case FL_PUSH:
-          editor->stop_editor();
-          editor->start_editor(R, C);
-          break;
-        case FL_KEYBOARD:
-          editor->stop_editor();
-          auto x = Fl::event_key();
-          if (x == FL_Enter) {
-            editor->start_editor(R, C);
-          }
-          break;
+    case FL_KEYBOARD:
+      editor->stop_editor();
+      auto x = Fl::event_key();
+      if (x == FL_Enter) {
+        editor->start_editor(R, C);
       }
-    default:
       break;
+    }
+  default:
+    break;
   }
 }
 
@@ -37,14 +37,24 @@ void TableEditor::cell_value_callback(Fl_Widget *w, void *ptr) {
   auto editor = static_cast<TableEditor *>(ptr);
   float value;
 
+  int row_top, col_left, row_bot, col_right;
+  editor->get_selection(row_top, col_left, row_bot, col_right);
+
   std::istringstream ss{editor->input->value()};
   ss >> value;
 
   if (editor->table.axis.size() == 1) {
-    editor->table.one[editor->edit_r] = value;
+    for (int r = row_top; r <= row_bot; r++) {
+      editor->table.one[r] = value;
+    }
   } else {
-    editor->table.two[editor->edit_r][editor->edit_c] = value;
+    for (int r = row_top; r <= row_bot; r++) {
+      for (int c = col_left; c <= col_right; c++) {
+        editor->table.two[r][c] = value;
+      }
+    }
   }
+
   editor->parent()->do_callback();
   editor->stop_editor();
 }
@@ -57,7 +67,7 @@ void TableEditor::stop_editor() {
 
 void TableEditor::start_editor(int r, int c) {
   set_selection(r, c, r, c);
-  
+
   int X, Y, W, H;
   find_cell(CONTEXT_CELL, r, c, X, Y, W, H);
   input->resize(X, Y, W, H);
@@ -100,6 +110,7 @@ void TableEditor::setTable(viaems::TableValue t) {
   }
   col_width_all(40);
   row_height_all(25);
+  set_selection(0, 0, 0, 0);
 }
 
 std::string TableEditor::cell_value(int r, int c) {
@@ -140,7 +151,8 @@ void TableEditor::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
     if (input->visible() && (R == edit_r) && (C == edit_c)) {
       return;
     }
-    fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H, is_selected(R, C) ? FL_YELLOW : FL_WHITE);
+    fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H,
+                is_selected(R, C) ? FL_YELLOW : FL_WHITE);
     fl_color(FL_BLACK);
     fl_push_clip(X, Y, W, H);
 
