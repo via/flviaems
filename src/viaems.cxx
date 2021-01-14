@@ -160,7 +160,7 @@ static cbor cbor_from_table_axis(TableAxis axis) {
   }
   auto result = cbor::map{
       {"name", axis.name},
-      {"labels", labels},
+      {"values", labels},
   };
   return result;
 }

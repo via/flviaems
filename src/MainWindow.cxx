@@ -140,7 +140,12 @@ public:
   viaems::ConfigValue get_value() { return std::string{chooser->text()}; }
 };
 
-MainWindow::MainWindow() : MainWindowUI() {}
+MainWindow::MainWindow() : MainWindowUI() {
+  m_table_title->callback(table_value_changed_callback, this);
+  m_table_rows->callback(table_value_changed_callback, this);
+  m_table_cols->callback(table_value_changed_callback, this);
+  m_table_editor_box->callback(table_value_changed_callback, this);
+}
 
 void MainWindow::update_connection_status(bool status) {
   m_connection_status->color(status ? FL_GREEN : FL_RED);
@@ -163,10 +168,18 @@ void MainWindow::select_table(Fl_Widget *w, void *p) {
 
   auto value = mw->m_model->get_value(s->path);
   mw->m_table_editor->take_focus();
-  mw->update_tree_editor(std::get<viaems::TableValue>(value));
+  mw->update_table_editor(std::get<viaems::TableValue>(value));
+  mw->detail_path = s->path;
 }
 
-void MainWindow::update_tree_editor(viaems::TableValue val) {
+void MainWindow::table_value_changed_callback(Fl_Widget *w, void *ptr) {
+  auto mw = static_cast<MainWindow *>(ptr);
+  auto table = mw->m_table_editor->getTable();
+  table.title = mw->m_table_title->value();
+  mw->m_model->set_value(mw->detail_path, table);
+}
+
+void MainWindow::update_table_editor(viaems::TableValue val) {
   m_table_title->value(val.title.c_str());
   if (val.axis.size() == 1) {
     m_table_rows->value(val.one.size());

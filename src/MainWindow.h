@@ -8,13 +8,15 @@
 class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
   Log log;
+  viaems::StructurePath detail_path;
 
   void update_config_structure(viaems::StructureNode top);
 
-  void update_tree_editor(viaems::TableValue t);
+  void update_table_editor(viaems::TableValue t);
 
   static void select_table(Fl_Widget *w, void *p);
   static void structure_value_update_callback(Fl_Widget *w, void *p);
+  static void table_value_changed_callback(Fl_Widget *w, void *ptr);
 
   void add_config_structure_entry(Fl_Tree_Item *, viaems::StructureNode);
 

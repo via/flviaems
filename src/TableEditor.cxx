@@ -35,7 +35,17 @@ void TableEditor::cell_select_callback(Fl_Widget *w, void *ptr) {
 
 void TableEditor::cell_value_callback(Fl_Widget *w, void *ptr) {
   auto editor = static_cast<TableEditor *>(ptr);
-  std::cerr << "set value: " << editor->input->value() << std::endl;
+  float value;
+
+  std::istringstream ss{editor->input->value()};
+  ss >> value;
+
+  if (editor->table.axis.size() == 1) {
+    editor->table.one[editor->edit_r] = value;
+  } else {
+    editor->table.two[editor->edit_r][editor->edit_c] = value;
+  }
+  editor->parent()->do_callback();
   editor->stop_editor();
 }
 

@@ -11,6 +11,7 @@ public:
   TableEditor(int X, int Y, int W, int H);
 
   void setTable(viaems::TableValue table);
+  viaems::TableValue getTable() { return table; };
 
 private:
   Fl_Float_Input *input;
@@ -24,7 +25,5 @@ private:
   void start_editor(int R, int C);
   void stop_editor();
 
-
-  //int handle(int ev);
   int edit_r, edit_c;
 };
