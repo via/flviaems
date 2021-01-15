@@ -242,13 +242,13 @@ void Protocol::handle_message_from_ems(cbor msg) {
   }
   type = val.at("type").to_string();
 
-  if (type == "feed") {
-    handle_feed_message_from_ems(msg.to_map().at("values").to_array());
-  } else if (type == "description") {
-    handle_description_message_from_ems(msg.to_map().at("keys").to_array());
-  } else if (type == "response") {
-    handle_response_message_from_ems(msg.to_map().at("id"),
-                                     msg.to_map().at("response"));
+  if (type == "feed" && (val.count("values") > 0)) {
+    handle_feed_message_from_ems(val.at("values").to_array());
+  } else if (type == "description" && (val.count("keys") > 0)) {
+    handle_description_message_from_ems(val.at("keys").to_array());
+  } else if (type == "response" && (val.count("id") > 0) &&
+             (val.count("response") > 0)) {
+    handle_response_message_from_ems(val.at("id"), val.at("response"));
   }
 }
 
@@ -386,6 +386,36 @@ std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
   ensure_sent();
 
   return req;
+}
+
+void Protocol::Flash() {
+  cbor wire_request = cbor::map{
+      {"type", "request"},
+      {"method", "flash"},
+  };
+
+  auto req = std::make_shared<Request>(Request{
+      .request = FlashRequest{},
+      .repr = wire_request,
+  });
+  m_requests.push_back(req);
+  ensure_sent();
+  m_requests.clear();
+}
+
+void Protocol::Bootloader() {
+  cbor wire_request = cbor::map{
+      {"type", "request"},
+      {"method", "bootloader"},
+  };
+
+  auto req = std::make_shared<Request>(Request{
+      .request = BootloaderRequest{},
+      .repr = wire_request,
+  });
+  m_requests.push_back(req);
+  ensure_sent();
+  m_requests.clear();
 }
 
 bool Protocol::Cancel(std::shared_ptr<Request> request) {

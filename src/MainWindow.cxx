@@ -151,6 +151,7 @@ static SelectableTreeWidget *get_config_tree_widget(Fl_Tree *tree, viaems::Struc
 }
 
 MainWindow::MainWindow() : MainWindowUI() {
+  /* Tables */
   m_table_title->callback(table_value_changed_callback, this);
   m_table_rows->callback(table_value_changed_callback, this);
   m_table_cols->callback(table_value_changed_callback, this);
@@ -290,6 +291,8 @@ void MainWindow::update_interrogation(bool in_progress, int val, int max) {
 }
 
 void MainWindow::update_model(viaems::Model *model) {
+  m_config_tree->clear_children(m_config_tree->root());
+
   m_model = model;
   update_config_structure(model->structure());
 }

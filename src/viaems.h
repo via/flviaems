@@ -100,9 +100,13 @@ struct SetRequest {
   void *ptr;
 };
 
+struct FlashRequest {};
+struct BootloaderRequest {};
+
 struct Request {
   uint32_t id;
-  std::variant<StructureRequest, GetRequest, SetRequest, PingRequest> request;
+  std::variant<StructureRequest, GetRequest, SetRequest, PingRequest,
+    FlashRequest, BootloaderRequest> request;
   bool is_sent;
   cbor repr;
 };
@@ -118,6 +122,8 @@ public:
   std::shared_ptr<Request> Structure(structure_cb, void *);
   std::shared_ptr<Request> Ping(ping_cb, void *);
   std::shared_ptr<Request> Set(set_cb, StructurePath, ConfigValue, void *);
+  void Flash();
+  void Bootloader();
   bool Cancel(std::shared_ptr<Request> req);
 
 private:

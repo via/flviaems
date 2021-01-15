@@ -15,7 +15,6 @@
 #include <FL/Fl_Spinner.H>
 #include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Choice.H>
-#include <FL/Fl_Button.H>
 #include <FL/Fl_Menu_Bar.H>
 
 class MainWindowUI {
@@ -52,20 +51,20 @@ protected:
   Fl_Input *m_sensor_fault_min;
   Fl_Input *m_sensor_fault_max;
   Fl_Input *m_sensor_fault_value;
-  Fl_Button *m_save;
-  Fl_Button *m_reset;
 public:
   Fl_Menu_Bar *m_bar;
   static Fl_Menu_Item menu_m_bar[];
 protected:
   static Fl_Menu_Item *m_file_menu;
   static Fl_Menu_Item *m_file_connect;
+public:
   static Fl_Menu_Item *m_file_connect_socket;
   static Fl_Menu_Item *m_file_connect_file;
+protected:
   static Fl_Menu_Item *m_file_saveall;
-  static Fl_Menu_Item *m_file_flash;
 public:
-  Fl_Check_Button *m_autosave;
+  static Fl_Menu_Item *m_file_flash;
+  static Fl_Menu_Item *m_file_bootloader;
 protected:
   Fl_Output *m_status_text;
 public:
