@@ -10,6 +10,9 @@ target_compile_features(flviaems PUBLIC cxx_std_17)
 find_library(FLTK fltk)
 target_link_libraries(flviaems ${FLTK})
 
+find_package(SQLite3)
+target_link_libraries(flviaems ${SQLite3_LIBRARIES})
+
 add_subdirectory(extern/cbor11)
 target_link_libraries(flviaems cbor11)
 target_include_directories(flviaems PRIVATE "extern/cbor11/include")
