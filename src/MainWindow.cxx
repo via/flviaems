@@ -156,6 +156,9 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_rows->callback(table_value_changed_callback, this);
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
+
+  /* Default log output */
+  log.SetOutputFile("log.vlog");
 }
 
 void MainWindow::update_connection_status(bool status) {
