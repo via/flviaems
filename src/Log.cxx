@@ -26,34 +26,30 @@ static std::string table_schema_from_update(const viaems::FeedUpdate& update) {
     }
     remaining -= 1;
   }
-  std::cerr << query << std::endl;
   return query;
 }
 
-static std::string table_insert_statement(const viaems::FeedUpdate& update) {
+static std::string table_insert_query(const std::set<std::string> keys) {
   std::string query;
   query += "INSERT INTO points (realtime_ns,";
-  int remaining = update.size() - 1;
-  for (const auto& x : update) {
-    query += "\"" + x.first + "\" ";
+  int remaining = keys.size() - 1;
+  for (const auto& x : keys) {
+    query += "\"" + x + "\" ";
     if (remaining) {
       query += ",";
     }
     remaining -= 1;
   }
-  uint64_t ns =
-  std::chrono::duration_cast<std::chrono::nanoseconds>(update.time.time_since_epoch()).count();
-  query += ") VALUES (" + std::to_string(ns) + ",";
 
-  remaining = update.size() - 1;
-  for (const auto& x : update) {
-    query += 
-    std::visit([](const auto &x) -> std::string { return std::to_string(x); }, x.second);
-    if (remaining) {
+  query += ") VALUES (?, ";
+
+  for (remaining = keys.size(); remaining; remaining--) {
+    query += "? ";
+    if (remaining > 1) {
       query += ",";
     }
-    remaining -= 1;
   }
+
   query += ");";
   return query;
 }
@@ -83,10 +79,6 @@ void Log::ensure_db_schema(const viaems::FeedUpdate &update) {
     return;
   }
   
-  for (const auto& k : update) {
-    keys.insert(k.first);
-  }
-
   res = sqlite3_exec(db, "CREATE INDEX points_time ON points(realtime_ns);", NULL, 0,
       &sqlerr);
   if (res) {
@@ -94,21 +86,63 @@ void Log::ensure_db_schema(const viaems::FeedUpdate &update) {
     sqlite3_free(sqlerr);
     return;
   }
-}
 
+  for (const auto& k : update) {
+    keys.insert(k.first);
+  }
 
-void Log::Update(std::vector<viaems::FeedUpdate> list) {
-  const auto &first = list.at(0);
-  ensure_db_schema(first);
-
-  char *sqlerr;
-  auto query = table_insert_statement(first);
-  int res = sqlite3_exec(db, query.c_str(), NULL, 0, &sqlerr);
+  std::string query = table_insert_query(keys);
+  std::cerr << query << std::endl;
+  res = sqlite3_prepare_v2(db, query.c_str(), query.size(), &insert_stmt, NULL);
   if (res) {
-    std::cerr << "Log: unable to insert log entry: " << sqlerr << std::endl;
+    std::cerr << "Log: unable to prepare insert statement: " << sqlerr << std::endl;
     sqlite3_free(sqlerr);
     return;
   }
+}
+
+void Log::Update(const std::vector<viaems::FeedUpdate>& list) {
+  const auto &first = list.at(0);
+  ensure_db_schema(first);
+
+  if (!in_transaction) {
+    sqlite3_exec(db, "BEGIN;", NULL, 0, NULL);
+    in_transaction = true;
+  }
+
+
+  for (const auto& update : list) {
+    sqlite3_reset(insert_stmt);
+    /* timestamp */
+    uint64_t time_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(update.time.time_since_epoch()).count();
+    sqlite3_bind_int64(insert_stmt, 1, time_ns);
+    int sql_index = 2;
+    for (const auto &key : keys) {
+      const auto& value = update.at(key);
+      if (std::holds_alternative<uint32_t>(value)) {
+        sqlite3_bind_int64(insert_stmt, sql_index, std::get<uint32_t>(value));
+      } else {
+        sqlite3_bind_double(insert_stmt, sql_index, std::get<float>(value));
+      }
+      sql_index += 1;
+    }
+
+    int res = sqlite3_step(insert_stmt);
+    if (res != SQLITE_DONE) {
+      std::cerr << "Log: unable to insert log entry: " << sqlite3_errmsg(db) << std::endl;
+      return;
+    }
+  }
+
+  cur_transaction_size += list.size();
+  if (cur_transaction_size > max_transaction_size) {
+    sqlite3_exec(db, "COMMIT;", NULL, 0, NULL);
+    std::cerr << "Wrote batch: " << cur_transaction_size << std::endl;
+    in_transaction = false;
+    cur_transaction_size = 0;
+  }
+
 }
 
 void Log::SetOutputFile(std::string path) {
@@ -118,4 +152,47 @@ void Log::SetOutputFile(std::string path) {
     return;
   }
 }
+
+static std::string table_search_statement(std::vector<std::string> keys) {
+  std::string query = "SELECT realtime_ns";
+  for (auto k : keys) {
+    query += ",\"" + k + "\"";
+  }
+
+  query += " FROM points WHERE realtime_ns > ? AND realtime_ns < ?";
+  return query;
+}
+
+std::vector<viaems::FeedUpdate> Log::GetRange(std::vector<std::string> keys, std::chrono::system_clock::time_point start,
+std::chrono::system_clock::time_point stop) {
+  uint64_t start_ns =
+  std::chrono::duration_cast<std::chrono::nanoseconds>(start.time_since_epoch()).count();
+
+  uint64_t stop_ns =
+  std::chrono::duration_cast<std::chrono::nanoseconds>(stop.time_since_epoch()).count();
+
+  auto q = table_search_statement(keys);
+  sqlite3_stmt *stmt;
+  sqlite3_prepare_v2(db, q.c_str(), q.size(), &stmt, NULL);
+
+  sqlite3_bind_int64(stmt, 1, start_ns);
+  sqlite3_bind_int64(stmt, 2, stop_ns);
+
+  int res;
+  std::vector<viaems::FeedUpdate> retval;
+  while (true) {
+    res = sqlite3_step(stmt);
+    if (res == SQLITE_DONE) {
+      break;
+    }
+
+    viaems::FeedUpdate line;
+    uint64_t ts = sqlite3_column_int64(stmt, 0);
+    auto since_epoch = std::chrono::nanoseconds{ts};
+    line.time = std::chrono::system_clock::time_point{since_epoch};
+    retval.push_back(line);
+  }
+  return retval;
+}
+
 
