@@ -144,6 +144,17 @@ MainWindowUI::MainWindowUI() {
     { m_status_text = new Fl_Output(335, 720, 530, 25);
       m_status_text->box(FL_NO_BOX);
     } // Fl_Output* m_status_text
+    { m_logview = new LogView(460, 423, 525, 264);
+      m_logview->box(FL_DOWN_BOX);
+      m_logview->color(FL_FOREGROUND_COLOR);
+      m_logview->selection_color(FL_BACKGROUND_COLOR);
+      m_logview->labeltype(FL_NORMAL_LABEL);
+      m_logview->labelfont(0);
+      m_logview->labelsize(14);
+      m_logview->labelcolor(FL_FOREGROUND_COLOR);
+      m_logview->align(Fl_Align(FL_ALIGN_CENTER));
+      m_logview->when(FL_WHEN_RELEASE);
+    } // LogView* m_logview
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window

@@ -159,6 +159,7 @@ MainWindow::MainWindow() : MainWindowUI() {
 
   /* Default log output */
   log.SetOutputFile("log.vlog");
+  m_logview->SetLog(&log);
 }
 
 void MainWindow::update_connection_status(bool status) {
@@ -174,10 +175,10 @@ void MainWindow::update_feed_hz(int hz) {
 void MainWindow::feed_update(std::vector<viaems::FeedUpdate> const &updates) {
   m_status_table->feed_update(updates.at(0));
   log.Update(updates);
-  auto bleh = log.GetRange({"rpm", "sensor.map", "sensor.brv"}, std::chrono::system_clock::now() -
-      std::chrono::seconds{1}, std::chrono::system_clock::now());
-  auto tt = std::chrono::system_clock::to_time_t(bleh[0].time);
-  std::cerr << "len: " << bleh.size() << " time: " << ctime(&tt)  << std::endl;
+
+  auto stop_time = std::chrono::system_clock::now();
+  auto start_time = stop_time - std::chrono::seconds{10};
+  m_logview->update_time_range(start_time, stop_time);
 }
 
 void MainWindow::select_table(Fl_Widget *w, void *p) {
