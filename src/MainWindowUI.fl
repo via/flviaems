@@ -8,7 +8,7 @@ class MainWindowUI {open
   } {
     Fl_Window m_main_window {
       label mainWindow open
-      protected xywh {1 16 1022 751} type Double box THIN_DOWN_BOX resizable non_modal visible
+      protected xywh {1 16 1022 751} type Double box THIN_DOWN_BOX hide resizable non_modal
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -36,7 +36,7 @@ class MainWindowUI {open
         label Interrogation
         protected xywh {875 724 135 21}
       }
-      Fl_Group m_table_editor_box {open selected
+      Fl_Group m_table_editor_box {open
         protected xywh {455 40 525 345} box DOWN_BOX resizable
       } {
         Fl_Input m_table_title {
@@ -187,6 +187,11 @@ class MainWindowUI {open
       }
       Fl_Output m_status_text {
         protected xywh {335 720 530 25} box NO_BOX
+      }
+      Fl_Box m_logview {selected
+        protected xywh {460 423 525 264} box DOWN_BOX color 0
+        code0 {\#include "LogView.h"}
+        class LogView
       }
     }
     code {m_main_window->show();} {}

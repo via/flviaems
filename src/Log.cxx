@@ -92,7 +92,6 @@ void Log::ensure_db_schema(const viaems::FeedUpdate &update) {
   }
 
   std::string query = table_insert_query(keys);
-  std::cerr << query << std::endl;
   res = sqlite3_prepare_v2(db, query.c_str(), query.size(), &insert_stmt, NULL);
   if (res) {
     std::cerr << "Log: unable to prepare insert statement: " << sqlerr << std::endl;
@@ -165,6 +164,9 @@ static std::string table_search_statement(std::vector<std::string> keys) {
 
 std::vector<viaems::FeedUpdate> Log::GetRange(std::vector<std::string> keys, std::chrono::system_clock::time_point start,
 std::chrono::system_clock::time_point stop) {
+  if (db == nullptr) {
+    return {};
+  }
   uint64_t start_ns =
   std::chrono::duration_cast<std::chrono::nanoseconds>(start.time_since_epoch()).count();
 
@@ -182,7 +184,7 @@ std::chrono::system_clock::time_point stop) {
   std::vector<viaems::FeedUpdate> retval;
   while (true) {
     res = sqlite3_step(stmt);
-    if (res == SQLITE_DONE) {
+    if ((res == SQLITE_DONE) || (res == SQLITE_MISUSE)) {
       break;
     }
 
@@ -190,6 +192,22 @@ std::chrono::system_clock::time_point stop) {
     uint64_t ts = sqlite3_column_int64(stmt, 0);
     auto since_epoch = std::chrono::nanoseconds{ts};
     line.time = std::chrono::system_clock::time_point{since_epoch};
+
+    for (int i = 1; i < sqlite3_column_count(stmt); i++) {
+      auto coltype = sqlite3_column_type(stmt, i);
+      switch (coltype) {
+        case SQLITE_INTEGER:
+          line.insert(std::make_pair(keys[i - 1],
+          (uint32_t)sqlite3_column_int64(stmt, i)));
+          break;
+        case SQLITE_FLOAT:
+          line.insert(std::make_pair(keys[i - 1],
+          (float)sqlite3_column_double(stmt, i)));
+          break;
+        default:
+        break;
+      }
+    }
     retval.push_back(line);
   }
   return retval;

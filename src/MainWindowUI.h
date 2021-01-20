@@ -16,6 +16,7 @@
 #include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Menu_Bar.H>
+#include "LogView.h"
 
 class MainWindowUI {
 public:
@@ -67,6 +68,7 @@ public:
   static Fl_Menu_Item *m_file_bootloader;
 protected:
   Fl_Output *m_status_text;
+  LogView *m_logview;
 public:
   void show();
 };
