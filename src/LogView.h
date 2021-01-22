@@ -22,6 +22,9 @@ private:
   std::chrono::system_clock::time_point start, stop;
   std::deque<viaems::FeedUpdate> data;
   std::vector<int> real_points;
+  int mouse_x, mouse_y;
+
+  int handle(int);
 
   void draw();
 };

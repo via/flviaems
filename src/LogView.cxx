@@ -61,4 +61,24 @@ void LogView::draw() {
   for (int i = 0; i < w(); i++) {
     fl_point(x() + i, y() + real_points[i]);
   }
+  fl_color(FL_RED);
+  if ((mouse_x > x()) && (mouse_x < x() + w())) {
+    char txt[32];
+    sprintf(txt, "rpm   %u", 2000);
+    fl_draw(txt, mouse_x + 5, mouse_y + 30);
+  }
+  fl_color(FL_LIGHT1);
+  fl_line(mouse_x, y(), mouse_x, y() + h());
 }
+
+int LogView::handle(int ev) {
+  if (auto ret = Fl_Box::handle(ev)) {
+    return ret;
+  }
+  if (ev == FL_MOVE) {
+    mouse_x = Fl::event_x();
+    mouse_y = Fl::event_y();
+  }
+  return 0;
+}
+
