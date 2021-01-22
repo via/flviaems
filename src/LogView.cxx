@@ -28,13 +28,18 @@ void LogView::update_time_range(std::chrono::system_clock::time_point start,
   std::chrono::duration_cast<std::chrono::nanoseconds>(data[0].time.time_since_epoch()).count();
   auto stop_time_ns =
   std::chrono::duration_cast<std::chrono::nanoseconds>(data[data.size() - 1].time.time_since_epoch()).count();
-  real_points.reserve(w());
+  real_points.clear();
+  for (int i = 0; i < w(); i++) {
+    real_points.push_back(0);
+  }
+
   for (int i = 0; i < data.size(); i++) {
     auto p_time_ns =
   std::chrono::duration_cast<std::chrono::nanoseconds>(data[i].time.time_since_epoch()).count();
     double x_ratio = (p_time_ns - start_time_ns) / (double)(stop_time_ns - start_time_ns);
 
     double y_ratio = std::get<uint32_t>(data[i]["rpm"]) / 6000.0;
+
     int x = w() * x_ratio;
     int y = h() * y_ratio;
     real_points[x] = y;
