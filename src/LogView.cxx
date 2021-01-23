@@ -10,35 +10,36 @@ LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
 void LogView::update_time_range(std::chrono::system_clock::time_point start,
     std::chrono::system_clock::time_point stop) {
 
-  if (data.size() == 0) {
-    auto newdata = log->GetRange({"rpm"}, start, stop);
-    data.insert(data.end(), newdata.begin(), newdata.end());
-  } else {
-    auto newdata = log->GetRange({"rpm"}, data[data.size() - 1].time, stop);
-    data.insert(data.end(), newdata.begin(), newdata.end());
-  }
-  for (auto i = data.begin(); i != data.end(); i++) {
+    auto get_start = (chunk.points.size() > 0) ?
+      chunk.points[chunk.points.size() - 1].time :
+      start;
+
+  auto newdata = log->GetRange({"rpm"}, get_start, stop);
+  chunk.points.insert(chunk.points.end(), newdata.points.begin(),
+  newdata.points.end());
+  chunk.keys = newdata.keys;
+  for (auto i = chunk.points.begin(); i != chunk.points.end(); i++) {
     if (i->time >= start) {
-      data.erase(data.begin(), i);
+      chunk.points.erase(chunk.points.begin(), i);
       break;
     }
   }
   
   auto start_time_ns =
-  std::chrono::duration_cast<std::chrono::nanoseconds>(data[0].time.time_since_epoch()).count();
+  std::chrono::duration_cast<std::chrono::nanoseconds>(chunk.points[0].time.time_since_epoch()).count();
   auto stop_time_ns =
-  std::chrono::duration_cast<std::chrono::nanoseconds>(data[data.size() - 1].time.time_since_epoch()).count();
+  std::chrono::duration_cast<std::chrono::nanoseconds>(chunk.points[chunk.points.size() - 1].time.time_since_epoch()).count();
   real_points.clear();
   for (int i = 0; i < w(); i++) {
     real_points.push_back(0);
   }
 
-  for (int i = 0; i < data.size(); i++) {
+  for (int i = 0; i < chunk.points.size(); i++) {
     auto p_time_ns =
-  std::chrono::duration_cast<std::chrono::nanoseconds>(data[i].time.time_since_epoch()).count();
+  std::chrono::duration_cast<std::chrono::nanoseconds>(chunk.points[i].time.time_since_epoch()).count();
     double x_ratio = (p_time_ns - start_time_ns) / (double)(stop_time_ns - start_time_ns);
 
-    double y_ratio = std::get<uint32_t>(data[i]["rpm"]) / 6000.0;
+    double y_ratio = std::get<uint32_t>(chunk.points[i].values[0]) / 6000.0;
 
     int x = w() * x_ratio;
     int y = h() * y_ratio;
@@ -54,7 +55,7 @@ void LogView::draw() {
   if (log == nullptr) {
     return;
   }
-  if (data.size() < 2) {
+  if (chunk.points.size() < 2) {
     return;
   }
   fl_color(FL_WHITE);

@@ -9,6 +9,16 @@
 
 #include "viaems.h"
 
+struct LogPoint {
+  std::chrono::system_clock::time_point time;
+  std::array<viaems::FeedValue, 2> values;
+};
+
+struct LogChunk {
+  std::vector<LogPoint> points;
+  std::vector<std::string> keys;
+};
+
 class Log {
   sqlite3 *db;
   std::set<std::string> keys;
@@ -33,7 +43,13 @@ public:
   void SetOutputFile(std::string path);
   void Update(const std::vector<viaems::FeedUpdate>&);
 
+#if 0
   std::vector<viaems::FeedUpdate>
+  GetRange(std::vector<std::string> keys,
+      std::chrono::system_clock::time_point start,
+      std::chrono::system_clock::time_point end);
+#endif
+  LogChunk
   GetRange(std::vector<std::string> keys,
       std::chrono::system_clock::time_point start,
       std::chrono::system_clock::time_point end);

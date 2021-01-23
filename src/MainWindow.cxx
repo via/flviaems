@@ -132,9 +132,13 @@ public:
   }
 
   void update_value(viaems::ConfigValue value) {
-    int index = this->chooser->find_index(std::get<std::string>(value).c_str());
-    this->chooser->value(index);
-    dirty(false);
+    try {
+      int index = this->chooser->find_index(std::get<std::string>(value).c_str());
+      this->chooser->value(index);
+      dirty(false);
+    } catch (std::exception &_) {
+      std::cerr <<"Exception!" << std::endl;
+    }
   }
 
   viaems::ConfigValue get_value() { return std::string{chooser->text()}; }

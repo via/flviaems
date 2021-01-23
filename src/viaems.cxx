@@ -8,8 +8,8 @@
 using namespace viaems;
 
 std::vector<FeedUpdate> Protocol::FeedUpdates() {
-  auto updates = m_feed_updates;
-  m_feed_updates.clear();
+  auto updates = std::move(m_feed_updates);
+  m_feed_updates = {};
   return updates;
 }
 
