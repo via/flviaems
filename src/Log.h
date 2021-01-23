@@ -11,14 +11,14 @@
 
 class Log {
   sqlite3 *db;
-  std::set<std::string> keys;
+  std::vector<std::string> keys;
   sqlite3_stmt *insert_stmt;
 
   bool in_transaction = false;
   int cur_transaction_size = 0;
   int max_transaction_size = 5000;
 
-  void ensure_db_schema(const viaems::FeedUpdate&);
+  void ensure_db_schema(const viaems::LogChunk&);
 
 
 public:
@@ -31,9 +31,9 @@ public:
 
   void LoadFromFile(std::istream &);
   void SetOutputFile(std::string path);
-  void Update(const std::vector<viaems::FeedUpdate>&);
+  void Update(const viaems::LogChunk&);
 
-  std::vector<viaems::FeedUpdate>
+  viaems::LogChunk
   GetRange(std::vector<std::string> keys,
       std::chrono::system_clock::time_point start,
       std::chrono::system_clock::time_point end);

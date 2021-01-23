@@ -132,9 +132,13 @@ public:
   }
 
   void update_value(viaems::ConfigValue value) {
-    int index = this->chooser->find_index(std::get<std::string>(value).c_str());
-    this->chooser->value(index);
-    dirty(false);
+    try {
+      int index = this->chooser->find_index(std::get<std::string>(value).c_str());
+      this->chooser->value(index);
+      dirty(false);
+    } catch (std::exception &_) {
+      std::cerr <<"Exception!" << std::endl;
+    }
   }
 
   viaems::ConfigValue get_value() { return std::string{chooser->text()}; }
@@ -173,8 +177,12 @@ void MainWindow::update_feed_hz(int hz) {
   m_rate->redraw();
 }
 
-void MainWindow::feed_update(std::vector<viaems::FeedUpdate> const &updates) {
-  m_status_table->feed_update(updates.at(0));
+void MainWindow::feed_update(const viaems::LogChunk &updates) {
+  std::map<std::string, viaems::FeedValue> status;
+  for (int i = 0; i < updates.keys.size(); i++) {
+    status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
+  }
+  m_status_table->feed_update(status);
   log.Update(updates);
 
   auto stop_time = std::chrono::system_clock::now();

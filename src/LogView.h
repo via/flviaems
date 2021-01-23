@@ -9,6 +9,16 @@
 #include "Log.h"
 #include "viaems.h"
 
+struct PointGroup {
+  float mean;
+  float min;
+  float max;
+};
+
+struct SeriesConfig {
+  float min_y;
+  float max_y;
+};
 
 class LogView : public Fl_Box {
 public:
@@ -20,11 +30,12 @@ public:
 private:
   Log *log;
   std::chrono::system_clock::time_point start, stop;
-  std::deque<viaems::FeedUpdate> data;
-  std::vector<int> real_points;
   int mouse_x, mouse_y;
 
-  int handle(int);
+  std::map<std::string, SeriesConfig> config;
+  std::map<std::string, std::vector<PointGroup>> series;
+  viaems::LogChunk cache;
 
+  int handle(int);
   void draw();
 };
