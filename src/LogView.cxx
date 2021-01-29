@@ -6,7 +6,9 @@
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   config.insert(std::make_pair("rpm", SeriesConfig{0, 6000}));
+  config.insert(std::make_pair("last_trigger_angle", SeriesConfig{0, 720}));
   series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
+  series.insert(std::make_pair("last_trigger_angle", std::vector<PointGroup>{}));
 }
 
 void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
@@ -66,7 +68,7 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
       continue;
     }
     for (int k = 0; k < keys.size(); k++) {
-      series[keys[k]].at(x).mean = std::get<uint32_t>(i->values[k]);
+      std::visit([&](const auto v) { series[keys[k]].at(x).mean = v; }, i->values[k]);
     }
   }
   redraw();

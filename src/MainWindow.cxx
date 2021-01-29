@@ -186,7 +186,7 @@ void MainWindow::feed_update(const viaems::LogChunk &updates) {
   log.Update(updates);
 
   auto stop_time = std::chrono::system_clock::now();
-  auto start_time = stop_time - std::chrono::seconds{60};
+  auto start_time = stop_time - std::chrono::seconds{10};
   m_logview->update_time_range(start_time, stop_time);
 }
 
