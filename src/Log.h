@@ -15,7 +15,7 @@ struct LogPoint {
 };
 
 struct LogChunk {
-  std::vector<LogPoint> points;
+  std::deque<LogPoint> points;
   std::vector<std::string> keys;
 };
 
