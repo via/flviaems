@@ -11,7 +11,7 @@ StatusTable::StatusTable(int X, int Y, int W, int H, const char *L = 0)
   end();
 }
 
-void StatusTable::feed_update(viaems::FeedUpdate const &update) {
+void StatusTable::feed_update(std::map<std::string, viaems::FeedValue> update) {
   rows(update.size());
 
   m_current_values.clear();

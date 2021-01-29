@@ -17,18 +17,19 @@ namespace viaems {
 
 typedef std::chrono::time_point<std::chrono::system_clock> FeedTime;
 typedef std::variant<uint32_t, float> FeedValue;
-typedef std::map<std::string, FeedValue> FeedUpdateTypedef;
-
-struct FeedUpdate : public std::map<std::string, FeedValue> {
-  std::chrono::system_clock::time_point time;
-
-  FeedUpdate(std::chrono::system_clock::time_point t)
-      : std::map<std::string, FeedValue>(), time(t){};
-
-  FeedUpdate() : FeedUpdate{std::chrono::system_clock::now()} {};
-};
 
 typedef std::vector<std::variant<int, std::string>> StructurePath;
+
+struct LogPoint {
+  std::chrono::system_clock::time_point time;
+  std::vector<viaems::FeedValue> values;
+};
+
+struct LogChunk {
+  std::deque<LogPoint> points;
+  std::vector<std::string> keys;
+};
+
 
 struct TableAxis {
   std::string name;
@@ -115,7 +116,7 @@ class Protocol {
 public:
   Protocol(std::ostream &out) : m_out{out} {};
 
-  std::vector<FeedUpdate> FeedUpdates();
+  LogChunk FeedUpdates();
   void NewData(std::string const &);
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
@@ -128,7 +129,7 @@ public:
 
 private:
   std::vector<std::string> m_feed_vars;
-  std::vector<FeedUpdate> m_feed_updates;
+  LogChunk m_feed_updates;
   std::string m_input_buffer;
   std::ostream &m_out;
   std::deque<std::shared_ptr<Request>> m_requests;

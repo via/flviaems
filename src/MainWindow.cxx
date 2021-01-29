@@ -177,12 +177,16 @@ void MainWindow::update_feed_hz(int hz) {
   m_rate->redraw();
 }
 
-void MainWindow::feed_update(std::vector<viaems::FeedUpdate> const &updates) {
-  m_status_table->feed_update(updates.at(0));
+void MainWindow::feed_update(const viaems::LogChunk &updates) {
+  std::map<std::string, viaems::FeedValue> status;
+  for (int i = 0; i < updates.keys.size(); i++) {
+    status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
+  }
+  m_status_table->feed_update(status);
   log.Update(updates);
 
   auto stop_time = std::chrono::system_clock::now();
-  auto start_time = stop_time - std::chrono::seconds{10};
+  auto start_time = stop_time - std::chrono::seconds{60};
   m_logview->update_time_range(start_time, stop_time);
 }
 

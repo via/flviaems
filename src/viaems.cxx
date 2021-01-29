@@ -3,13 +3,14 @@
 #include <exception>
 #include <streambuf>
 
+#include "Log.h"
 #include "viaems.h"
 
 using namespace viaems;
 
-std::vector<FeedUpdate> Protocol::FeedUpdates() {
-  auto updates = std::move(m_feed_updates);
-  m_feed_updates = {};
+LogChunk Protocol::FeedUpdates() {
+  auto updates = m_feed_updates;
+  m_feed_updates.points.clear();
   return updates;
 }
 
@@ -18,23 +19,25 @@ void Protocol::handle_description_message_from_ems(cbor::array a) {
   for (cbor i : a) {
     m_feed_vars.push_back(i);
   }
+  m_feed_updates.keys = m_feed_vars;
 }
 
 void Protocol::handle_feed_message_from_ems(cbor::array a) {
   if (a.size() != m_feed_vars.size()) {
     return;
   }
-  FeedUpdate update;
+  LogPoint update;
+  update.time = std::chrono::system_clock::now();
   for (size_t i = 0; i < a.size(); i++) {
     cbor &val = a[i];
     if (val.is_int()) {
-      update[m_feed_vars[i]] =
-          FeedValue(static_cast<uint32_t>(val.to_unsigned()));
+      update.values.push_back(
+          FeedValue(static_cast<uint32_t>(val.to_unsigned())));
     } else if (val.is_float()) {
-      update[m_feed_vars[i]] = FeedValue(static_cast<float>(val.to_float()));
+      update.values.push_back(FeedValue(static_cast<float>(val.to_float())));
     }
   }
-  m_feed_updates.push_back(update);
+  m_feed_updates.points.push_back(update);
 }
 
 static StructureLeaf generate_config_node(cbor::map entry, StructurePath path) {

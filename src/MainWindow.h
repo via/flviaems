@@ -22,7 +22,7 @@ class MainWindow : public MainWindowUI {
 
 public:
   MainWindow();
-  void feed_update(std::vector<viaems::FeedUpdate> const &);
+  void feed_update(const viaems::LogChunk &);
   void update_connection_status(bool status);
   void update_feed_hz(int hz);
   void update_model(viaems::Model *model);

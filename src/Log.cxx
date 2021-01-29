@@ -6,30 +6,31 @@
 
 Log::Log() {}
 
-static std::string table_schema_from_update(const viaems::FeedUpdate& update) {
+static std::string table_schema_from_update(const viaems::LogChunk& update) {
   std::string query;
 
-  int remaining = update.size() - 1;
+  int index = 0;
 
   query += "CREATE TABLE points (realtime_ns INTEGER,";
-  for (const auto& x : update) {
-    query += "\"" + x.first + "\" ";
-    if (std::holds_alternative<uint32_t>(x.second)) {
+  for (const auto& x : update.keys) {
+    query += "\"" + x + "\" ";
+    if (std::holds_alternative<uint32_t>(update.points[0].values[index])) {
       query += "INTEGER";
     } else {
       query += "REAL";
     }
-    if (remaining) {
+    if (index < update.keys.size() - 1) {
       query += ", ";
     } else {
       query += ");";
     }
-    remaining -= 1;
+    index += 1;
   }
+  std::cerr << query << std::endl;
   return query;
 }
 
-static std::string table_insert_query(const std::set<std::string> keys) {
+static std::string table_insert_query(const std::vector<std::string> keys) {
   std::string query;
   query += "INSERT INTO points (realtime_ns,";
   int remaining = keys.size() - 1;
@@ -54,17 +55,20 @@ static std::string table_insert_query(const std::set<std::string> keys) {
   return query;
 }
 
-static bool points_schema_matches_update(std::set<std::string> keys,
-viaems::FeedUpdate update) {
-  for (const auto &k : update) {
-    if (keys.count(k.first) == 0) {
+static bool points_schema_matches_update(std::vector<std::string> keys,
+viaems::LogChunk update) {
+  if (update.keys.size() != keys.size()) {
+    return false;
+  }
+  for (int i = 0; i < keys.size(); i++) {
+    if (update.keys[i] != keys[i]) {
       return false;
     }
   }
   return true;
 }
 
-void Log::ensure_db_schema(const viaems::FeedUpdate &update) {
+void Log::ensure_db_schema(const viaems::LogChunk &update) {
   if (points_schema_matches_update(keys, update)) {
     return;
   }
@@ -87,9 +91,7 @@ void Log::ensure_db_schema(const viaems::FeedUpdate &update) {
     return;
   }
 
-  for (const auto& k : update) {
-    keys.insert(k.first);
-  }
+  keys.insert(keys.end(), update.keys.begin(), update.keys.end());
 
   std::string query = table_insert_query(keys);
   res = sqlite3_prepare_v2(db, query.c_str(), query.size(), &insert_stmt, NULL);
@@ -100,9 +102,8 @@ void Log::ensure_db_schema(const viaems::FeedUpdate &update) {
   }
 }
 
-void Log::Update(const std::vector<viaems::FeedUpdate>& list) {
-  const auto &first = list.at(0);
-  ensure_db_schema(first);
+void Log::Update(const viaems::LogChunk& update) {
+  ensure_db_schema(update);
 
   if (!in_transaction) {
     sqlite3_exec(db, "BEGIN;", NULL, 0, NULL);
@@ -110,15 +111,16 @@ void Log::Update(const std::vector<viaems::FeedUpdate>& list) {
   }
 
 
-  for (const auto& update : list) {
+  for (const auto& point : update.points) {
     sqlite3_reset(insert_stmt);
     /* timestamp */
     uint64_t time_ns =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(update.time.time_since_epoch()).count();
+      std::chrono::duration_cast<std::chrono::nanoseconds>(point.time.time_since_epoch()).count();
     sqlite3_bind_int64(insert_stmt, 1, time_ns);
     int sql_index = 2;
     for (const auto &key : keys) {
-      const auto& value = update.at(key);
+      int value_index = sql_index - 2;
+      const auto& value = point.values[value_index];
       if (std::holds_alternative<uint32_t>(value)) {
         sqlite3_bind_int64(insert_stmt, sql_index, std::get<uint32_t>(value));
       } else {
@@ -134,7 +136,7 @@ void Log::Update(const std::vector<viaems::FeedUpdate>& list) {
     }
   }
 
-  cur_transaction_size += list.size();
+  cur_transaction_size += update.points.size();
   if (cur_transaction_size > max_transaction_size) {
     sqlite3_exec(db, "COMMIT;", NULL, 0, NULL);
     std::cerr << "Wrote batch: " << cur_transaction_size << std::endl;
@@ -162,7 +164,7 @@ static std::string table_search_statement(std::vector<std::string> keys) {
   return query;
 }
 
-LogChunk Log::GetRange(std::vector<std::string> keys, std::chrono::system_clock::time_point start,
+viaems::LogChunk Log::GetRange(std::vector<std::string> keys, std::chrono::system_clock::time_point start,
 std::chrono::system_clock::time_point stop) {
   if (db == nullptr) {
     return {};
@@ -181,7 +183,7 @@ std::chrono::system_clock::time_point stop) {
   sqlite3_bind_int64(stmt, 2, stop_ns);
 
   int res;
-  LogChunk retval;
+  viaems::LogChunk retval;
   retval.keys = keys;
   while (true) {
     res = sqlite3_step(stmt);
@@ -189,7 +191,7 @@ std::chrono::system_clock::time_point stop) {
       break;
     }
 
-    LogPoint point;
+    viaems::LogPoint point;
     uint64_t ts = sqlite3_column_int64(stmt, 0);
     auto since_epoch = std::chrono::nanoseconds{ts};
     point.time = std::chrono::system_clock::time_point{since_epoch};
@@ -198,10 +200,10 @@ std::chrono::system_clock::time_point stop) {
       auto coltype = sqlite3_column_type(stmt, i);
       switch (coltype) {
         case SQLITE_INTEGER:
-          point.values[i - 1] = (uint32_t)sqlite3_column_int64(stmt, i);
+          point.values.push_back((uint32_t)sqlite3_column_int64(stmt, i));
           break;
         case SQLITE_FLOAT:
-          point.values[i - 1] = (float)sqlite3_column_double(stmt, i);
+          point.values.push_back((float)sqlite3_column_double(stmt, i));
           break;
         default:
         break;

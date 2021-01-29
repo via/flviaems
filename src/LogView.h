@@ -34,7 +34,7 @@ private:
 
   std::map<std::string, SeriesConfig> config;
   std::map<std::string, std::vector<PointGroup>> series;
-  LogChunk cache;
+  viaems::LogChunk cache;
 
   int handle(int);
   void draw();
