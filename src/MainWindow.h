@@ -1,13 +1,53 @@
 #ifndef MainWindow_h
 #define MainWindow_h
 
+#include <mutex>
+#include <condition_variable>
+
 #include "Log.h"
 #include "MainWindowUI.h"
 #include "viaems.h"
 
+struct LogWriter {
+  Log log;
+  std::mutex mutex;
+  std::condition_variable cv;
+  std::deque<std::unique_ptr<viaems::LogChunk>> chunks;
+  std::thread thread;
+
+  void add_chunk(std::unique_ptr<viaems::LogChunk> chunk) {
+    std::unique_lock<std::mutex> lock(mutex);
+    chunks.push_back(std::move(chunk));
+    cv.notify_one();
+  }
+
+  void write_loop() {
+    while (true) {
+      std::unique_lock<std::mutex> lock(mutex);
+      if (chunks.empty()) {
+        cv.wait(lock);
+      }
+
+      auto first = std::move(chunks.front());
+      chunks.erase(chunks.begin());
+
+      lock.unlock();
+
+      log.Update(*first);
+    }
+  }
+
+  void start() {
+    thread = std::thread([](LogWriter *w) { w->write_loop(); }, this);
+  }
+
+};
+
+
 class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
   Log log;
+  LogWriter logwriter;
   viaems::StructurePath detail_path;
 
   void update_config_structure(viaems::StructureNode top);
@@ -22,7 +62,7 @@ class MainWindow : public MainWindowUI {
 
 public:
   MainWindow();
-  void feed_update(const viaems::LogChunk &);
+  void feed_update(std::unique_ptr<viaems::LogChunk>);
   void update_connection_status(bool status);
   void update_feed_hz(int hz);
   void update_model(viaems::Model *model);

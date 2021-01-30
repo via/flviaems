@@ -8,9 +8,10 @@
 
 using namespace viaems;
 
-LogChunk Protocol::FeedUpdates() {
-  auto updates = m_feed_updates;
-  m_feed_updates.points.clear();
+std::unique_ptr<LogChunk> Protocol::FeedUpdates() {
+  auto updates = std::move(m_feed_updates);
+  m_feed_updates = std::make_unique<LogChunk>();
+  m_feed_updates->keys = m_feed_vars;
   return updates;
 }
 
@@ -19,7 +20,7 @@ void Protocol::handle_description_message_from_ems(cbor::array a) {
   for (cbor i : a) {
     m_feed_vars.push_back(i);
   }
-  m_feed_updates.keys = m_feed_vars;
+  m_feed_updates->keys = m_feed_vars;
 }
 
 void Protocol::handle_feed_message_from_ems(cbor::array a) {
@@ -37,7 +38,7 @@ void Protocol::handle_feed_message_from_ems(cbor::array a) {
       update.values.push_back(FeedValue(static_cast<float>(val.to_float())));
     }
   }
-  m_feed_updates.points.push_back(update);
+  m_feed_updates->points.push_back(update);
 }
 
 static StructureLeaf generate_config_node(cbor::map entry, StructurePath path) {

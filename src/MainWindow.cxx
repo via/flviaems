@@ -1,5 +1,7 @@
 #include <sstream>
 
+#include <memory>
+
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Group.H>
@@ -154,6 +156,7 @@ static SelectableTreeWidget *get_config_tree_widget(Fl_Tree *tree, viaems::Struc
   return nullptr;
 }
 
+
 MainWindow::MainWindow() : MainWindowUI() {
   /* Tables */
   m_table_title->callback(table_value_changed_callback, this);
@@ -161,9 +164,12 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
 
+  logwriter.log.SetOutputFile("log.vlog");
+  logwriter.start();
+
   /* Default log output */
-//  log.SetOutputFile("log.vlog");
-  log.SetOutputFile(":memory:");
+  log.SetOutputFile("log.vlog");
+//  log.SetOutputFile(":memory:");
   m_logview->SetLog(&log);
 }
 
@@ -177,16 +183,17 @@ void MainWindow::update_feed_hz(int hz) {
   m_rate->redraw();
 }
 
-void MainWindow::feed_update(const viaems::LogChunk &updates) {
+void MainWindow::feed_update(std::unique_ptr<viaems::LogChunk> updates) {
   std::map<std::string, viaems::FeedValue> status;
-  for (int i = 0; i < updates.keys.size(); i++) {
-    status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
+  for (int i = 0; i < updates->keys.size(); i++) {
+    status.insert(std::make_pair(updates->keys[i], updates->points[0].values[i]));
   }
   m_status_table->feed_update(status);
-  log.Update(updates);
+//  log.Update(updates);
+  logwriter.add_chunk(std::move(updates));
 
   auto stop_time = std::chrono::system_clock::now();
-  auto start_time = stop_time - std::chrono::seconds{10};
+  auto start_time = stop_time - std::chrono::seconds{20};
   m_logview->update_time_range(start_time, stop_time);
 }
 

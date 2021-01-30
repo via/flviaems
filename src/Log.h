@@ -4,6 +4,8 @@
 #include <set>
 #include <vector>
 #include <fstream>
+#include <thread>
+#include <memory>
 
 #include <sqlite3.h>
 
@@ -13,10 +15,6 @@ class Log {
   sqlite3 *db;
   std::vector<std::string> keys;
   sqlite3_stmt *insert_stmt;
-
-  bool in_transaction = false;
-  int cur_transaction_size = 0;
-  int max_transaction_size = 5000;
 
   void ensure_db_schema(const viaems::LogChunk&);
 
