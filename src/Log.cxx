@@ -26,7 +26,6 @@ static std::string table_schema_from_update(const viaems::LogChunk& update) {
     }
     index += 1;
   }
-  std::cerr << query << std::endl;
   return query;
 }
 
@@ -91,6 +90,11 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
     return;
   }
 
+  res = sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA wal_autocheckpoint=0;", NULL, 0, &sqlerr);
+  if (res) {
+    std::cerr << "Log: unable to set WAL mode: " << sqlerr << std::endl;
+    sqlite3_free(sqlerr);
+  }
   keys.insert(keys.end(), update.keys.begin(), update.keys.end());
 
   std::string query = table_insert_query(keys);
@@ -138,8 +142,12 @@ void Log::Update(const viaems::LogChunk& update) {
 
   cur_transaction_size += update.points.size();
   if (cur_transaction_size > max_transaction_size) {
+    auto before = std::chrono::system_clock::now();
     sqlite3_exec(db, "COMMIT;", NULL, 0, NULL);
-    std::cerr << "Wrote batch: " << cur_transaction_size << std::endl;
+    auto after = std::chrono::system_clock::now();
+    std::cerr << "Wrote batch in " <<
+    std::chrono::duration_cast<std::chrono::microseconds>(after -
+    before).count() << std::endl;
     in_transaction = false;
     cur_transaction_size = 0;
   }

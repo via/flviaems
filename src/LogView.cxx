@@ -93,7 +93,7 @@ void LogView::draw() {
     }
 
     fl_color(FL_RED);
-    if ((mouse_x > x()) && (mouse_x < x() + w())) {
+    if ((mouse_x > x()) && (mouse_x < x() + w()) && (series[element.first].size() == w())) {
       char txt[32];
       sprintf(txt, "%s   %f", name.c_str(), series[element.first][mouse_x - x()].mean);
       fl_draw(txt, mouse_x + 5, mouse_y + (count + 1) * 15);
