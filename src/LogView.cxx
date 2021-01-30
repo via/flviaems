@@ -80,6 +80,7 @@ void LogView::draw() {
   if (log == nullptr) {
     return;
   }
+  int count = 0;
   for (const auto element : config) {
     auto name = element.first;
     auto conf = element.second;
@@ -94,9 +95,10 @@ void LogView::draw() {
     fl_color(FL_RED);
     if ((mouse_x > x()) && (mouse_x < x() + w())) {
       char txt[32];
-      sprintf(txt, "%s   %u", name.c_str(), 2000);
-      fl_draw(txt, mouse_x + 5, mouse_y + 30);
+      sprintf(txt, "%s   %f", name.c_str(), series[element.first][mouse_x - x()].mean);
+      fl_draw(txt, mouse_x + 5, mouse_y + (count + 1) * 15);
     }
+    count += 1;
   }
 
   fl_color(FL_LIGHT1);
