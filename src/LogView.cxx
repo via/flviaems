@@ -43,6 +43,10 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
     }
   }
 
+  if (!cache.points.size()) {
+    return;
+  }
+
   for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
     if (i->time >= new_start) {
       cache.points.erase(cache.points.begin(), i);

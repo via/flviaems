@@ -1,5 +1,7 @@
 #include <sstream>
 
+#include <memory>
+
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Group.H>
@@ -154,12 +156,16 @@ static SelectableTreeWidget *get_config_tree_widget(Fl_Tree *tree, viaems::Struc
   return nullptr;
 }
 
+
 MainWindow::MainWindow() : MainWindowUI() {
   /* Tables */
   m_table_title->callback(table_value_changed_callback, this);
   m_table_rows->callback(table_value_changed_callback, this);
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
+
+  logwriter.log.SetOutputFile("log.vlog");
+  logwriter.start();
 
   /* Default log output */
   log.SetOutputFile("log.vlog");
@@ -183,7 +189,8 @@ void MainWindow::feed_update(const viaems::LogChunk &updates) {
     status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
   }
   m_status_table->feed_update(status);
-  log.Update(updates);
+//  log.Update(updates);
+  logwriter.add_chunk(std::make_unique<viaems::LogChunk>(updates));
 
   auto stop_time = std::chrono::system_clock::now();
   auto start_time = stop_time - std::chrono::seconds{10};

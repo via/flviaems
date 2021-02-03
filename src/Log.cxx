@@ -90,7 +90,7 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
     return;
   }
 
-  res = sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA wal_autocheckpoint=0;", NULL, 0, &sqlerr);
+  res = sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", NULL, 0, &sqlerr);
   if (res) {
     std::cerr << "Log: unable to set WAL mode: " << sqlerr << std::endl;
     sqlite3_free(sqlerr);

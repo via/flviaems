@@ -4,6 +4,7 @@
 #include <set>
 #include <vector>
 #include <fstream>
+#include <thread>
 
 #include <sqlite3.h>
 
@@ -16,7 +17,7 @@ class Log {
 
   bool in_transaction = false;
   int cur_transaction_size = 0;
-  int max_transaction_size = 5000;
+  int max_transaction_size = 10;
 
   void ensure_db_schema(const viaems::LogChunk&);
 
@@ -32,6 +33,7 @@ public:
   void LoadFromFile(std::istream &);
   void SetOutputFile(std::string path);
   void Update(const viaems::LogChunk&);
+  void Commit();
 
   viaems::LogChunk
   GetRange(std::vector<std::string> keys,
