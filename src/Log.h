@@ -17,7 +17,7 @@ class Log {
 
   bool in_transaction = false;
   int cur_transaction_size = 0;
-  int max_transaction_size = 10;
+  int max_transaction_size = 5000;
 
   void ensure_db_schema(const viaems::LogChunk&);
 

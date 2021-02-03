@@ -71,6 +71,10 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
   if (points_schema_matches_update(keys, update)) {
     return;
   }
+  std::cerr << "Keys: ";
+  for (auto x : keys) { std::cerr << x << " "; }
+  std::cerr << std::endl << "Update: ";
+  for (auto x : update.keys) { std::cerr << x << " "; }
 
   /* TODO if table already exists, alter instead */
   char *sqlerr;
