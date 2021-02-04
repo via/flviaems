@@ -72,7 +72,22 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
       continue;
     }
     for (int k = 0; k < keys.size(); k++) {
-      std::visit([&](const auto v) { series[keys[k]].at(x).mean = v; }, i->values[k]);
+      std::visit([&](const auto v) { 
+        auto &s = series[keys[k]].at(x);
+        if (!s.set) {
+          s.first = v;
+          s.min = v;
+          s.max = v;
+        }
+        if (v < s.min) {
+          s.min = v;
+        }
+        if (v > s.max) {
+          s.max = v;
+        }
+        s.last = v;
+        s.set = true;
+        }, i->values[k]);
     }
   }
   redraw();
@@ -90,16 +105,33 @@ void LogView::draw() {
     auto conf = element.second;
     fl_color(FL_WHITE);
     int cx = 0;
+    int last_x = 0;
+    int last_y = -1;
+
     for (const auto pointgroup : series[element.first]) {
-      int cy = h() * ((pointgroup.mean - conf.min_y) / (conf.max_y - conf.min_y));
-      fl_point(x() + cx, y() + cy);
+
+      if (pointgroup.set) {
+        int cymin = h() * ((pointgroup.min - conf.min_y) / (conf.max_y - conf.min_y));
+        int cymax = h() * ((pointgroup.max - conf.min_y) / (conf.max_y - conf.min_y));
+        int cyfirst = h() * ((pointgroup.first - conf.min_y) / (conf.max_y - conf.min_y));
+        int cylast = h() * ((pointgroup.last - conf.min_y) / (conf.max_y - conf.min_y));
+
+        fl_line(x() + cx, y() + cymin, x() + cx, y() + cymax);
+        if (last_y >= 0) {
+          fl_line(x() + last_x, y() + last_y, x() + cx, y() + cyfirst);
+        }
+
+        last_x = cx;
+        last_y = cylast;
+      }
+
       cx += 1;
     }
 
     fl_color(FL_RED);
     if ((mouse_x > x()) && (mouse_x < x() + w()) && (series[element.first].size() == w())) {
       char txt[32];
-      sprintf(txt, "%s   %f", name.c_str(), series[element.first][mouse_x - x()].mean);
+      sprintf(txt, "%s  %.2f", name.c_str(), series[element.first][mouse_x - x()].max);
       fl_draw(txt, mouse_x + 5, mouse_y + (count + 1) * 15);
     }
     count += 1;

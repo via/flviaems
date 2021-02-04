@@ -10,9 +10,11 @@
 #include "viaems.h"
 
 struct PointGroup {
-  float mean;
+  float first;
+  float last;
   float min;
   float max;
+  bool set;
 };
 
 struct SeriesConfig {

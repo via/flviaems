@@ -71,10 +71,6 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
   if (points_schema_matches_update(keys, update)) {
     return;
   }
-  std::cerr << "Keys: ";
-  for (auto x : keys) { std::cerr << x << " "; }
-  std::cerr << std::endl << "Update: ";
-  for (auto x : update.keys) { std::cerr << x << " "; }
 
   /* TODO if table already exists, alter instead */
   char *sqlerr;
@@ -113,11 +109,7 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
 void Log::Update(const viaems::LogChunk& update) {
   ensure_db_schema(update);
 
-  if (!in_transaction) {
-    sqlite3_exec(db, "BEGIN;", NULL, 0, NULL);
-    in_transaction = true;
-  }
-
+  sqlite3_exec(db, "BEGIN;", NULL, 0, NULL);
 
   for (const auto& point : update.points) {
     sqlite3_reset(insert_stmt);
@@ -144,17 +136,12 @@ void Log::Update(const viaems::LogChunk& update) {
     }
   }
 
-  cur_transaction_size += update.points.size();
-  if (cur_transaction_size > max_transaction_size) {
-    auto before = std::chrono::system_clock::now();
-    sqlite3_exec(db, "COMMIT;", NULL, 0, NULL);
-    auto after = std::chrono::system_clock::now();
-    std::cerr << "Wrote batch in " <<
+  auto before = std::chrono::system_clock::now();
+  sqlite3_exec(db, "COMMIT;", NULL, 0, NULL);
+  auto after = std::chrono::system_clock::now();
+  std::cerr << "Wrote batch in " <<
     std::chrono::duration_cast<std::chrono::microseconds>(after -
-    before).count() << std::endl;
-    in_transaction = false;
-    cur_transaction_size = 0;
-  }
+        before).count() << std::endl;
 
 }
 
