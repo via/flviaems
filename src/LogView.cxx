@@ -103,11 +103,11 @@ void LogView::draw() {
   for (const auto element : config) {
     auto name = element.first;
     auto conf = element.second;
-    fl_color(FL_WHITE);
     int cx = 0;
     int last_x = 0;
     int last_y = -1;
 
+    fl_color(FL_WHITE);
     for (const auto pointgroup : series[element.first]) {
 
       if (pointgroup.set) {
@@ -118,7 +118,7 @@ void LogView::draw() {
 
         fl_line(x() + cx, y() + cymin, x() + cx, y() + cymax);
         if (last_y >= 0) {
-          fl_line(x() + last_x, y() + last_y, x() + cx, y() + cyfirst);
+          fl_line(x() + last_x, y() + last_y, x() + cx - 1, y() + cyfirst);
         }
 
         last_x = cx;

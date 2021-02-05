@@ -193,7 +193,7 @@ void MainWindow::feed_update(std::unique_ptr<viaems::LogChunk> updates) {
   logwriter.add_chunk(std::move(updates));
 
   auto stop_time = std::chrono::system_clock::now();
-  auto start_time = stop_time - std::chrono::seconds{30};
+  auto start_time = stop_time - std::chrono::seconds{20};
   m_logview->update_time_range(start_time, stop_time);
 }
 
