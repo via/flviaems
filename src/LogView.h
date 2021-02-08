@@ -20,6 +20,7 @@ struct PointGroup {
 struct SeriesConfig {
   float min_y;
   float max_y;
+  Fl_Color color;
 };
 
 class LogView : public Fl_Box {

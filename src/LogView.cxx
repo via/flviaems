@@ -5,8 +5,8 @@
 #include "LogView.h"
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
-  config.insert(std::make_pair("rpm", SeriesConfig{0, 6000}));
-  config.insert(std::make_pair("last_trigger_angle", SeriesConfig{0, 720}));
+  config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
+  config.insert(std::make_pair("last_trigger_angle", SeriesConfig{0, 720, FL_YELLOW}));
   series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
   series.insert(std::make_pair("last_trigger_angle", std::vector<PointGroup>{}));
 }
@@ -107,7 +107,7 @@ void LogView::draw() {
     int last_x = 0;
     int last_y = -1;
 
-    fl_color(FL_WHITE);
+    fl_color(conf.color);
     for (const auto pointgroup : series[element.first]) {
 
       if (pointgroup.set) {
@@ -128,7 +128,7 @@ void LogView::draw() {
       cx += 1;
     }
 
-    fl_color(FL_RED);
+    fl_color(FL_WHITE);
     if ((mouse_x > x()) && (mouse_x < x() + w()) && (series[element.first].size() == w())) {
       char txt[32];
       sprintf(txt, "%s  %.2f", name.c_str(), series[element.first][mouse_x - x()].max);
@@ -149,6 +149,7 @@ int LogView::handle(int ev) {
     mouse_x = Fl::event_x();
     mouse_y = Fl::event_y();
   }
+
   return 0;
 }
 
