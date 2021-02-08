@@ -30,7 +30,6 @@ struct LogChunk {
   std::vector<std::string> keys;
 };
 
-
 struct TableAxis {
   std::string name;
   std::vector<float> labels;
@@ -134,6 +133,9 @@ private:
   std::string m_input_buffer;
   std::ostream &m_out;
   std::deque<std::shared_ptr<Request>> m_requests;
+
+  std::chrono::system_clock::time_point zero_time;
+  uint32_t last_feed_time = -1;
 
   const int max_inflight_reqs = 1;
 
