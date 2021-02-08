@@ -65,6 +65,10 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
   auto stop_time_ns =
     std::chrono::duration_cast<std::chrono::nanoseconds>(new_stop.time_since_epoch()).count();
 
+  std::vector<std::vector<PointGroup> *> keymap;
+  for (auto k : keys) {
+    keymap.push_back(&series[k]);
+  }
   for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(i->time.time_since_epoch()).count();
     int x = w() * ((double)(t - start_time_ns) / (stop_time_ns - start_time_ns));
@@ -73,7 +77,7 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
     }
     for (int k = 0; k < keys.size(); k++) {
       std::visit([&](const auto v) { 
-        auto &s = series[keys[k]].at(x);
+        auto &s = keymap[k]->at(x);
         if (!s.set) {
           s.first = v;
           s.min = v;
