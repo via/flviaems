@@ -23,6 +23,12 @@ void Protocol::handle_description_message_from_ems(cbor::array a) {
   m_feed_updates->keys = m_feed_vars;
 }
 
+static std::chrono::system_clock::time_point calculate_zero_point(uint32_t
+cpu_time, std::chrono::system_clock::time_point real_time) {
+  auto ns_since_zero = std::chrono::nanoseconds{(uint64_t)cpu_time * 250};
+  return real_time + ns_since_zero;
+}
+
 void Protocol::handle_feed_message_from_ems(cbor::array a) {
   if (a.size() != m_feed_vars.size()) {
     return;

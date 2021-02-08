@@ -72,10 +72,16 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
     return;
   }
 
-  /* TODO if table already exists, alter instead */
   char *sqlerr;
+  int res = sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", NULL, 0, &sqlerr);
+  if (res) {
+    std::cerr << "Log: unable to set WAL mode: " << sqlerr << std::endl;
+    sqlite3_free(sqlerr);
+  }
+
+  /* TODO if table already exists, alter instead */
   auto create_stmt = table_schema_from_update(update);
-  int res = sqlite3_exec(db, create_stmt.c_str(), NULL, 0, &sqlerr);
+  res = sqlite3_exec(db, create_stmt.c_str(), NULL, 0, &sqlerr);
   if (res) {
     std::cerr << "Log: unable to initialize log schema: " << sqlerr << std::endl;
     sqlite3_free(sqlerr);
@@ -87,14 +93,8 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
   if (res) {
     std::cerr << "Log: unable to create log index: " << sqlerr << std::endl;
     sqlite3_free(sqlerr);
-    return;
   }
 
-  res = sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", NULL, 0, &sqlerr);
-  if (res) {
-    std::cerr << "Log: unable to set WAL mode: " << sqlerr << std::endl;
-    sqlite3_free(sqlerr);
-  }
   keys.insert(keys.end(), update.keys.begin(), update.keys.end());
 
   std::string query = table_insert_query(keys);
@@ -136,12 +136,7 @@ void Log::Update(const viaems::LogChunk& update) {
     }
   }
 
-  auto before = std::chrono::system_clock::now();
   sqlite3_exec(db, "COMMIT;", NULL, 0, NULL);
-  auto after = std::chrono::system_clock::now();
-  std::cerr << "Wrote batch in " <<
-    std::chrono::duration_cast<std::chrono::microseconds>(after -
-        before).count() << std::endl;
 
 }
 

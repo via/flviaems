@@ -30,7 +30,6 @@ struct LogChunk {
   std::vector<std::string> keys;
 };
 
-
 struct TableAxis {
   std::string name;
   std::vector<float> labels;
@@ -118,6 +117,7 @@ public:
   m_feed_updates(std::make_unique<LogChunk>())  {};
 
   std::unique_ptr<LogChunk> FeedUpdates();
+  std::chrono::system_clock::time_point zero_time;
   void NewData(std::string const &);
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
