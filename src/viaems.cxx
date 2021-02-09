@@ -26,7 +26,13 @@ void Protocol::handle_description_message_from_ems(cbor::array a) {
 static std::chrono::system_clock::time_point calculate_zero_point(uint32_t
 cpu_time, std::chrono::system_clock::time_point real_time) {
   auto ns_since_zero = std::chrono::nanoseconds{(uint64_t)cpu_time * 250};
-  return real_time + ns_since_zero;
+  return real_time - ns_since_zero;
+}
+
+static std::chrono::system_clock::time_point calculate_real_time(uint32_t
+cpu_time, std::chrono::system_clock::time_point zero_time) {
+  auto ns_since_zero = std::chrono::nanoseconds{(uint64_t)cpu_time * 250};
+  return zero_time + ns_since_zero;
 }
 
 void Protocol::handle_feed_message_from_ems(cbor::array a) {
@@ -34,7 +40,21 @@ void Protocol::handle_feed_message_from_ems(cbor::array a) {
     return;
   }
   LogPoint update;
-  update.time = std::chrono::system_clock::now();
+  int i;
+  for (i = 0; i < m_feed_vars.size(); i++) {
+    if (m_feed_vars[i] == "cputime") {
+      break;
+    }
+  }
+  if (i == m_feed_vars.size()) {
+    return;
+  }
+  auto cputime = a[i].to_unsigned();
+  if (cputime < last_feed_time) {
+    zero_time = calculate_zero_point(cputime, std::chrono::system_clock::now());
+  }
+  update.time = calculate_real_time(cputime, zero_time);
+  last_feed_time = cputime;
   for (size_t i = 0; i < a.size(); i++) {
     cbor &val = a[i];
     if (val.is_int()) {

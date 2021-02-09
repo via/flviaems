@@ -117,7 +117,6 @@ public:
   m_feed_updates(std::make_unique<LogChunk>())  {};
 
   std::unique_ptr<LogChunk> FeedUpdates();
-  std::chrono::system_clock::time_point zero_time;
   void NewData(std::string const &);
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
@@ -134,6 +133,9 @@ private:
   std::string m_input_buffer;
   std::ostream &m_out;
   std::deque<std::shared_ptr<Request>> m_requests;
+
+  std::chrono::system_clock::time_point zero_time;
+  uint32_t last_feed_time = -1;
 
   const int max_inflight_reqs = 1;
 
