@@ -26,7 +26,7 @@ struct LogPoint {
 };
 
 struct LogChunk {
-  std::deque<LogPoint> points;
+  std::vector<LogPoint> points;
   std::vector<std::string> keys;
 };
 
@@ -113,10 +113,9 @@ struct Request {
 
 class Protocol {
 public:
-  Protocol(std::ostream &out) : m_out{out},
-  m_feed_updates(std::make_unique<LogChunk>())  {};
+  Protocol(std::ostream &out) : m_out{out} {};
 
-  std::unique_ptr<LogChunk> FeedUpdates();
+  LogChunk FeedUpdates();
   void NewData(std::string const &);
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
@@ -129,7 +128,7 @@ public:
 
 private:
   std::vector<std::string> m_feed_vars;
-  std::unique_ptr<LogChunk> m_feed_updates;
+  LogChunk m_feed_updates;
   std::string m_input_buffer;
   std::ostream &m_out;
   std::deque<std::shared_ptr<Request>> m_requests;
