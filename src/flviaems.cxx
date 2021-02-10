@@ -29,12 +29,12 @@ class FLViaems {
     static std::deque<int> rates;
 
     /* Keep average over 1 second */
-    rates.push_back(updates->points.size());
+    rates.push_back(updates.points.size());
     if (rates.size() > 20) {
       rates.erase(rates.begin());
     }
 
-    if (updates->points.size() > 0) {
+    if (updates.points.size() > 0) {
       v->ui.feed_update(std::move(updates));
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
     }

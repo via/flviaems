@@ -12,12 +12,12 @@ struct LogWriter {
   Log log;
   std::mutex mutex;
   std::condition_variable cv;
-  std::deque<std::unique_ptr<viaems::LogChunk>> chunks;
+  std::deque<viaems::LogChunk> chunks;
   std::thread thread;
 
-  void add_chunk(std::unique_ptr<viaems::LogChunk> chunk) {
+  void add_chunk(viaems::LogChunk&& chunk) {
     std::unique_lock<std::mutex> lock(mutex);
-    chunks.push_back(std::move(chunk));
+    chunks.emplace_back(chunk);
     cv.notify_one();
   }
 
@@ -33,7 +33,7 @@ struct LogWriter {
 
       lock.unlock();
 
-      log.Update(*first);
+      log.Update(first);
     }
   }
 
@@ -62,7 +62,7 @@ class MainWindow : public MainWindowUI {
 
 public:
   MainWindow();
-  void feed_update(std::unique_ptr<viaems::LogChunk>);
+  void feed_update(viaems::LogChunk&&);
   void update_connection_status(bool status);
   void update_feed_hz(int hz);
   void update_model(viaems::Model *model);

@@ -6,21 +6,45 @@
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
-  config.insert(std::make_pair("last_trigger_angle", SeriesConfig{0, 720, FL_YELLOW}));
   series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
-  series.insert(std::make_pair("last_trigger_angle", std::vector<PointGroup>{}));
+
+  config.insert(std::make_pair("sensor.map", SeriesConfig{0, 250, FL_YELLOW}));
+  series.insert(std::make_pair("sensor.map", std::vector<PointGroup>{}));
+
+  config.insert(std::make_pair("sensor.ego", SeriesConfig{0.7, 1.0, FL_GREEN}));
+  series.insert(std::make_pair("sensor.ego", std::vector<PointGroup>{}));
 }
+
+
+struct range {
+  uint64_t start_ns;
+  uint64_t stop_ns;
+};
 
 void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
     std::chrono::system_clock::time_point new_stop) {
+
+  auto start_time_ns =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(new_start.time_since_epoch()).count();
+  auto stop_time_ns =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(new_stop.time_since_epoch()).count();
 
   std::vector<std::string> keys;
   for (auto i : config) {
     keys.push_back(i.first);
     series[i.first].clear();
     for (auto k = 0; k < w(); k++) {
-      series[i.first].push_back({});
+      PointGroup pg{};
+      series[i.first].push_back(pg);
     }
+  }
+
+  std::vector<range> pixel_ranges;
+  auto ns_per_pixel = (stop_time_ns - start_time_ns) / w();
+  for (auto k = 0; k < w(); k++) {
+    uint64_t start = start_time_ns + (k * ns_per_pixel);
+    uint64_t stop = start_time_ns + ((k + 1) * ns_per_pixel);
+    pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
   }
 
 /* Is new start before potentially cached start? Determine a range to fetch and
@@ -60,38 +84,40 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
     }
   }
 
-  auto start_time_ns =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(new_start.time_since_epoch()).count();
-  auto stop_time_ns =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(new_stop.time_since_epoch()).count();
-
   std::vector<std::vector<PointGroup> *> keymap;
   for (auto k : keys) {
     keymap.push_back(&series[k]);
   }
+  int pixel = 0;
   for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(i->time.time_since_epoch()).count();
-    int x = w() * ((double)(t - start_time_ns) / (stop_time_ns - start_time_ns));
-    if ((x < 0) || (x >= w())) {
-      continue;
+    while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w()) pixel++;
+    if (pixel == w()) {
+      break;
     }
+
     for (int k = 0; k < keys.size(); k++) {
-      std::visit([&](const auto v) { 
-        auto &s = keymap[k]->at(x);
-        if (!s.set) {
-          s.first = v;
-          s.min = v;
-          s.max = v;
-        }
-        if (v < s.min) {
-          s.min = v;
-        }
-        if (v > s.max) {
-          s.max = v;
-        }
-        s.last = v;
-        s.set = true;
-        }, i->values[k]);
+      auto &s = keymap[k]->at(pixel);
+      viaems::FeedValue fv = i->values[k];
+      float v;
+      if (std::holds_alternative<uint32_t>(fv)) {
+        v = std::get<uint32_t>(fv);
+      } else {
+        v = std::get<float>(fv);
+      }
+      if (!s.set) {
+        s.first = v;
+        s.min = v;
+        s.max = v;
+      }
+      if (v < s.min) {
+        s.min = v;
+      }
+      if (v > s.max) {
+        s.max = v;
+      }
+      s.last = v;
+      s.set = true;
     }
   }
   redraw();
@@ -120,9 +146,9 @@ void LogView::draw() {
         int cyfirst = h() * ((pointgroup.first - conf.min_y) / (conf.max_y - conf.min_y));
         int cylast = h() * ((pointgroup.last - conf.min_y) / (conf.max_y - conf.min_y));
 
-        fl_line(x() + cx, y() + cymin, x() + cx, y() + cymax);
+        fl_line(x() + cx, y() + h() - cymin, x() + cx, y() + h() - cymax);
         if (last_y >= 0) {
-          fl_line(x() + last_x, y() + last_y, x() + cx - 1, y() + cyfirst);
+          fl_line(x() + last_x, y() + h() - last_y, x() + cx - 1, y() + h() - cyfirst);
         }
 
         last_x = cx;

@@ -203,7 +203,7 @@ std::chrono::system_clock::time_point stop) {
         break;
       }
     }
-    retval.points.push_back(point);
+    retval.points.emplace_back(point);
   }
   return retval;
 }
