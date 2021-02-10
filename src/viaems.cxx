@@ -64,7 +64,7 @@ void Protocol::handle_feed_message_from_ems(cbor::array a) {
       update.values.push_back(FeedValue(static_cast<float>(val.to_float())));
     }
   }
-  m_feed_updates.points.push_back(update);
+  m_feed_updates.points.emplace_back(update);
 }
 
 static StructureLeaf generate_config_node(cbor::map entry, StructurePath path) {

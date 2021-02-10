@@ -17,7 +17,7 @@ struct LogWriter {
 
   void add_chunk(viaems::LogChunk&& chunk) {
     std::unique_lock<std::mutex> lock(mutex);
-    chunks.push_back(std::move(chunk));
+    chunks.emplace_back(chunk);
     cv.notify_one();
   }
 
