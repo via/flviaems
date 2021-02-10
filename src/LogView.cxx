@@ -76,8 +76,8 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
       continue;
     }
     for (int k = 0; k < keys.size(); k++) {
+      auto &s = keymap[k]->at(x);
       std::visit([&](const auto v) { 
-        auto &s = keymap[k]->at(x);
         if (!s.set) {
           s.first = v;
           s.min = v;
