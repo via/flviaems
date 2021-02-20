@@ -17,32 +17,49 @@ struct range {
   uint64_t stop_ns;
 };
 
+void LogView::update_pointgroups(int x0, int x1) {
+  std::chrono::nanoseconds fetch_start = start_ns + (ns_per_pixel * x0);
+  std::chrono::nanoseconds fetch_stop = start_ns + (ns_per_pixel * x1);
+
+  std::vector<std::string> keys;
+  for (auto i : config) {
+    keys.push_back(i.first);
+  }
+
+  auto updates = log->GetRange(keys, new_start, cached_start);
+
 void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
     std::chrono::system_clock::time_point new_stop) {
 
-  auto start_time_ns =
+  auto new_start_time_ns =
     std::chrono::duration_cast<std::chrono::nanoseconds>(new_start.time_since_epoch()).count();
-  auto stop_time_ns =
+  auto new_stop_time_ns =
     std::chrono::duration_cast<std::chrono::nanoseconds>(new_stop.time_since_epoch()).count();
 
   std::vector<std::string> keys;
   for (auto i : config) {
     keys.push_back(i.first);
+  }
+
+  auto old_w = series.begin()->second.size();
+  auto old_ns_per_pixel = (stop_ns - start_ns) / old_w;
+  auto ns_per_pixel = (new_stop_time_ns - new_start_time_ns) / w();
+
+  /* Is current pointgroup list usable? */
+  if ((old_w == w() &&
+      (old_ns_per_pixel == ns_per_pixel)) {
+    /* Shift as necessary, repopulate new sections */
+  } else {
+    /* No, reset everything */
+    }
+
+  for (auto i : config) {
     series[i.first].clear();
     for (auto k = 0; k < w(); k++) {
       PointGroup pg{};
       series[i.first].push_back(pg);
     }
   }
-
-  std::vector<range> pixel_ranges;
-  auto ns_per_pixel = (stop_time_ns - start_time_ns) / w();
-  for (auto k = 0; k < w(); k++) {
-    uint64_t start = start_time_ns + (k * ns_per_pixel);
-    uint64_t stop = start_time_ns + ((k + 1) * ns_per_pixel);
-    pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
-  }
-
 /* Is new start before potentially cached start? Determine a range to fetch and
  * fetch it (either newstart ->cachedstart or newstart -> newend. */
 
@@ -178,4 +195,3 @@ int LogView::handle(int ev) {
 
   return 0;
 }
-

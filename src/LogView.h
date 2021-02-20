@@ -32,7 +32,7 @@ public:
 
 private:
   Log *log;
-  std::chrono::system_clock::time_point start, stop;
+  uint64_t start_ns, stop_ns, ns_per_pixel;
   int mouse_x, mouse_y;
 
   std::map<std::string, SeriesConfig> config;
