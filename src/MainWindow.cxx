@@ -194,7 +194,11 @@ void MainWindow::feed_update(viaems::LogChunk &&updates) {
 
   auto stop_time = std::chrono::system_clock::now();
   auto start_time = stop_time - std::chrono::seconds{20};
-  m_logview->update_time_range(start_time, stop_time);
+
+  auto start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(start_time.time_since_epoch()).count();
+  auto stop_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(stop_time.time_since_epoch()).count();
+
+  m_logview->update_time_range(start_ns, stop_ns);
 }
 
 void MainWindow::select_table(Fl_Widget *w, void *p) {

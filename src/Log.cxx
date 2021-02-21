@@ -158,16 +158,11 @@ static std::string table_search_statement(std::vector<std::string> keys) {
   return query;
 }
 
-viaems::LogChunk Log::GetRange(std::vector<std::string> keys, std::chrono::system_clock::time_point start,
-std::chrono::system_clock::time_point stop) {
+viaems::LogChunk Log::GetRange(std::vector<std::string> keys, uint64_t start_ns,
+uint64_t stop_ns) {
   if (db == nullptr) {
     return {};
   }
-  uint64_t start_ns =
-  std::chrono::duration_cast<std::chrono::nanoseconds>(start.time_since_epoch()).count();
-
-  uint64_t stop_ns =
-  std::chrono::duration_cast<std::chrono::nanoseconds>(stop.time_since_epoch()).count();
 
   auto q = table_search_statement(keys);
   sqlite3_stmt *stmt;

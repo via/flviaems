@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <deque>
 
 #include <FL/Fl.H>
@@ -27,8 +26,7 @@ class LogView : public Fl_Box {
 public:
   LogView(int X, int Y, int W, int H);
   void SetLog(Log *log) {this->log = log;};
-  void update_time_range(std::chrono::system_clock::time_point start,
-      std::chrono::system_clock::time_point stop);
+  void update_time_range(uint64_t start, uint64_t stop);
 
 private:
   Log *log;
@@ -39,6 +37,7 @@ private:
   std::map<std::string, std::vector<PointGroup>> series;
   viaems::LogChunk cache;
 
+  void update_pointgroups(int x0, int x1);
   int handle(int);
   void draw();
 };

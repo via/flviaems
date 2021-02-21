@@ -11,107 +11,36 @@ LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   series.insert(std::make_pair("last_trigger_angle", std::vector<PointGroup>{}));
 }
 
-
-struct range {
-  uint64_t start_ns;
-  uint64_t stop_ns;
-};
-
 void LogView::update_pointgroups(int x0, int x1) {
-  std::chrono::nanoseconds fetch_start = start_ns + (ns_per_pixel * x0);
-  std::chrono::nanoseconds fetch_stop = start_ns + (ns_per_pixel * x1);
+  auto fetch_start =  start_ns + (ns_per_pixel * x0);
+  auto fetch_stop = start_ns + (ns_per_pixel * x1);
 
   std::vector<std::string> keys;
   for (auto i : config) {
     keys.push_back(i.first);
-  }
-
-  auto updates = log->GetRange(keys, new_start, cached_start);
-
-void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
-    std::chrono::system_clock::time_point new_stop) {
-
-  auto new_start_time_ns =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(new_start.time_since_epoch()).count();
-  auto new_stop_time_ns =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(new_stop.time_since_epoch()).count();
-
-  std::vector<std::string> keys;
-  for (auto i : config) {
-    keys.push_back(i.first);
-  }
-
-  auto old_w = series.begin()->second.size();
-  auto old_ns_per_pixel = (stop_ns - start_ns) / old_w;
-  auto ns_per_pixel = (new_stop_time_ns - new_start_time_ns) / w();
-
-  /* Is current pointgroup list usable? */
-  if ((old_w == w() &&
-      (old_ns_per_pixel == ns_per_pixel)) {
-    /* Shift as necessary, repopulate new sections */
-  } else {
-    /* No, reset everything */
-    }
-
-  for (auto i : config) {
-    series[i.first].clear();
-    for (auto k = 0; k < w(); k++) {
-      PointGroup pg{};
-      series[i.first].push_back(pg);
-    }
-  }
-/* Is new start before potentially cached start? Determine a range to fetch and
- * fetch it (either newstart ->cachedstart or newstart -> newend. */
-
-  if (!cache.points.size()) {
-    cache = log->GetRange(keys, new_start, new_stop);
-  } else {
-    auto cached_start = cache.points[0].time;
-    if (new_start < cached_start) {
-      auto updates = log->GetRange(keys, new_start, cached_start);
-      cache.points.insert(cache.points.begin(), updates.points.begin(),
-      updates.points.end());
-    }
-    auto cached_stop = cache.points[cache.points.size() - 1].time;
-    if (new_stop > cached_stop) {
-      auto updates = log->GetRange(keys, cached_stop, new_stop);
-      cache.points.insert(cache.points.end(), updates.points.begin(),
-      updates.points.end());
-    }
-  }
-
-  if (!cache.points.size()) {
-    return;
-  }
-
-  for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
-    if (i->time >= new_start) {
-      cache.points.erase(cache.points.begin(), i);
-      break;
-    }
-  }
-  for (auto i = cache.points.end() - 1; i != cache.points.begin(); i--) {
-    if (i->time < new_stop) {
-      cache.points.erase(i + 1, cache.points.end());
-      break;
-    }
   }
 
   std::vector<std::vector<PointGroup> *> keymap;
   for (auto k : keys) {
     keymap.push_back(&series[k]);
   }
-  int pixel = 0;
-  for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
-    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(i->time.time_since_epoch()).count();
-    while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w()) pixel++;
-    if (pixel == w()) {
+
+  auto updates = log->GetRange(keys, fetch_start, fetch_stop);
+
+  int cur_pixel = x0;
+  uint64_t end_time_of_pixel = start_ns + (ns_per_pixel * cur_pixel);
+  for (auto update : updates.points) {
+    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(update.time.time_since_epoch()).count();
+    while ((t >= end_time_of_pixel) && cur_pixel <= x1) {
+      cur_pixel++;
+      end_time_of_pixel = start_ns + (ns_per_pixel * cur_pixel);
+    }
+    if (cur_pixel > x1) {
       break;
     }
-
     for (int k = 0; k < keys.size(); k++) {
-      auto &s = keymap[k]->at(pixel);
-      viaems::FeedValue fv = i->values[k];
+      auto &s = keymap[k]->at(cur_pixel);
+      viaems::FeedValue fv = update.values[k];
       float v;
       if (std::holds_alternative<uint32_t>(fv)) {
         v = std::get<uint32_t>(fv);
@@ -133,6 +62,51 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
       s.set = true;
     }
   }
+
+}
+
+void LogView::update_time_range(uint64_t new_start, uint64_t new_stop) {
+
+
+  std::vector<std::string> keys;
+  for (auto i : config) {
+    keys.push_back(i.first);
+  }
+
+  auto old_w = series.begin()->second.size();
+  auto old_ns_per_pixel = old_w ? ((stop_ns - start_ns) / old_w) : 0;
+  auto shift = new_stop - stop_ns;
+  ns_per_pixel = (new_stop - new_start) / w();
+
+  start_ns = new_start;
+  stop_ns = new_stop;
+
+  /* Is current pointgroup list usable? */
+  if ((old_w == w()) &&
+      (old_ns_per_pixel == ns_per_pixel)) {
+    /* Shift as necessary, repopulate new sections */
+    int shift_pixels = shift / ns_per_pixel;
+    for (auto i : config) {
+      for (auto k = 0; k < w() - shift_pixels; k++) {
+        series[i.first][k] = series[i.first][k + shift_pixels];
+      }
+      for (auto k = w() - shift_pixels; k < w(); k++) {
+        series[i.first][k] = PointGroup{};
+      }
+    }
+    update_pointgroups(w() - 1 - shift_pixels, w() - 1);
+  } else {
+    for (auto i : config) {
+      series[i.first].clear();
+      for (auto k = 0; k < w(); k++) {
+        PointGroup pg{};
+        series[i.first].push_back(pg);
+      }
+    }
+    update_pointgroups(0, w() - 1);
+  }
+
+
   redraw();
 }
 

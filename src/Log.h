@@ -33,6 +33,6 @@ public:
 
   viaems::LogChunk
   GetRange(std::vector<std::string> keys,
-      std::chrono::system_clock::time_point start,
-      std::chrono::system_clock::time_point end);
+      uint64_t start,
+      uint64_t end);
 };
