@@ -25,6 +25,7 @@ private:
   void draw_cell(TableContext c, int R, int C, int X, int Y, int W, int H);
   std::string cell_value(int r, int c);
 
+  void adjust_selection(int amt);
   static void cell_select_callback(Fl_Widget *w, void *);
   static void cell_value_callback(Fl_Widget *w, void *);
   void start_editor(int R, int C);

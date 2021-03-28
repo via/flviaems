@@ -25,12 +25,36 @@ void TableEditor::cell_select_callback(Fl_Widget *w, void *ptr) {
       auto x = Fl::event_key();
       if (x == FL_Enter) {
         editor->start_editor(R, C);
+      } else if (x == '=') {
+        editor->adjust_selection(1);
+      } else if (x == '-') {
+        editor->adjust_selection(-1);
       }
       break;
     }
   default:
     break;
   }
+}
+
+void TableEditor::adjust_selection(int amt) {
+  int row_top, col_left, row_bot, col_right;
+  this->get_selection(row_top, col_left, row_bot, col_right);
+
+  if (this->table.axis.size() == 1) {
+    for (int r = row_top; r <= row_bot; r++) {
+      this->edit_changes.insert(std::make_pair(r, 0));
+      this->table.one[r] += amt;
+    }
+  } else {
+    for (int r = row_top; r <= row_bot; r++) {
+      for (int c = col_left; c <= col_right; c++) {
+        this->edit_changes.insert(std::make_pair(r, c));
+        this->table.two[r][c] += amt;
+      }
+    }
+  }
+  this->parent()->do_callback();
 }
 
 void TableEditor::cell_value_callback(Fl_Widget *w, void *ptr) {
