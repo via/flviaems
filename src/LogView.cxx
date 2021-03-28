@@ -6,9 +6,13 @@
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
-  config.insert(std::make_pair("last_trigger_angle", SeriesConfig{0, 720, FL_YELLOW}));
   series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
-  series.insert(std::make_pair("last_trigger_angle", std::vector<PointGroup>{}));
+
+  config.insert(std::make_pair("sensor.map", SeriesConfig{0, 250, FL_YELLOW}));
+  series.insert(std::make_pair("sensor.map", std::vector<PointGroup>{}));
+
+  config.insert(std::make_pair("sensor.ego", SeriesConfig{0.7, 1.0, FL_GREEN}));
+  series.insert(std::make_pair("sensor.ego", std::vector<PointGroup>{}));
 }
 
 
@@ -142,9 +146,9 @@ void LogView::draw() {
         int cyfirst = h() * ((pointgroup.first - conf.min_y) / (conf.max_y - conf.min_y));
         int cylast = h() * ((pointgroup.last - conf.min_y) / (conf.max_y - conf.min_y));
 
-        fl_line(x() + cx, y() + cymin, x() + cx, y() + cymax);
+        fl_line(x() + cx, y() + h() - cymin, x() + cx, y() + h() - cymax);
         if (last_y >= 0) {
-          fl_line(x() + last_x, y() + last_y, x() + cx - 1, y() + cyfirst);
+          fl_line(x() + last_x, y() + h() - last_y, x() + cx - 1, y() + h() - cyfirst);
         }
 
         last_x = cx;
