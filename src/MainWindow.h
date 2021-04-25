@@ -1,47 +1,9 @@
 #ifndef MainWindow_h
 #define MainWindow_h
 
-#include <mutex>
-#include <condition_variable>
-
 #include "Log.h"
 #include "MainWindowUI.h"
 #include "viaems.h"
-
-struct LogWriter {
-  Log log;
-  std::mutex mutex;
-  std::condition_variable cv;
-  std::deque<viaems::LogChunk> chunks;
-  std::thread thread;
-
-  void add_chunk(viaems::LogChunk&& chunk) {
-    std::unique_lock<std::mutex> lock(mutex);
-    chunks.emplace_back(chunk);
-    cv.notify_one();
-  }
-
-  void write_loop() {
-    while (true) {
-      std::unique_lock<std::mutex> lock(mutex);
-      if (chunks.empty()) {
-        cv.wait(lock);
-      }
-
-      auto first = std::move(chunks.front());
-      chunks.erase(chunks.begin());
-
-      lock.unlock();
-
-      log.Update(first);
-    }
-  }
-
-  void start() {
-    thread = std::thread([](LogWriter *w) { w->write_loop(); }, this);
-  }
-
-};
 
 
 class MainWindow : public MainWindowUI {

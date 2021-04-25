@@ -7,6 +7,9 @@
 #include <thread>
 #include <memory>
 
+#include <mutex>
+#include <condition_variable>
+
 #include <sqlite3.h>
 
 #include "viaems.h"
@@ -36,3 +39,19 @@ public:
       std::chrono::system_clock::time_point start,
       std::chrono::system_clock::time_point end);
 };
+
+struct LogWriter {
+  Log log;
+  std::mutex mutex;
+  std::condition_variable cv;
+  std::deque<viaems::LogChunk> chunks;
+  std::thread thread;
+
+  void add_chunk(viaems::LogChunk&& chunk);
+  void write_loop();
+  void start() {
+    thread = std::thread([](LogWriter *w) { w->write_loop(); }, this);
+  }
+
+};
+

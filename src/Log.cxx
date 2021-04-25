@@ -209,3 +209,24 @@ std::chrono::system_clock::time_point stop) {
 }
 
 
+void LogWriter::add_chunk(viaems::LogChunk&& chunk) {
+  std::unique_lock<std::mutex> lock(mutex);
+  chunks.emplace_back(chunk);
+  cv.notify_one();
+}
+
+void LogWriter::write_loop() {
+  while (true) {
+    std::unique_lock<std::mutex> lock(mutex);
+    if (chunks.empty()) {
+      cv.wait(lock);
+    }
+
+    auto first = std::move(chunks.front());
+    chunks.erase(chunks.begin());
+
+    lock.unlock();
+
+    log.Update(first);
+  }
+}
