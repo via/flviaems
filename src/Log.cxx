@@ -84,7 +84,7 @@ static std::vector<std::string> current_points_keys(sqlite3 *db) {
   return keys;
 }
 
-void Log::ensure_db_schema(const viaems::LogChunk &update) {
+static void ensure_db_schema(sqlite3 *db, const viaems::LogChunk &update) {
 
   auto table_keys = current_points_keys(db);
 
@@ -109,12 +109,14 @@ void Log::ensure_db_schema(const viaems::LogChunk &update) {
   } else if (false) {
     /* Alter the existing table to have the additional cols */
   }
-
-
 }
 
-void Log::WriteChunk(const viaems::LogChunk& update) {
-  ensure_db_schema(update);
+void Log::WriteChunk(viaems::LogChunk&& update) {
+  if (!db) {
+    return;
+  }
+
+  ensure_db_schema(this->db, update);
 
   auto query = table_insert_query(update.keys);
   sqlite3_stmt *insert_stmt;
@@ -232,17 +234,21 @@ std::chrono::system_clock::time_point stop) {
 }
 
 
-void ThreadedLogWriter::add_chunk(viaems::LogChunk&& chunk) {
+void ThreadedWriteLog::WriteChunk(viaems::LogChunk&& chunk) {
   std::unique_lock<std::mutex> lock(mutex);
   chunks.emplace_back(chunk);
   cv.notify_one();
 }
 
-void ThreadedLogWriter::write_loop() {
+void ThreadedWriteLog::write_loop() {
   while (true) {
     std::unique_lock<std::mutex> lock(mutex);
     if (chunks.empty()) {
       cv.wait(lock);
+    }
+
+    if (!running) {
+      return;
     }
 
     auto first = std::move(chunks.front());
@@ -250,6 +256,6 @@ void ThreadedLogWriter::write_loop() {
 
     lock.unlock();
 
-    log.WriteChunk(first);
+    Log::WriteChunk(std::move(first));
   }
 }

@@ -8,8 +8,8 @@
 
 class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
-  Log log;
-  ThreadedLogWriter logwriter;
+  Log log_reader;
+  ThreadedWriteLog log_writer;
   viaems::StructurePath detail_path;
 
   void update_config_structure(viaems::StructureNode top);

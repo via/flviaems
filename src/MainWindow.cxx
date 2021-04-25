@@ -164,21 +164,11 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
 
-  /*
-  Log writes;
-  Log views;
 
-  writes.SetFile("log.vlog");
-  views.SetFile("log.vlog");
+  log_reader.SetFile("log.vlog");
+  log_writer.SetFile("log.vlog");
 
-  logwriter.log.SetOutputFile("log.vlog");
-  logwriter.start();
-  */
-
-  /* Default log output */
-  log.SetFile("log.vlog");
-//  log.SetOutputFile(":memory:");
-  m_logview->SetLog(&log);
+  m_logview->SetLog(&log_reader);
 }
 
 void MainWindow::update_connection_status(bool status) {
@@ -197,8 +187,7 @@ void MainWindow::feed_update(viaems::LogChunk &&updates) {
     status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
   }
   m_status_table->feed_update(status);
-//  log.Update(updates);
-  logwriter.add_chunk(std::move(updates));
+  log_writer.WriteChunk(std::move(updates));
 
   auto stop_time = std::chrono::system_clock::now();
   auto start_time = stop_time - std::chrono::seconds{20};
