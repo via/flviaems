@@ -67,47 +67,62 @@ viaems::LogChunk update) {
   return true;
 }
 
-void Log::ensure_db_schema(const viaems::LogChunk &update) {
-  if (points_schema_matches_update(keys, update)) {
-    return;
-  }
+static std::vector<std::string> current_points_keys(sqlite3 *db) {
+  sqlite3_stmt *stmt;
+  std::vector<std::string> keys;
 
-  char *sqlerr;
-  int res = sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", NULL, 0, &sqlerr);
-  if (res) {
-    std::cerr << "Log: unable to set WAL mode: " << sqlerr << std::endl;
-    sqlite3_free(sqlerr);
+  std::string query = "PRAGMA TABLE_INFO(points);";
+  sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+  while (true) {
+    int res = sqlite3_step(stmt);
+    if ((res == SQLITE_DONE) || (res == SQLITE_MISUSE)) {
+      break;
+    }
+    auto *col_name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)); 
+    keys.push_back(std::string{col_name});
   }
-
-  /* TODO if table already exists, alter instead */
-  auto create_stmt = table_schema_from_update(update);
-  res = sqlite3_exec(db, create_stmt.c_str(), NULL, 0, &sqlerr);
-  if (res) {
-    std::cerr << "Log: unable to initialize log schema: " << sqlerr << std::endl;
-    sqlite3_free(sqlerr);
-    return;
-  }
-  
-  res = sqlite3_exec(db, "CREATE INDEX points_time ON points(realtime_ns);", NULL, 0,
-      &sqlerr);
-  if (res) {
-    std::cerr << "Log: unable to create log index: " << sqlerr << std::endl;
-    sqlite3_free(sqlerr);
-  }
-
-  keys.insert(keys.end(), update.keys.begin(), update.keys.end());
-
-  std::string query = table_insert_query(keys);
-  res = sqlite3_prepare_v2(db, query.c_str(), query.size(), &insert_stmt, NULL);
-  if (res) {
-    std::cerr << "Log: unable to prepare insert statement: " << sqlerr << std::endl;
-    sqlite3_free(sqlerr);
-    return;
-  }
+  return keys;
 }
 
-void Log::Update(const viaems::LogChunk& update) {
+void Log::ensure_db_schema(const viaems::LogChunk &update) {
+
+  auto table_keys = current_points_keys(db);
+
+  if (table_keys.size() == 0) {
+    /* Create a new table */
+    int res;
+    char *sqlerr;
+    auto create_stmt = table_schema_from_update(update);
+    res = sqlite3_exec(db, create_stmt.c_str(), NULL, 0, &sqlerr);
+    if (res) {
+      std::cerr << "Log: unable to initialize log schema: " << sqlerr << std::endl;
+      sqlite3_free(sqlerr);
+      return;
+    }
+
+    res = sqlite3_exec(db, "CREATE INDEX points_time ON points(realtime_ns);", NULL, 0,
+        &sqlerr);
+    if (res) {
+      std::cerr << "Log: unable to create log index: " << sqlerr << std::endl;
+      sqlite3_free(sqlerr);
+    }
+  } else if (false) {
+    /* Alter the existing table to have the additional cols */
+  }
+
+
+}
+
+void Log::WriteChunk(const viaems::LogChunk& update) {
   ensure_db_schema(update);
+
+  auto query = table_insert_query(update.keys);
+  sqlite3_stmt *insert_stmt;
+  int res = sqlite3_prepare_v2(db, query.c_str(), query.size(), &insert_stmt, NULL);
+  if (res != SQLITE_OK) {
+    std::cerr << "Log: unable to prepare insert statement: " << sqlite3_errmsg(db) << std::endl;
+    return;
+  }
 
   sqlite3_exec(db, "BEGIN;", NULL, 0, NULL);
 
@@ -118,7 +133,7 @@ void Log::Update(const viaems::LogChunk& update) {
       std::chrono::duration_cast<std::chrono::nanoseconds>(point.time.time_since_epoch()).count();
     sqlite3_bind_int64(insert_stmt, 1, time_ns);
     int sql_index = 2;
-    for (const auto &key : keys) {
+    for (const auto &key : update.keys) {
       int value_index = sql_index - 2;
       const auto& value = point.values[value_index];
       if (std::holds_alternative<uint32_t>(value)) {
@@ -140,11 +155,19 @@ void Log::Update(const viaems::LogChunk& update) {
 
 }
 
-void Log::SetOutputFile(std::string path) {
+void Log::SetFile(std::string path) {
   int r = sqlite3_open(path.c_str(), &db);
   if (r) {
     db = nullptr;
     return;
+  }
+
+  /* Enable WAL mode */
+  char *sqlerr;
+  int res = sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", NULL, 0, &sqlerr);
+  if (res) {
+    std::cerr << "Log: unable to set WAL mode: " << sqlerr << std::endl;
+    sqlite3_free(sqlerr);
   }
 }
 
@@ -209,13 +232,13 @@ std::chrono::system_clock::time_point stop) {
 }
 
 
-void LogWriter::add_chunk(viaems::LogChunk&& chunk) {
+void ThreadedLogWriter::add_chunk(viaems::LogChunk&& chunk) {
   std::unique_lock<std::mutex> lock(mutex);
   chunks.emplace_back(chunk);
   cv.notify_one();
 }
 
-void LogWriter::write_loop() {
+void ThreadedLogWriter::write_loop() {
   while (true) {
     std::unique_lock<std::mutex> lock(mutex);
     if (chunks.empty()) {
@@ -227,6 +250,6 @@ void LogWriter::write_loop() {
 
     lock.unlock();
 
-    log.Update(first);
+    log.WriteChunk(first);
   }
 }

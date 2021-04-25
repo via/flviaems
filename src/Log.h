@@ -16,9 +16,6 @@
 
 class Log {
   sqlite3 *db;
-  std::vector<std::string> keys;
-  sqlite3_stmt *insert_stmt;
-
   void ensure_db_schema(const viaems::LogChunk&);
 
 
@@ -30,9 +27,8 @@ public:
     }
   };
 
-  void LoadFromFile(std::istream &);
-  void SetOutputFile(std::string path);
-  void Update(const viaems::LogChunk&);
+  void SetFile(std::string path);
+  void WriteChunk(const viaems::LogChunk&);
 
   viaems::LogChunk
   GetRange(std::vector<std::string> keys,
@@ -40,7 +36,7 @@ public:
       std::chrono::system_clock::time_point end);
 };
 
-struct LogWriter {
+struct ThreadedLogWriter {
   Log log;
   std::mutex mutex;
   std::condition_variable cv;
@@ -50,7 +46,7 @@ struct LogWriter {
   void add_chunk(viaems::LogChunk&& chunk);
   void write_loop();
   void start() {
-    thread = std::thread([](LogWriter *w) { w->write_loop(); }, this);
+    thread = std::thread([](ThreadedLogWriter *w) { w->write_loop(); }, this);
   }
 
 };

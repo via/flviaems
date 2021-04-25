@@ -164,11 +164,19 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
 
+  /*
+  Log writes;
+  Log views;
+
+  writes.SetFile("log.vlog");
+  views.SetFile("log.vlog");
+
   logwriter.log.SetOutputFile("log.vlog");
   logwriter.start();
+  */
 
   /* Default log output */
-  log.SetOutputFile("log.vlog");
+  log.SetFile("log.vlog");
 //  log.SetOutputFile(":memory:");
   m_logview->SetLog(&log);
 }

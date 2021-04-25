@@ -9,7 +9,7 @@
 class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
   Log log;
-  LogWriter logwriter;
+  ThreadedLogWriter logwriter;
   viaems::StructurePath detail_path;
 
   void update_config_structure(viaems::StructureNode top);
