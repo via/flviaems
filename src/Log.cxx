@@ -81,6 +81,7 @@ static std::vector<std::string> current_points_keys(sqlite3 *db) {
     auto *col_name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)); 
     keys.push_back(std::string{col_name});
   }
+  sqlite3_finalize(stmt);
   return keys;
 }
 
@@ -154,6 +155,7 @@ void Log::WriteChunk(viaems::LogChunk&& update) {
   }
 
   sqlite3_exec(db, "COMMIT;", NULL, 0, NULL);
+  sqlite3_finalize(insert_stmt);
 
 }
 
@@ -230,6 +232,7 @@ std::chrono::system_clock::time_point stop) {
     }
     retval.points.emplace_back(point);
   }
+  sqlite3_finalize(stmt);
   return retval;
 }
 
