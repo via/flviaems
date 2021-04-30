@@ -9,9 +9,11 @@
 #include <sstream>
 #include <variant>
 #include <vector>
-
-#include <cbor11.h>
 #include <fstream>
+#include <functional>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 namespace viaems {
 
@@ -108,15 +110,15 @@ struct Request {
   std::variant<StructureRequest, GetRequest, SetRequest, PingRequest,
     FlashRequest, BootloaderRequest> request;
   bool is_sent;
-  cbor repr;
+  json repr;
 };
 
 class Protocol {
 public:
-  Protocol(std::ostream &out) : m_out{out} {};
+  Protocol(std::function<void(const json&)> write_cb) : write_cb{write_cb} {};
 
   LogChunk FeedUpdates();
-  void NewData(std::string const &);
+  void NewData(const json &j);
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
   std::shared_ptr<Request> Structure(structure_cb, void *);
@@ -129,8 +131,7 @@ public:
 private:
   std::vector<std::string> m_feed_vars;
   LogChunk m_feed_updates;
-  std::string m_input_buffer;
-  std::ostream &m_out;
+  std::function<void(const json&)> write_cb;
   std::deque<std::shared_ptr<Request>> m_requests;
 
   std::chrono::system_clock::time_point zero_time;
@@ -138,10 +139,9 @@ private:
 
   const int max_inflight_reqs = 1;
 
-  void handle_message_from_ems(cbor m);
-  void handle_feed_message_from_ems(cbor::array m);
-  void handle_description_message_from_ems(cbor::array m);
-  void handle_response_message_from_ems(uint32_t id, cbor response);
+  void handle_feed_message_from_ems(const json &m);
+  void handle_description_message_from_ems(const json &m);
+  void handle_response_message_from_ems(uint32_t id, const json &response);
   void ensure_sent();
 };
 
@@ -202,6 +202,7 @@ public:
   void interrogate(interrogation_change_cb cb, void *ptr);
   void set_value(StructurePath path, ConfigValue value);
 };
+
 
 } // namespace viaems
 

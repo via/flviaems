@@ -18,6 +18,5 @@ target_link_libraries(flviaems ${FLTK})
 find_package(SQLite3)
 target_link_libraries(flviaems ${SQLite3_LIBRARIES})
 
-add_subdirectory(extern/cbor11)
-target_link_libraries(flviaems cbor11)
-target_include_directories(flviaems PRIVATE "extern/cbor11/include")
+add_subdirectory(extern/json)
+target_link_libraries(flviaems nlohmann_json::nlohmann_json)

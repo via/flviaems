@@ -1,4 +1,5 @@
 #include <set>
+#include <iostream>
 
 #include <sqlite3.h>
 

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
-#include <unistd.h>
+#include <functional>
 
 #include "MainWindow.h"
 #include <FL/Fl.H>
@@ -11,21 +11,75 @@
 
 #include "viaems.h"
 
-static void set_stdin_nonblock(int fd) {
-  fcntl(fd, F_SETFL, O_NONBLOCK | fcntl(fd, F_GETFL, 0));
-}
+#include <nlohmann/json.hpp>
+using json = json;
+
+class Connection {
+  std::istream &in;
+  std::ostream &out;
+
+  std::thread reader_thread;
+  std::deque<json> in_messages;
+  std::mutex in_mutex;
+  Fl_Awake_Handler handler;
+  void *handler_ptr;
+
+  bool running;
+
+  static void do_reader_thread(Connection *self) {
+    while (self->running) {
+      try {
+        auto msg = json::from_cbor(self->in, false);
+        std::unique_lock<std::mutex> lock(self->in_mutex);
+        self->in_messages.push_back(msg);
+        lock.unlock();
+        Fl::awake(self->handler, self->handler_ptr);
+      } catch (json::parse_error &e) {
+      }
+
+    }
+  }
+  public:
+    Connection(std::istream &i, std::ostream &o, Fl_Awake_Handler read_handler, void *ptr)
+    : in{i}, out{o}, handler{read_handler}, handler_ptr{ptr}, running{true} {
+      this->reader_thread = std::thread([](Connection *s) {
+        s->do_reader_thread(s); }, this);
+    }
+    ~Connection() {
+      running = false;
+      reader_thread.join();
+    }
+
+    void Write(const json &msg) {
+      json::to_cbor(msg, out);
+      out.flush();
+    }
+
+    std::optional<json> Read() {
+      std::unique_lock<std::mutex> lock(in_mutex);
+      if (in_messages.empty()) {
+        return {};
+      }
+      auto msg = std::move(in_messages[0]);
+      in_messages.pop_front();
+      return msg;
+    }
+};
+
 
 class FLViaems {
-  viaems::Protocol connector;
-  int read_fd;
   MainWindow ui;
+  viaems::Protocol protocol;
   viaems::Model model;
+
+  std::unique_ptr<Connection> connector;
   std::shared_ptr<viaems::Request> ping_req;
+
 
   static void feed_refresh_handler(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
-    auto updates = v->connector.FeedUpdates();
+    auto updates = v->protocol.FeedUpdates();
     static std::deque<int> rates;
 
     /* Keep average over 1 second */
@@ -41,22 +95,11 @@ class FLViaems {
     Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
   }
 
-  static void stdin_ready_cb(int fd, void *ptr) {
-    auto v = static_cast<FLViaems *>(ptr);
-
-    char buf[4096];
-    auto res = read(v->read_fd, &buf[0], sizeof(buf));
-    if (res < 0) {
-      return;
-    }
-    v->connector.NewData(std::string(buf, res));
-  }
-
   static void failed_ping_callback(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
     if (v->ping_req) {
-      v->connector.Cancel(v->ping_req);
+      v->protocol.Cancel(v->ping_req);
       v->ping_req.reset();
     }
     std::cerr << "failed ping" << std::endl;
@@ -111,37 +154,62 @@ class FLViaems {
     auto v = static_cast<FLViaems *>(ptr);
 
     Fl::add_timeout(0.5, v->failed_ping_callback, v);
-    v->ping_req = v->connector.Ping(v->ping_callback, v);
+    v->ping_req = v->protocol.Ping(v->ping_callback, v);
     Fl::repeat_timeout(1, v->pinger, v);
   }
 
   static void flash(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    v->connector.Flash();
+    v->protocol.Flash();
     v->start_interrogation();
   }
 
   static void bootloader(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    v->connector.Bootloader();
+    v->protocol.Bootloader();
     v->start_interrogation();
   }
 
+  void initialize_connection() {
+    this->connector = std::make_unique<Connection>(std::cin, std::cout,
+    read_message, this);
+  }
+
+  static void read_message(void *ptr) {
+    FLViaems *v = static_cast<FLViaems *>(ptr);
+    do {
+      auto msg = v->connector->Read();
+      if (!msg) {
+        break;
+      }
+      v->protocol.NewData(msg.value());
+    } while (true);
+  }
+
+  void write_message(const json& msg) {
+    if (this->connector != nullptr) {
+      this->connector->Write(msg);
+    }
+  }
+
 public:
-  FLViaems(std::ostream &o, int infd) : connector{o}, model{connector} {
+  FLViaems() : protocol{std::bind(&FLViaems::write_message, this,
+  std::placeholders::_1)}, model{protocol} {
+    Fl::lock(); /* Necessary to enable awake() functionality */
     model.set_value_change_callback(value_update, this);
     ui.m_file_flash->callback(flash, this);
     ui.m_file_bootloader->callback(bootloader, this);
-    read_fd = infd;
-    set_stdin_nonblock(read_fd);
-    Fl::add_fd(0, FL_READ, stdin_ready_cb, this);
     Fl::add_timeout(0.05, feed_refresh_handler, this);
     Fl::add_timeout(1, pinger, this);
+    initialize_connection();
+  };
+
+  ~FLViaems() {
   };
 };
 
 int main() {
-  FLViaems controller{std::cout, STDIN_FILENO};
+  FLViaems controller{};
   Fl::run();
   return 0;
 }

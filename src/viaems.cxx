@@ -2,9 +2,13 @@
 #include <cstdlib>
 #include <exception>
 #include <streambuf>
+#include <iostream>
 
 #include "Log.h"
 #include "viaems.h"
+
+#include <nlohmann/json.hpp>
+using json = json;
 
 using namespace viaems;
 
@@ -15,9 +19,9 @@ LogChunk Protocol::FeedUpdates() {
   return updates;
 }
 
-void Protocol::handle_description_message_from_ems(cbor::array a) {
+void Protocol::handle_description_message_from_ems(const json &a) {
   m_feed_vars.clear();
-  for (cbor i : a) {
+  for (json i : a) {
     m_feed_vars.push_back(i);
   }
   m_feed_updates.keys = m_feed_vars;
@@ -35,7 +39,7 @@ cpu_time, std::chrono::system_clock::time_point zero_time) {
   return zero_time + ns_since_zero;
 }
 
-void Protocol::handle_feed_message_from_ems(cbor::array a) {
+void Protocol::handle_feed_message_from_ems(const json &a) {
   if (a.size() != m_feed_vars.size()) {
     return;
   }
@@ -49,71 +53,71 @@ void Protocol::handle_feed_message_from_ems(cbor::array a) {
   if (i == m_feed_vars.size()) {
     return;
   }
-  auto cputime = a[i].to_unsigned();
+  auto cputime = a[i].get<uint32_t>();
   if (cputime < last_feed_time) {
     zero_time = calculate_zero_point(cputime, std::chrono::system_clock::now());
   }
   update.time = calculate_real_time(cputime, zero_time);
   last_feed_time = cputime;
   for (size_t i = 0; i < a.size(); i++) {
-    cbor &val = a[i];
-    if (val.is_int()) {
+    const json &val = a[i];
+    if (val.is_number_integer()) {
       update.values.push_back(
-          FeedValue(static_cast<uint32_t>(val.to_unsigned())));
-    } else if (val.is_float()) {
-      update.values.push_back(FeedValue(static_cast<float>(val.to_float())));
+          FeedValue(val.get<uint32_t>()));
+    } else if (val.is_number_float()) {
+      update.values.push_back(
+          FeedValue(val.get<float>()));
     }
   }
   m_feed_updates.points.emplace_back(update);
 }
 
-static StructureLeaf generate_config_node(cbor::map entry, StructurePath path) {
-  std::string type = entry.at("_type").to_string();
+static StructureLeaf generate_config_node(const json &entry, StructurePath path) {
+  std::string type = entry["_type"];
   std::string desc = "";
-  if (entry.count("description")) {
-    desc = entry.at("description").to_string();
+  if (entry.contains("description")) {
+    desc = entry["description"];
   }
 
   std::vector<std::string> choices;
-  if (entry.count("choices")) {
-    for (auto choice : entry.at("choices").to_array()) {
-      choices.push_back(choice.to_string());
+  if (entry.contains("choices")) {
+    for (auto choice : entry["choices"]) {
+      choices.push_back(choice);
     }
   }
 
   return StructureLeaf{
       .description = desc,
-      .type = entry.at("_type").to_string(),
+      .type = type,
       .choices = choices,
       .path = path,
   };
 }
 
-static StructureNode generate_structure_node_from_cbor(cbor entry,
+static StructureNode generate_structure_node_from_cbor(const json &entry,
                                                        StructurePath curpath) {
-  if (entry.is_map()) {
-    auto map = entry.to_map();
-    if (map.count("_type")) {
+  if (entry.is_object()) {
+    if (entry.contains("_type")) {
       /* This is a leaf node */
-      return StructureNode{generate_config_node(map, curpath)};
+      return StructureNode{generate_config_node(entry, curpath)};
     }
 
     /* This is actually a map, we should descend */
     auto result = StructureMap{};
-    for (const auto &map_entry : entry.to_map()) {
+    for (const auto &map_entry : entry.items()) {
       StructurePath new_path = curpath;
-      new_path.push_back(map_entry.first.to_string());
+      new_path.push_back(map_entry.key());
 
       auto child =
-          generate_structure_node_from_cbor(map_entry.second, new_path);
+          generate_structure_node_from_cbor(map_entry.value(), new_path);
       result.insert(std::pair<std::string, StructureNode>(
-          map_entry.first.to_string(), child));
+          map_entry.key(), child));
     }
     return StructureNode{result};
   } else if (entry.is_array()) {
     auto result = StructureList{};
     int index = 0;
-    for (const auto &list_entry : entry.to_array()) {
+    for (const auto &list_entry : entry) {
       StructurePath new_path = curpath;
       new_path.push_back(index);
       index += 1;
@@ -127,33 +131,33 @@ static StructureNode generate_structure_node_from_cbor(cbor entry,
   return StructureNode{StructureLeaf{}};
 }
 
-static TableAxis generate_table_axis_from_cbor(cbor::map axis) {
+static TableAxis generate_table_axis_from_cbor(const json &axis) {
   TableAxis res{};
-  res.name = axis.at("name").to_string();
-  for (const auto label : axis.at("values").to_array()) {
-    res.labels.push_back(label.to_float());
+  res.name = axis["name"];
+  for (const auto label : axis["values"]) {
+    res.labels.push_back(label);
   }
   return res;
 }
 
-static ConfigValue generate_table_value_from_cbor(cbor::map map) {
+static ConfigValue generate_table_value_from_cbor(const json &map) {
   TableValue table;
-  int n_axis = map.at("num-axis").to_unsigned();
-  table.title = map.at("title").to_string();
+  int n_axis = map["num-axis"];
+  table.title = map["title"];
   table.axis.push_back(
-      generate_table_axis_from_cbor(map.at("horizontal-axis").to_map()));
+      generate_table_axis_from_cbor(map["horizontal-axis"]));
 
   if (n_axis == 1) {
-    for (const auto datum : map.at("data").to_array()) {
-      table.one.push_back(datum.to_float());
+    for (const auto datum : map["data"]) {
+      table.one.push_back(datum);
     }
   } else if (n_axis == 2) {
     table.axis.push_back(
-        generate_table_axis_from_cbor(map.at("vertical-axis").to_map()));
-    for (const auto outter : map.at("data").to_array()) {
+        generate_table_axis_from_cbor(map["vertical-axis"]));
+    for (const auto outter : map["data"]) {
       std::vector<float> values;
-      for (const auto value : outter.to_array()) {
-        values.push_back(value.to_float());
+      for (const auto value : outter) {
+        values.push_back(value);
       }
       table.two.push_back(values);
     }
@@ -161,72 +165,76 @@ static ConfigValue generate_table_value_from_cbor(cbor::map map) {
   return table;
 }
 
-static ConfigValue generate_node_value_from_cbor(cbor value) {
+bool is_valid_table_cbor(const json &value) {
+ if (!value.contains("title") ||
+     !value.contains("num-axis") ||
+     !value.contains("horizontal-axis")) {
+   return false;
+ }
+ if (!value["horizontal-axis"].contains("name") ||
+     !value["horizontal-axis"].contains("values")) {
+   return false;
+ }
+ if (value["num-axis"] == 2) {
+   if (!value.contains("vertical-axis") ||
+     !value["vertical-axis"].contains("name") ||
+     !value["vertical-axis"].contains("values")) {
+     return true;
+   }
+ }
+ if (!value.contains("data")) {
+   return false;
+ }
+ return true;
+}
 
-  if (value.is_int()) {
-    return (uint32_t)value.to_unsigned();
+static ConfigValue generate_node_value_from_cbor(const json &value) {
+
+  if (value.is_number_integer()) {
+    return value.get<uint32_t>();
   }
-  if (value.is_float()) {
-    return (float)value.to_float();
+  if (value.is_number_float()) {
+    return value.get<float>();
   }
   if (value.is_string()) {
-    return value.to_string();
+    return value.get<std::string>();
   }
-  if (value.is_map()) {
-    auto m = value.to_map();
-    if (m.count("num-axis") > 0) {
-      return generate_table_value_from_cbor(m);
-    }
+  if (is_valid_table_cbor(value)) {
+    return generate_table_value_from_cbor(value);
   }
   return ConfigValue{5.0f};
 }
 
-template <typename T> static cbor cbor_from_value(T v) { return cbor{v}; }
+template <typename T> static json cbor_from_value(T v) { return v; }
 
-static cbor cbor_from_table_axis(TableAxis axis) {
-  cbor::array labels;
-  for (const auto l : axis.labels) {
-    labels.push_back(l);
-  }
-  auto result = cbor::map{
+static json cbor_from_table_axis(TableAxis axis) {
+  auto result = json{
       {"name", axis.name},
-      {"values", labels},
+      {"values", axis.labels},
   };
   return result;
 }
 
-static cbor cbor_from_value(const TableValue &v) {
-  auto result = cbor::map{
+static json cbor_from_value(const TableValue &v) {
+  auto result = json{
       {"num-axis", v.axis.size()},
       {"title", v.title},
       {"horizontal-axis", cbor_from_table_axis(v.axis[0])},
   };
   if (v.axis.size() == 1) {
-    auto data = cbor::array{};
-    for (const auto d : v.one) {
-      data.push_back(d);
-    }
-    result.insert(std::pair("data", data));
+    result["data"] = v.one;
   } else {
-    auto data = cbor::array{};
-    for (const auto row : v.two) {
-      auto cbor_row = cbor::array{};
-      for (const auto val : row) {
-        cbor_row.push_back(val);
-      }
-      data.push_back(cbor_row);
-    }
-    result.insert(std::pair("data", data));
-    result.insert(std::pair("vertical-axis", cbor_from_table_axis(v.axis[1])));
+    result["data"] = v.two;
+    result["vertical-axis"] =  cbor_from_table_axis(v.axis[1]);
   }
   return result;
 }
 
-static cbor cbor_from_value(const OutputValue &v) { return cbor{}; }
+static json cbor_from_value(const OutputValue &v) { return json{}; }
 
-static cbor cbor_from_value(const SensorValue &v) { return cbor{}; }
+static json cbor_from_value(const SensorValue &v) { return json{}; }
 
-void Protocol::handle_response_message_from_ems(uint32_t id, cbor response) {
+void Protocol::handle_response_message_from_ems(uint32_t id, const json &response) {
   if (m_requests.empty()) {
     return;
   }
@@ -244,7 +252,7 @@ void Protocol::handle_response_message_from_ems(uint32_t id, cbor response) {
     pingreq.cb(pingreq.ptr);
   } else if (std::holds_alternative<StructureRequest>(req->request)) {
     auto structurereq = std::get<StructureRequest>(req->request);
-    auto c = generate_structure_node_from_cbor(response.to_map(), {});
+    auto c = generate_structure_node_from_cbor(response, {});
     structurereq.cb(c, structurereq.ptr);
   } else if (std::holds_alternative<GetRequest>(req->request)) {
     auto getreq = std::get<GetRequest>(req->request);
@@ -257,80 +265,33 @@ void Protocol::handle_response_message_from_ems(uint32_t id, cbor response) {
   }
 }
 
-void Protocol::handle_message_from_ems(cbor msg) {
-  if (!msg.is_map()) {
+void Protocol::NewData(const json &msg) {
+  if (!msg.is_object()) {
     return;
   }
 
-  std::string type;
-  cbor::map val = msg.to_map();
-  if (val.count("type") != 1) {
+  if (!msg.contains("type")) {
     return;
   }
-  if ((val.count("success") == 1) && !val.at("success").to_bool()) {
+  if ((msg.contains("success") == 1) && (msg["success"] != true)) {
     return;
   }
-  type = val.at("type").to_string();
 
-  if (type == "feed" && (val.count("values") > 0)) {
-    handle_feed_message_from_ems(val.at("values").to_array());
-  } else if (type == "description" && (val.count("keys") > 0)) {
-    handle_description_message_from_ems(val.at("keys").to_array());
-  } else if (type == "response" && (val.count("id") > 0) &&
-             (val.count("response") > 0)) {
-    handle_response_message_from_ems(val.at("id"), val.at("response"));
-  }
-}
+  std::string type = msg["type"];
 
-struct SliceReader : public std::streambuf {
-  SliceReader(char *s, std::size_t n) { setg(s, s, s + n); }
-
-  size_t bytes_read() { return gptr() - eback(); }
-};
-
-void Protocol::NewData(std::string const &data) {
-  m_input_buffer.append(data);
-
-  SliceReader reader{m_input_buffer.data(), m_input_buffer.size()};
-  std::istream data_ss{&reader};
-  size_t bytes_to_remove = 0;
-
-  cbor cbordata;
-  do {
-    try {
-      if (!cbordata.read(data_ss)) {
-        break;
-      }
-    } catch (const std::bad_alloc &) {
-      std::cerr << "Bad alloc!" << std::endl;
-      break;
-    } catch (const std::length_error &) {
-      std::cerr << "length error" << std::endl;
-      break;
-    }
-
-    cbor::array array;
-    for (auto req : m_requests) {
-      array.push_back(req->id);
-    }
-    cbor item = array;
-    handle_message_from_ems(cbordata);
-    /* Only remove bytes we've successfully decoded */
-    bytes_to_remove = reader.bytes_read();
-  } while (true);
-
-  m_input_buffer.erase(0, bytes_to_remove);
-
-  /* Is our buffer massive? If so, reset it */
-  if (m_input_buffer.length() > 16384) {
-    m_input_buffer.clear();
+  if (type == "feed" && msg.contains("values")) {
+    handle_feed_message_from_ems(msg["values"]);
+  } else if (type == "description" && msg.contains("keys")) {
+    handle_description_message_from_ems(msg["keys"]);
+  } else if (type == "response" && msg.contains("id") && msg.contains("response")) {
+    handle_response_message_from_ems(msg["id"], msg["response"]);
   }
 }
 
 std::shared_ptr<Request> Protocol::Structure(structure_cb cb, void *v) {
   uint32_t id = rand() % 1024;
 
-  cbor wire_request = cbor::map{
+  auto wire_request = json{
       {"type", "request"},
       {"method", "structure"},
       {"id", id},
@@ -349,7 +310,7 @@ std::shared_ptr<Request> Protocol::Structure(structure_cb cb, void *v) {
 std::shared_ptr<Request> Protocol::Ping(ping_cb cb, void *v) {
   uint32_t id = rand() % 1024;
 
-  cbor wire_request = cbor::map{
+  auto wire_request = json{
       {"type", "request"},
       {"method", "ping"},
       {"id", id},
@@ -365,8 +326,8 @@ std::shared_ptr<Request> Protocol::Ping(ping_cb cb, void *v) {
   return req;
 }
 
-cbor::array cbor_path_from_structure_path(viaems::StructurePath path) {
-  cbor::array result;
+static json cbor_path_from_structure_path(viaems::StructurePath path) {
+  json result;
   for (const auto &p : path) {
     std::visit([&](const auto &v) { result.push_back(v); }, p);
   }
@@ -377,7 +338,7 @@ std::shared_ptr<Request> Protocol::Get(get_cb cb, viaems::StructurePath path,
                                        void *v) {
   uint32_t id = rand() % 1024;
 
-  cbor wire_request = cbor::map{
+  auto wire_request = json{
       {"type", "request"},
       {"method", "get"},
       {"id", id},
@@ -399,9 +360,9 @@ std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
                                        viaems::ConfigValue value, void *v) {
   uint32_t id = rand() % 1024;
 
-  cbor cval = std::visit(
-      [](const auto &v) -> cbor { return cbor_from_value(v); }, value);
-  cbor wire_request = cbor::map{
+  auto cval = std::visit(
+      [](const auto &v) -> json { return cbor_from_value(v); }, value);
+  auto wire_request = json{
       {"type", "request"}, {"method", "set"},
       {"id", id},          {"path", cbor_path_from_structure_path(path)},
       {"value", cval},
@@ -419,7 +380,7 @@ std::shared_ptr<Request> Protocol::Set(set_cb cb, viaems::StructurePath path,
 }
 
 void Protocol::Flash() {
-  cbor wire_request = cbor::map{
+  auto wire_request = json{
       {"type", "request"},
       {"method", "flash"},
   };
@@ -434,7 +395,7 @@ void Protocol::Flash() {
 }
 
 void Protocol::Bootloader() {
-  cbor wire_request = cbor::map{
+  auto wire_request = json{
       {"type", "request"},
       {"method", "bootloader"},
   };
@@ -469,8 +430,7 @@ void Protocol::ensure_sent() {
     return;
   }
   first->is_sent = true;
-  first->repr.write(m_out);
-  m_out.flush();
+  this->write_cb(first->repr);
 }
 
 void Model::interrogate(interrogation_change_cb cb, void *ptr) {
@@ -555,3 +515,4 @@ void Model::recurse_model_structure(StructureNode node) {
 void Model::set_value(StructurePath path, ConfigValue value) {
   m_protocol.Set(handle_model_set, path, value, this);
 }
+
