@@ -15,19 +15,21 @@ LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   series.insert(std::make_pair("sensor.ego", std::vector<PointGroup>{}));
 }
 
-
 struct range {
   uint64_t start_ns;
   uint64_t stop_ns;
 };
 
-void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
+void LogView::update_time_range(
+    std::chrono::system_clock::time_point new_start,
     std::chrono::system_clock::time_point new_stop) {
 
-  auto start_time_ns =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(new_start.time_since_epoch()).count();
-  auto stop_time_ns =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(new_stop.time_since_epoch()).count();
+  auto start_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           new_start.time_since_epoch())
+                           .count();
+  auto stop_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                          new_stop.time_since_epoch())
+                          .count();
 
   std::vector<std::string> keys;
   for (auto i : config) {
@@ -47,8 +49,8 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
     pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
   }
 
-/* Is new start before potentially cached start? Determine a range to fetch and
- * fetch it (either newstart ->cachedstart or newstart -> newend. */
+  /* Is new start before potentially cached start? Determine a range to fetch
+   * and fetch it (either newstart ->cachedstart or newstart -> newend. */
 
   if (!cache.points.size()) {
     cache = log->GetRange(keys, new_start, new_stop);
@@ -57,13 +59,13 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
     if (new_start < cached_start) {
       auto updates = log->GetRange(keys, new_start, cached_start);
       cache.points.insert(cache.points.begin(), updates.points.begin(),
-      updates.points.end());
+                          updates.points.end());
     }
     auto cached_stop = cache.points[cache.points.size() - 1].time;
     if (new_stop > cached_stop) {
       auto updates = log->GetRange(keys, cached_stop, new_stop);
       cache.points.insert(cache.points.end(), updates.points.begin(),
-      updates.points.end());
+                          updates.points.end());
     }
   }
 
@@ -90,8 +92,11 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
   }
   int pixel = 0;
   for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
-    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(i->time.time_since_epoch()).count();
-    while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w()) pixel++;
+    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                 i->time.time_since_epoch())
+                 .count();
+    while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w())
+      pixel++;
     if (pixel == w()) {
       break;
     }
@@ -123,7 +128,6 @@ void LogView::update_time_range(std::chrono::system_clock::time_point new_start,
   redraw();
 }
 
-
 void LogView::draw() {
   draw_box();
   if (log == nullptr) {
@@ -141,14 +145,19 @@ void LogView::draw() {
     for (const auto pointgroup : series[element.first]) {
 
       if (pointgroup.set) {
-        int cymin = h() * ((pointgroup.min - conf.min_y) / (conf.max_y - conf.min_y));
-        int cymax = h() * ((pointgroup.max - conf.min_y) / (conf.max_y - conf.min_y));
-        int cyfirst = h() * ((pointgroup.first - conf.min_y) / (conf.max_y - conf.min_y));
-        int cylast = h() * ((pointgroup.last - conf.min_y) / (conf.max_y - conf.min_y));
+        int cymin =
+            h() * ((pointgroup.min - conf.min_y) / (conf.max_y - conf.min_y));
+        int cymax =
+            h() * ((pointgroup.max - conf.min_y) / (conf.max_y - conf.min_y));
+        int cyfirst =
+            h() * ((pointgroup.first - conf.min_y) / (conf.max_y - conf.min_y));
+        int cylast =
+            h() * ((pointgroup.last - conf.min_y) / (conf.max_y - conf.min_y));
 
         fl_line(x() + cx, y() + h() - cymin, x() + cx, y() + h() - cymax);
         if (last_y >= 0) {
-          fl_line(x() + last_x, y() + h() - last_y, x() + cx - 1, y() + h() - cyfirst);
+          fl_line(x() + last_x, y() + h() - last_y, x() + cx - 1,
+                  y() + h() - cyfirst);
         }
 
         last_x = cx;
@@ -159,9 +168,11 @@ void LogView::draw() {
     }
 
     fl_color(FL_WHITE);
-    if ((mouse_x > x()) && (mouse_x < x() + w()) && (series[element.first].size() == w())) {
+    if ((mouse_x > x()) && (mouse_x < x() + w()) &&
+        (series[element.first].size() == w())) {
       char txt[32];
-      sprintf(txt, "%s  %.2f", name.c_str(), series[element.first][mouse_x - x()].max);
+      sprintf(txt, "%s  %.2f", name.c_str(),
+              series[element.first][mouse_x - x()].max);
       fl_draw(txt, mouse_x + 5, mouse_y + (count + 1) * 15);
     }
     count += 1;
@@ -182,4 +193,3 @@ int LogView::handle(int ev) {
 
   return 0;
 }
-

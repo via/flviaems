@@ -1,5 +1,5 @@
-#include <sstream>
 #include <iostream>
+#include <sstream>
 
 #include <memory>
 
@@ -136,18 +136,20 @@ public:
 
   void update_value(viaems::ConfigValue value) {
     try {
-      int index = this->chooser->find_index(std::get<std::string>(value).c_str());
+      int index =
+          this->chooser->find_index(std::get<std::string>(value).c_str());
       this->chooser->value(index);
       dirty(false);
     } catch (std::exception &_) {
-      std::cerr <<"Exception!" << std::endl;
+      std::cerr << "Exception!" << std::endl;
     }
   }
 
   viaems::ConfigValue get_value() { return std::string{chooser->text()}; }
 };
 
-static SelectableTreeWidget *get_config_tree_widget(Fl_Tree *tree, viaems::StructurePath path) {
+static SelectableTreeWidget *
+get_config_tree_widget(Fl_Tree *tree, viaems::StructurePath path) {
   for (Fl_Tree_Item *item = tree->first(); item; item = item->next()) {
     auto w = dynamic_cast<SelectableTreeWidget *>(item->widget());
     if (w && w->path == path) {
@@ -157,14 +159,12 @@ static SelectableTreeWidget *get_config_tree_widget(Fl_Tree *tree, viaems::Struc
   return nullptr;
 }
 
-
 MainWindow::MainWindow() : MainWindowUI() {
   /* Tables */
   m_table_title->callback(table_value_changed_callback, this);
   m_table_rows->callback(table_value_changed_callback, this);
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
-
 
   log_reader.SetFile("log.vlog");
   log_writer.SetFile("log.vlog");

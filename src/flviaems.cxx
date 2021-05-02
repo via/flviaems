@@ -1,9 +1,9 @@
 #include <cstdio>
 #include <fcntl.h>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <numeric>
-#include <functional>
 
 #include "MainWindow.h"
 #include <FL/Fl.H>
@@ -36,36 +36,36 @@ class Connection {
         Fl::awake(self->handler, self->handler_ptr);
       } catch (json::parse_error &e) {
       }
-
     }
   }
-  public:
-    Connection(std::istream &i, std::ostream &o, Fl_Awake_Handler read_handler, void *ptr)
-    : in{i}, out{o}, handler{read_handler}, handler_ptr{ptr}, running{true} {
-      this->reader_thread = std::thread([](Connection *s) {
-        s->do_reader_thread(s); }, this);
-    }
-    ~Connection() {
-      running = false;
-      reader_thread.join();
-    }
 
-    void Write(const json &msg) {
-      json::to_cbor(msg, out);
-      out.flush();
-    }
+public:
+  Connection(std::istream &i, std::ostream &o, Fl_Awake_Handler read_handler,
+             void *ptr)
+      : in{i}, out{o}, handler{read_handler}, handler_ptr{ptr}, running{true} {
+    this->reader_thread =
+        std::thread([](Connection *s) { s->do_reader_thread(s); }, this);
+  }
+  ~Connection() {
+    running = false;
+    reader_thread.join();
+  }
 
-    std::optional<json> Read() {
-      std::unique_lock<std::mutex> lock(in_mutex);
-      if (in_messages.empty()) {
-        return {};
-      }
-      auto msg = std::move(in_messages[0]);
-      in_messages.pop_front();
-      return msg;
+  void Write(const json &msg) {
+    json::to_cbor(msg, out);
+    out.flush();
+  }
+
+  std::optional<json> Read() {
+    std::unique_lock<std::mutex> lock(in_mutex);
+    if (in_messages.empty()) {
+      return {};
     }
+    auto msg = std::move(in_messages[0]);
+    in_messages.pop_front();
+    return msg;
+  }
 };
-
 
 class FLViaems {
   MainWindow ui;
@@ -74,7 +74,6 @@ class FLViaems {
 
   std::unique_ptr<Connection> connector;
   std::shared_ptr<viaems::Request> ping_req;
-
 
   static void feed_refresh_handler(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
@@ -171,8 +170,8 @@ class FLViaems {
   }
 
   void initialize_connection() {
-    this->connector = std::make_unique<Connection>(std::cin, std::cout,
-    read_message, this);
+    this->connector =
+        std::make_unique<Connection>(std::cin, std::cout, read_message, this);
   }
 
   static void read_message(void *ptr) {
@@ -186,15 +185,17 @@ class FLViaems {
     } while (true);
   }
 
-  void write_message(const json& msg) {
+  void write_message(const json &msg) {
     if (this->connector != nullptr) {
       this->connector->Write(msg);
     }
   }
 
 public:
-  FLViaems() : protocol{std::bind(&FLViaems::write_message, this,
-  std::placeholders::_1)}, model{protocol} {
+  FLViaems()
+      : protocol{std::bind(&FLViaems::write_message, this,
+                           std::placeholders::_1)},
+        model{protocol} {
     Fl::lock(); /* Necessary to enable awake() functionality */
     model.set_value_change_callback(value_update, this);
     ui.m_file_flash->callback(flash, this);
@@ -204,8 +205,7 @@ public:
     initialize_connection();
   };
 
-  ~FLViaems() {
-  };
+  ~FLViaems(){};
 };
 
 int main() {

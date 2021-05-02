@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <exception>
 #include <streambuf>
-#include <iostream>
 
 #include "Log.h"
 #include "viaems.h"
@@ -27,14 +26,16 @@ void Protocol::handle_description_message_from_ems(const json &a) {
   m_feed_updates.keys = m_feed_vars;
 }
 
-static std::chrono::system_clock::time_point calculate_zero_point(uint32_t
-cpu_time, std::chrono::system_clock::time_point real_time) {
+static std::chrono::system_clock::time_point
+calculate_zero_point(uint32_t cpu_time,
+                     std::chrono::system_clock::time_point real_time) {
   auto ns_since_zero = std::chrono::nanoseconds{(uint64_t)cpu_time * 250};
   return real_time - ns_since_zero;
 }
 
-static std::chrono::system_clock::time_point calculate_real_time(uint32_t
-cpu_time, std::chrono::system_clock::time_point zero_time) {
+static std::chrono::system_clock::time_point
+calculate_real_time(uint32_t cpu_time,
+                    std::chrono::system_clock::time_point zero_time) {
   auto ns_since_zero = std::chrono::nanoseconds{(uint64_t)cpu_time * 250};
   return zero_time + ns_since_zero;
 }
@@ -62,17 +63,16 @@ void Protocol::handle_feed_message_from_ems(const json &a) {
   for (size_t i = 0; i < a.size(); i++) {
     const json &val = a[i];
     if (val.is_number_integer()) {
-      update.values.push_back(
-          FeedValue(val.get<uint32_t>()));
+      update.values.push_back(FeedValue(val.get<uint32_t>()));
     } else if (val.is_number_float()) {
-      update.values.push_back(
-          FeedValue(val.get<float>()));
+      update.values.push_back(FeedValue(val.get<float>()));
     }
   }
   m_feed_updates.points.emplace_back(update);
 }
 
-static StructureLeaf generate_config_node(const json &entry, StructurePath path) {
+static StructureLeaf generate_config_node(const json &entry,
+                                          StructurePath path) {
   std::string type = entry["_type"];
   std::string desc = "";
   if (entry.contains("description")) {
@@ -110,8 +110,8 @@ static StructureNode generate_structure_node_from_cbor(const json &entry,
 
       auto child =
           generate_structure_node_from_cbor(map_entry.value(), new_path);
-      result.insert(std::pair<std::string, StructureNode>(
-          map_entry.key(), child));
+      result.insert(
+          std::pair<std::string, StructureNode>(map_entry.key(), child));
     }
     return StructureNode{result};
   } else if (entry.is_array()) {
@@ -144,16 +144,14 @@ static ConfigValue generate_table_value_from_cbor(const json &map) {
   TableValue table;
   int n_axis = map["num-axis"];
   table.title = map["title"];
-  table.axis.push_back(
-      generate_table_axis_from_cbor(map["horizontal-axis"]));
+  table.axis.push_back(generate_table_axis_from_cbor(map["horizontal-axis"]));
 
   if (n_axis == 1) {
     for (const auto datum : map["data"]) {
       table.one.push_back(datum);
     }
   } else if (n_axis == 2) {
-    table.axis.push_back(
-        generate_table_axis_from_cbor(map["vertical-axis"]));
+    table.axis.push_back(generate_table_axis_from_cbor(map["vertical-axis"]));
     for (const auto outter : map["data"]) {
       std::vector<float> values;
       for (const auto value : outter) {
@@ -166,26 +164,25 @@ static ConfigValue generate_table_value_from_cbor(const json &map) {
 }
 
 bool is_valid_table_cbor(const json &value) {
- if (!value.contains("title") ||
-     !value.contains("num-axis") ||
-     !value.contains("horizontal-axis")) {
-   return false;
- }
- if (!value["horizontal-axis"].contains("name") ||
-     !value["horizontal-axis"].contains("values")) {
-   return false;
- }
- if (value["num-axis"] == 2) {
-   if (!value.contains("vertical-axis") ||
-     !value["vertical-axis"].contains("name") ||
-     !value["vertical-axis"].contains("values")) {
-     return true;
-   }
- }
- if (!value.contains("data")) {
-   return false;
- }
- return true;
+  if (!value.contains("title") || !value.contains("num-axis") ||
+      !value.contains("horizontal-axis")) {
+    return false;
+  }
+  if (!value["horizontal-axis"].contains("name") ||
+      !value["horizontal-axis"].contains("values")) {
+    return false;
+  }
+  if (value["num-axis"] == 2) {
+    if (!value.contains("vertical-axis") ||
+        !value["vertical-axis"].contains("name") ||
+        !value["vertical-axis"].contains("values")) {
+      return true;
+    }
+  }
+  if (!value.contains("data")) {
+    return false;
+  }
+  return true;
 }
 
 static ConfigValue generate_node_value_from_cbor(const json &value) {
@@ -225,7 +222,7 @@ static json cbor_from_value(const TableValue &v) {
     result["data"] = v.one;
   } else {
     result["data"] = v.two;
-    result["vertical-axis"] =  cbor_from_table_axis(v.axis[1]);
+    result["vertical-axis"] = cbor_from_table_axis(v.axis[1]);
   }
   return result;
 }
@@ -234,7 +231,8 @@ static json cbor_from_value(const OutputValue &v) { return json{}; }
 
 static json cbor_from_value(const SensorValue &v) { return json{}; }
 
-void Protocol::handle_response_message_from_ems(uint32_t id, const json &response) {
+void Protocol::handle_response_message_from_ems(uint32_t id,
+                                                const json &response) {
   if (m_requests.empty()) {
     return;
   }
@@ -283,7 +281,8 @@ void Protocol::NewData(const json &msg) {
     handle_feed_message_from_ems(msg["values"]);
   } else if (type == "description" && msg.contains("keys")) {
     handle_description_message_from_ems(msg["keys"]);
-  } else if (type == "response" && msg.contains("id") && msg.contains("response")) {
+  } else if (type == "response" && msg.contains("id") &&
+             msg.contains("response")) {
     handle_response_message_from_ems(msg["id"], msg["response"]);
   }
 }
@@ -515,4 +514,3 @@ void Model::recurse_model_structure(StructureNode node) {
 void Model::set_value(StructurePath path, ConfigValue value) {
   m_protocol.Set(handle_model_set, path, value, this);
 }
-

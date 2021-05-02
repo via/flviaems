@@ -4,13 +4,13 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <fstream>
+#include <functional>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <variant>
 #include <vector>
-#include <fstream>
-#include <functional>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -108,14 +108,15 @@ struct BootloaderRequest {};
 struct Request {
   uint32_t id;
   std::variant<StructureRequest, GetRequest, SetRequest, PingRequest,
-    FlashRequest, BootloaderRequest> request;
+               FlashRequest, BootloaderRequest>
+      request;
   bool is_sent;
   json repr;
 };
 
 class Protocol {
 public:
-  Protocol(std::function<void(const json&)> write_cb) : write_cb{write_cb} {};
+  Protocol(std::function<void(const json &)> write_cb) : write_cb{write_cb} {};
 
   LogChunk FeedUpdates();
   void NewData(const json &j);
@@ -131,7 +132,7 @@ public:
 private:
   std::vector<std::string> m_feed_vars;
   LogChunk m_feed_updates;
-  std::function<void(const json&)> write_cb;
+  std::function<void(const json &)> write_cb;
   std::deque<std::shared_ptr<Request>> m_requests;
 
   std::chrono::system_clock::time_point zero_time;
@@ -202,7 +203,6 @@ public:
   void interrogate(interrogation_change_cb cb, void *ptr);
   void set_value(StructurePath path, ConfigValue value);
 };
-
 
 } // namespace viaems
 

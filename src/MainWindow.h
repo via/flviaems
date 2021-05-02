@@ -5,7 +5,6 @@
 #include "MainWindowUI.h"
 #include "viaems.h"
 
-
 class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
   Log log_reader;
@@ -24,7 +23,7 @@ class MainWindow : public MainWindowUI {
 
 public:
   MainWindow();
-  void feed_update(viaems::LogChunk&&);
+  void feed_update(viaems::LogChunk &&);
   void update_connection_status(bool status);
   void update_feed_hz(int hz);
   void update_model(viaems::Model *model);

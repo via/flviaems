@@ -179,10 +179,10 @@ void TableEditor::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
     }
     if (edit_changes.count(std::make_pair(R, C)) > 0) {
       fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H,
-          is_selected(R, C) ? FL_DARK_YELLOW : FL_RED);
+                  is_selected(R, C) ? FL_DARK_YELLOW : FL_RED);
     } else {
       fl_draw_box(FL_THIN_UP_BOX, X, Y, W, H,
-          is_selected(R, C) ? FL_YELLOW : FL_WHITE);
+                  is_selected(R, C) ? FL_YELLOW : FL_WHITE);
     }
     fl_color(FL_BLACK);
     fl_push_clip(X, Y, W, H);

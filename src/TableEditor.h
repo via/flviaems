@@ -30,5 +30,4 @@ private:
   static void cell_value_callback(Fl_Widget *w, void *);
   void start_editor(int R, int C);
   void stop_editor();
-
 };

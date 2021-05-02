@@ -1,14 +1,14 @@
 #pragma once
 
 #include <chrono>
-#include <set>
-#include <vector>
 #include <fstream>
-#include <thread>
 #include <memory>
+#include <set>
+#include <thread>
+#include <vector>
 
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
 
 #include <sqlite3.h>
 
@@ -26,12 +26,11 @@ public:
   };
 
   void SetFile(std::string path);
-  void WriteChunk(viaems::LogChunk&&);
+  void WriteChunk(viaems::LogChunk &&);
 
-  viaems::LogChunk
-  GetRange(std::vector<std::string> keys,
-      std::chrono::system_clock::time_point start,
-      std::chrono::system_clock::time_point end);
+  viaems::LogChunk GetRange(std::vector<std::string> keys,
+                            std::chrono::system_clock::time_point start,
+                            std::chrono::system_clock::time_point end);
 };
 
 class ThreadedWriteLog : public Log {
@@ -42,13 +41,12 @@ class ThreadedWriteLog : public Log {
   bool running;
 
   void write_loop();
-public:
 
+public:
   ~ThreadedWriteLog() {
     running = false;
     cv.notify_one();
     thread.join();
-
   }
 
   ThreadedWriteLog() {
@@ -56,5 +54,5 @@ public:
     thread = std::thread([](ThreadedWriteLog *w) { w->write_loop(); }, this);
   }
 
-  void WriteChunk(viaems::LogChunk&&);
+  void WriteChunk(viaems::LogChunk &&);
 };
