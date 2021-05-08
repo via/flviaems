@@ -194,6 +194,9 @@ public:
     return m_model.at(path)->value;
   }
 
+  json to_json();
+  void from_json(const json&);
+
   void set_value_change_callback(value_change_cb cb, void *ptr) {
     value_cb = cb;
     value_cb_ptr = ptr;

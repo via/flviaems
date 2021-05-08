@@ -514,3 +514,10 @@ void Model::recurse_model_structure(StructureNode node) {
 void Model::set_value(StructurePath path, ConfigValue value) {
   m_protocol.Set(handle_model_set, path, value, this);
 }
+
+
+
+json Model::to_json() {
+  json config{};
+  return config;
+}
