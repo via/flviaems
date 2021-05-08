@@ -31,6 +31,8 @@ public:
   viaems::LogChunk GetRange(std::vector<std::string> keys,
                             std::chrono::system_clock::time_point start,
                             std::chrono::system_clock::time_point end);
+
+  void SaveConfig(std::chrono::system_clock::time_point time, json conf);
 };
 
 class ThreadedWriteLog : public Log {

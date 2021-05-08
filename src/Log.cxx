@@ -7,7 +7,7 @@
 
 Log::Log() {}
 
-static std::string table_schema_from_update(const viaems::LogChunk &update) {
+static std::string points_table_schema_from_update(const viaems::LogChunk &update) {
   std::string query;
 
   int index = 0;
@@ -30,7 +30,7 @@ static std::string table_schema_from_update(const viaems::LogChunk &update) {
   return query;
 }
 
-static std::string table_insert_query(const std::vector<std::string> keys) {
+static std::string points_table_insert_query(const std::vector<std::string> keys) {
   std::string query;
   query += "INSERT INTO points (realtime_ns,";
   int remaining = keys.size() - 1;
@@ -95,7 +95,7 @@ static void ensure_db_schema(sqlite3 *db, const viaems::LogChunk &update) {
     /* Create a new table */
     int res;
     char *sqlerr;
-    auto create_stmt = table_schema_from_update(update);
+    auto create_stmt = points_table_schema_from_update(update);
     res = sqlite3_exec(db, create_stmt.c_str(), NULL, 0, &sqlerr);
     if (res) {
       std::cerr << "Log: unable to initialize log schema: " << sqlerr
@@ -122,7 +122,7 @@ void Log::WriteChunk(viaems::LogChunk &&update) {
 
   ensure_db_schema(this->db, update);
 
-  auto query = table_insert_query(update.keys);
+  auto query = points_table_insert_query(update.keys);
   sqlite3_stmt *insert_stmt;
   int res =
       sqlite3_prepare_v2(db, query.c_str(), query.size(), &insert_stmt, NULL);
@@ -245,6 +245,51 @@ viaems::LogChunk Log::GetRange(std::vector<std::string> keys,
   }
   sqlite3_finalize(stmt);
   return retval;
+}
+
+static void ensure_configs_table(sqlite3 *db) {
+  std::string create_table_str = "CREATE TABLE configs (time INTEGER, config TEXT);";
+
+  int res;
+  char *sqlerr;
+  res = sqlite3_exec(db, create_table_str.c_str(), NULL, 0, &sqlerr);
+  if (res) {
+    std::cerr << "Log: unable to create configs table" << sqlerr
+      << std::endl;
+    sqlite3_free(sqlerr);
+    return;
+  }
+}
+
+void Log::SaveConfig(std::chrono::system_clock::time_point time, json conf) {
+  ensure_configs_table(db);
+
+  std::string insert_query_str = "INSERT INTO configs VALUES(?, ?);";
+  sqlite3_stmt *insert_stmt;
+  int res = sqlite3_prepare_v2(db, insert_query_str.c_str(),
+  insert_query_str.size(), &insert_stmt, NULL);
+
+  if (res != SQLITE_OK) {
+    std::cerr << "Log: unable to prepare insert statement: "
+              << sqlite3_errmsg(db) << std::endl;
+    return;
+  }
+
+  sqlite3_reset(insert_stmt);
+  uint64_t time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      time.time_since_epoch())
+    .count();
+  sqlite3_bind_int64(insert_stmt, 1, time_ns);
+
+  std::string conf_dump = conf.dump();
+  sqlite3_bind_text(insert_stmt, 2, conf_dump.c_str(), conf_dump.size(), SQLITE_STATIC);
+
+  res = sqlite3_step(insert_stmt);
+  if (res != SQLITE_DONE) {
+    std::cerr << "Log: unable to save config: " << sqlite3_errmsg(db) << std::endl;
+    return;
+  }
+  sqlite3_finalize(insert_stmt);
 }
 
 void ThreadedWriteLog::WriteChunk(viaems::LogChunk &&chunk) {
