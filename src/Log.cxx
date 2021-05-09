@@ -257,6 +257,7 @@ std::chrono::system_clock::time_point Log::EndTime() {
     return std::chrono::system_clock::now();
   }
   auto ns = sqlite3_column_int64(stmt, 0);
+  sqlite3_finalize(stmt);
   return std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
 }
 
