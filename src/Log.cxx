@@ -247,6 +247,20 @@ viaems::LogChunk Log::GetRange(std::vector<std::string> keys,
   return retval;
 }
 
+std::chrono::system_clock::time_point Log::EndTime() {
+  std::string query = "SELECT realtime_ns FROM points ORDER BY realtime_ns DESC LIMIT 1";
+
+  sqlite3_stmt *stmt;
+  sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+  int res = sqlite3_step(stmt);
+  if (res == SQLITE_DONE) {
+    return std::chrono::system_clock::now();
+  }
+  auto ns = sqlite3_column_int64(stmt, 0);
+  return std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
+}
+
+
 static void ensure_configs_table(sqlite3 *db) {
   std::string create_table_str = "CREATE TABLE configs (time INTEGER, config TEXT);";
 

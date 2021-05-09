@@ -170,6 +170,10 @@ MainWindow::MainWindow() : MainWindowUI() {
   log_writer.SetFile("log.vlog");
 
   m_logview->SetLog(&log_reader);
+
+  auto stop_time = log_reader.EndTime();
+  auto start_time = stop_time - std::chrono::seconds{20};
+  m_logview->update_time_range(start_time, stop_time);
 }
 
 void MainWindow::update_connection_status(bool status) {
@@ -190,7 +194,7 @@ void MainWindow::feed_update(viaems::LogChunk &&updates) {
   m_status_table->feed_update(status);
   log_writer.WriteChunk(std::move(updates));
 
-  auto stop_time = std::chrono::system_clock::now();
+  auto stop_time = log_reader.EndTime();
   auto start_time = stop_time - std::chrono::seconds{20};
   m_logview->update_time_range(start_time, stop_time);
 }
