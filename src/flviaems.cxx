@@ -31,7 +31,7 @@ class Connection {
       try {
         auto msg = json::from_cbor(self->in, false);
         std::unique_lock<std::mutex> lock(self->in_mutex);
-        self->in_messages.push_back(msg);
+        self->in_messages.push_back(std::move(msg));
         lock.unlock();
         Fl::awake(self->handler, self->handler_ptr);
       } catch (json::parse_error &e) {
@@ -72,6 +72,9 @@ class FLViaems {
   viaems::Protocol protocol;
   viaems::Model model;
 
+  Log log_reader;
+  ThreadedWriteLog log_writer;
+
   std::unique_ptr<Connection> connector;
   std::shared_ptr<viaems::Request> ping_req;
 
@@ -88,8 +91,14 @@ class FLViaems {
     }
 
     if (updates.points.size() > 0) {
-      v->ui.feed_update(std::move(updates));
+      std::map<std::string, viaems::FeedValue> status;
+      for (unsigned int i = 0; i < updates.keys.size(); i++) {
+        status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
+      }
+
+      v->ui.feed_update(status);
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
+      v->log_writer.WriteChunk(std::move(updates));
     }
     Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
   }
@@ -111,6 +120,8 @@ class FLViaems {
     v->ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
     if (!s.in_progress) {
       v->ui.update_model(&v->model);
+      v->log_writer.SaveConfig(std::chrono::system_clock::now(),
+          v->model.to_json());
     }
   }
 
@@ -197,9 +208,14 @@ public:
                            std::placeholders::_1)},
         model{protocol} {
     Fl::lock(); /* Necessary to enable awake() functionality */
+
+    log_reader.SetFile("log.vlog");
+    log_writer.SetFile("log.vlog");
+
     model.set_value_change_callback(value_update, this);
     ui.m_file_flash->callback(flash, this);
     ui.m_file_bootloader->callback(bootloader, this);
+    ui.update_log(&log_reader);
     Fl::add_timeout(0.05, feed_refresh_handler, this);
     Fl::add_timeout(1, pinger, this);
     initialize_connection();

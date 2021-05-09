@@ -516,8 +516,24 @@ void Model::set_value(StructurePath path, ConfigValue value) {
 }
 
 
-
+json Model::json_from_structure(StructureNode n) {
+  json j{};
+  if (n.is_list()) {
+    for (const auto& v : n.list()) {
+      j.push_back(json_from_structure(v));
+    }
+    return j;
+  } else if (n.is_map()) {
+    for (const auto& v : n.map()) {
+      j[v.first] = json_from_structure(v.second);
+    }
+    return j;
+  } else {
+    const auto& val = get_value(n.leaf().path);
+    return std::visit([&](const auto& v) { return cbor_from_value(v); }, val);
+  }
+}
 json Model::to_json() {
-  json config{};
+  auto config = json_from_structure(root);
   return config;
 }

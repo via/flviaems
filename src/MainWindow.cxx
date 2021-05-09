@@ -166,14 +166,17 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
 
-  log_reader.SetFile("log.vlog");
-  log_writer.SetFile("log.vlog");
 
-  m_logview->SetLog(&log_reader);
+}
 
-  auto stop_time = log_reader.EndTime();
-  auto start_time = stop_time - std::chrono::seconds{20};
-  m_logview->update_time_range(start_time, stop_time);
+void MainWindow::update_log(std::optional<Log *> l) {
+  log = l;
+  if (log) {
+    m_logview->SetLog(log.value());
+    auto stop_time = log.value()->EndTime();
+    auto start_time = stop_time - std::chrono::seconds{20};
+    m_logview->update_time_range(start_time, stop_time);
+  }
 }
 
 void MainWindow::update_connection_status(bool status) {
@@ -186,15 +189,10 @@ void MainWindow::update_feed_hz(int hz) {
   m_rate->redraw();
 }
 
-void MainWindow::feed_update(viaems::LogChunk &&updates) {
-  std::map<std::string, viaems::FeedValue> status;
-  for (int i = 0; i < updates.keys.size(); i++) {
-    status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
-  }
+void MainWindow::feed_update(std::map<std::string, viaems::FeedValue> status) {
   m_status_table->feed_update(status);
-  log_writer.WriteChunk(std::move(updates));
 
-  auto stop_time = log_reader.EndTime();
+  auto stop_time = log.value()->EndTime();
   auto start_time = stop_time - std::chrono::seconds{20};
   m_logview->update_time_range(start_time, stop_time);
 }
