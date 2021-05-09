@@ -163,6 +163,43 @@ static ConfigValue generate_table_value_from_cbor(const json &map) {
   return table;
 }
 
+static ConfigValue generate_output_value_from_cbor(const json &map) {
+  OutputValue v;
+  v.angle = map.at("angle");
+  v.inverted = map.at("inverted") != 0;
+  v.pin = map.at("pin");
+  v.type = map.at("type");
+  return v;
+}
+
+static ConfigValue generate_sensor_value_from_cbor(const json &map) {
+  SensorValue v;
+  v.source = map.at("source");
+  v.method = map.at("method");
+  v.pin = map.at("pin");
+  v.lag = map.at("lag");
+
+  v.fault.min = map.at("fault-min");
+  v.fault.max = map.at("fault-max");
+  v.fault.value = map.at("fault-value");
+
+  v.range_min = map.at("range-min");
+  v.range_max = map.at("range-max");
+
+  v.const_value = map.at("fixed-value");
+
+  v.therm.a = map.at("therm-a");
+  v.therm.b = map.at("therm-b");
+  v.therm.c = map.at("therm-c");
+  v.therm.bias = map.at("therm-bias");
+
+  v.window.offset = map.at("window-offset");
+  v.window.capture_width = map.at("window-capture-width");
+  v.window.total_width = map.at("window-total-width");
+
+  return v;
+}
+
 bool is_valid_table_cbor(const json &value) {
   if (!value.contains("title") || !value.contains("num-axis") ||
       !value.contains("horizontal-axis")) {
@@ -199,7 +236,13 @@ static ConfigValue generate_node_value_from_cbor(const json &value) {
   if (is_valid_table_cbor(value)) {
     return generate_table_value_from_cbor(value);
   }
-  return ConfigValue{5.0f};
+  if (value.contains("angle")) {
+    return generate_output_value_from_cbor(value);
+  }
+  if (value.contains("source")) {
+    return generate_sensor_value_from_cbor(value);
+  }
+  return uint32_t{0};
 }
 
 template <typename T> static json cbor_from_value(T v) { return v; }
@@ -227,9 +270,36 @@ static json cbor_from_value(const TableValue &v) {
   return result;
 }
 
-static json cbor_from_value(const OutputValue &v) { return json{}; }
+static json cbor_from_value(const OutputValue &v) {
+  return json{
+    {"type", v.type},
+    {"angle", v.angle},
+    {"pin", v.pin},
+    {"inverted", v.inverted ? 1 : 0},
+  };
+}
 
-static json cbor_from_value(const SensorValue &v) { return json{}; }
+static json cbor_from_value(const SensorValue &v) {
+  return json{
+    {"fault-min", v.fault.min},
+    {"fault-max", v.fault.max},
+    {"fault-value", v.fault.value},
+    {"fixed-value", v.const_value},
+    {"lag", v.lag},
+    {"method", v.method},
+    {"pin", v.pin},
+    {"range-max", v.range_max},
+    {"range-min", v.range_min},
+    {"source", v.source},
+    {"therm-a", v.therm.a},
+    {"therm-b", v.therm.b},
+    {"therm-c", v.therm.c},
+    {"therm-bias", v.therm.bias},
+    {"window-capture-width", v.window.capture_width},
+    {"window-offset", v.window.offset},
+    {"window-total-width", v.window.total_width},
+  };
+}
 
 void Protocol::handle_response_message_from_ems(uint32_t id,
                                                 const json &response) {

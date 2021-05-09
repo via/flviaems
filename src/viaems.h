@@ -44,8 +44,44 @@ struct TableValue {
   std::vector<std::vector<float>> two;
 };
 
-struct SensorValue {};
-struct OutputValue {};
+struct SensorValue {
+  std::string source;
+  std::string method;
+
+  uint32_t pin;
+  float lag;
+
+  struct {
+    uint32_t max;
+    uint32_t min;
+    float value;
+  } fault;
+
+  float range_min;
+  float range_max;
+
+  float const_value;
+
+  struct {
+    float a;
+    float b;
+    float c;
+    float bias;
+  } therm;
+
+  struct {
+    uint32_t capture_width;
+    uint32_t total_width;
+    uint32_t offset;
+  } window;
+};
+
+struct OutputValue {
+  float angle;
+  bool inverted;
+  uint32_t pin;
+  std::string type;
+};
 
 typedef std::variant<uint32_t, float, std::string, TableValue, SensorValue,
                      OutputValue>
