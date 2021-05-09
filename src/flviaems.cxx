@@ -31,7 +31,7 @@ class Connection {
       try {
         auto msg = json::from_cbor(self->in, false);
         std::unique_lock<std::mutex> lock(self->in_mutex);
-        self->in_messages.push_back(msg);
+        self->in_messages.push_back(std::move(msg));
         lock.unlock();
         Fl::awake(self->handler, self->handler_ptr);
       } catch (json::parse_error &e) {
