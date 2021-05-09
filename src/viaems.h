@@ -180,6 +180,7 @@ class Model {
   std::vector<std::shared_ptr<Request>> get_reqs;
 
   void recurse_model_structure(StructureNode node);
+  json json_from_structure(StructureNode root);
 
   static void handle_model_get(StructurePath path, ConfigValue val, void *ptr);
   static void handle_model_set(StructurePath path, ConfigValue val, void *ptr);
