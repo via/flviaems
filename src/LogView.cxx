@@ -189,7 +189,13 @@ int LogView::handle(int ev) {
   if (ev == FL_MOVE) {
     mouse_x = Fl::event_x();
     mouse_y = Fl::event_y();
+    redraw();
   }
 
   return 0;
 }
+
+void LogView::SetLog(Log *log) { 
+  this->log = log;
+  this->cache = viaems::LogChunk{};
+};

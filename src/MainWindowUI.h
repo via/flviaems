@@ -17,6 +17,7 @@
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Menu_Bar.H>
 #include "LogView.h"
+#include <FL/Fl_Button.H>
 
 class MainWindowUI {
 public:
@@ -56,19 +57,28 @@ public:
   Fl_Menu_Bar *m_bar;
   static Fl_Menu_Item menu_m_bar[];
 protected:
-  static Fl_Menu_Item *m_file_menu;
-  static Fl_Menu_Item *m_file_connect;
-public:
-  static Fl_Menu_Item *m_file_connect_socket;
-  static Fl_Menu_Item *m_file_connect_file;
-protected:
-  static Fl_Menu_Item *m_file_saveall;
+  static Fl_Menu_Item *m_target_menu;
 public:
   static Fl_Menu_Item *m_file_flash;
   static Fl_Menu_Item *m_file_bootloader;
 protected:
+  static Fl_Menu_Item *m_connection_menu;
+public:
+  static Fl_Menu_Item *m_connection_device;
+  static Fl_Menu_Item *m_connection_simulator;
+  static Fl_Menu_Item *m_connection_offline;
+protected:
+  static Fl_Menu_Item *m_log_menu;
+public:
+  static Fl_Menu_Item *m_log_select;
+protected:
+  static Fl_Menu_Item *m_log_loadconfig;
   Fl_Output *m_status_text;
   LogView *m_logview;
+  Fl_Output *m_offline;
+  Fl_Output *m_logview_start;
+  Fl_Output *m_logview_stop;
+  Fl_Button *m_logview_pause;
 public:
   void show();
 };

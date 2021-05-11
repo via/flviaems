@@ -169,14 +169,14 @@ MainWindow::MainWindow() : MainWindowUI() {
 
 }
 
-void MainWindow::update_log(std::optional<Log *> l) {
-  log = l;
-  if (log) {
-    m_logview->SetLog(log.value());
-    auto stop_time = log.value()->EndTime();
+void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
+  if (l) {
+    m_logview->SetLog(l.value().get());
+    auto stop_time = l.value()->EndTime();
     auto start_time = stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
   }
+  log = l;
 }
 
 void MainWindow::update_connection_status(bool status) {

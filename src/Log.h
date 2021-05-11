@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <atomic>
 #include <fstream>
 #include <memory>
 #include <set>
@@ -18,14 +19,13 @@ class Log {
   sqlite3 *db;
 
 public:
-  Log();
+  Log(std::string path);
   ~Log() {
     if (db != nullptr) {
       sqlite3_close(db);
     }
   };
 
-  void SetFile(std::string path);
   void WriteChunk(viaems::LogChunk &&);
 
   viaems::LogChunk GetRange(std::vector<std::string> keys,
@@ -43,18 +43,21 @@ class ThreadedWriteLog : public Log {
   std::condition_variable cv;
   std::deque<viaems::LogChunk> chunks;
   std::thread thread;
-  bool running;
+  std::atomic<bool> running;
 
   void write_loop();
 
 public:
+
   ~ThreadedWriteLog() {
+    std::unique_lock<std::mutex> lock(mutex);
     running = false;
     cv.notify_one();
+    lock.unlock();
     thread.join();
   }
 
-  ThreadedWriteLog() {
+  ThreadedWriteLog(std::string path) : Log(path) {
     running = true;
     thread = std::thread([](ThreadedWriteLog *w) { w->write_loop(); }, this);
   }

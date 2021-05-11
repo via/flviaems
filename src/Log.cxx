@@ -5,8 +5,6 @@
 
 #include "Log.h"
 
-Log::Log() {}
-
 static std::string points_table_schema_from_update(const viaems::LogChunk &update) {
   std::string query;
 
@@ -165,7 +163,7 @@ void Log::WriteChunk(viaems::LogChunk &&update) {
   sqlite3_finalize(insert_stmt);
 }
 
-void Log::SetFile(std::string path) {
+Log::Log(std::string path) {
   int r = sqlite3_open(path.c_str(), &db);
   if (r) {
     db = nullptr;
@@ -348,7 +346,7 @@ void ThreadedWriteLog::WriteChunk(viaems::LogChunk &&chunk) {
 void ThreadedWriteLog::write_loop() {
   while (true) {
     std::unique_lock<std::mutex> lock(mutex);
-    if (chunks.empty()) {
+    if (running && chunks.empty()) {
       cv.wait(lock);
     }
 

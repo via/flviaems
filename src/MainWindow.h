@@ -8,7 +8,7 @@
 class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
   viaems::StructurePath detail_path;
-  std::optional<Log *> log;
+  std::optional<std::shared_ptr<Log>> log;
 
   void update_config_structure(viaems::StructureNode top);
 
@@ -29,7 +29,7 @@ public:
   void update_interrogation(bool in_progress, int value, int max);
   void update_config_value(viaems::StructurePath path,
                            viaems::ConfigValue value);
-  void update_log(std::optional<Log *>);
+  void update_log(std::optional<std::shared_ptr<Log>>);
 };
 
 #endif

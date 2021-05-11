@@ -26,7 +26,7 @@ struct SeriesConfig {
 class LogView : public Fl_Box {
 public:
   LogView(int X, int Y, int W, int H);
-  void SetLog(Log *log) { this->log = log; };
+  void SetLog(Log *log);
   void update_time_range(std::chrono::system_clock::time_point start,
                          std::chrono::system_clock::time_point stop);
 
