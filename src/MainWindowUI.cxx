@@ -3,24 +3,32 @@
 #include "MainWindowUI.h"
 
 Fl_Menu_Item MainWindowUI::menu_m_bar[] = {
- {"File", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Connect...", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Socket", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"File", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {0,0,0,0,0,0,0,0,0},
- {"Save All", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Target", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Flash", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Reset to bootloader", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0},
+ {"Connection", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Device", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Simulator", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Offline", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {0,0,0,0,0,0,0,0,0},
+ {"Log", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Select File...", 0,  0, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Load Config", 0,  0, 0, 64, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {0,0,0,0,0,0,0,0,0},
+ {0,0,0,0,0,0,0,0,0},
  {0,0,0,0,0,0,0,0,0}
 };
-Fl_Menu_Item* MainWindowUI::m_file_menu = MainWindowUI::menu_m_bar + 0;
-Fl_Menu_Item* MainWindowUI::m_file_connect = MainWindowUI::menu_m_bar + 1;
-Fl_Menu_Item* MainWindowUI::m_file_connect_socket = MainWindowUI::menu_m_bar + 2;
-Fl_Menu_Item* MainWindowUI::m_file_connect_file = MainWindowUI::menu_m_bar + 3;
-Fl_Menu_Item* MainWindowUI::m_file_saveall = MainWindowUI::menu_m_bar + 5;
-Fl_Menu_Item* MainWindowUI::m_file_flash = MainWindowUI::menu_m_bar + 6;
-Fl_Menu_Item* MainWindowUI::m_file_bootloader = MainWindowUI::menu_m_bar + 7;
+Fl_Menu_Item* MainWindowUI::m_target_menu = MainWindowUI::menu_m_bar + 0;
+Fl_Menu_Item* MainWindowUI::m_file_flash = MainWindowUI::menu_m_bar + 1;
+Fl_Menu_Item* MainWindowUI::m_file_bootloader = MainWindowUI::menu_m_bar + 2;
+Fl_Menu_Item* MainWindowUI::m_connection_menu = MainWindowUI::menu_m_bar + 4;
+Fl_Menu_Item* MainWindowUI::m_connection_device = MainWindowUI::menu_m_bar + 5;
+Fl_Menu_Item* MainWindowUI::m_connection_simulator = MainWindowUI::menu_m_bar + 6;
+Fl_Menu_Item* MainWindowUI::m_connection_offline = MainWindowUI::menu_m_bar + 7;
+Fl_Menu_Item* MainWindowUI::m_log_menu = MainWindowUI::menu_m_bar + 9;
+Fl_Menu_Item* MainWindowUI::m_log_select = MainWindowUI::menu_m_bar + 10;
+Fl_Menu_Item* MainWindowUI::m_log_loadconfig = MainWindowUI::menu_m_bar + 11;
 
 MainWindowUI::MainWindowUI() {
   { m_main_window = new Fl_Double_Window(1022, 751, "mainWindow");
@@ -49,7 +57,7 @@ MainWindowUI::MainWindowUI() {
       m_connection_status->color((Fl_Color)1);
       m_connection_status->align(Fl_Align(FL_ALIGN_LEFT));
     } // Fl_Box* m_connection_status
-    { m_rate = new Fl_Output(270, 720, 50, 25, "Rate:");
+    { m_rate = new Fl_Output(385, 720, 50, 25, "Rate:");
     } // Fl_Output* m_rate
     { m_interrogation_progress = new Fl_Progress(875, 724, 135, 21, "Interrogation");
     } // Fl_Progress* m_interrogation_progress
@@ -141,7 +149,7 @@ MainWindowUI::MainWindowUI() {
     { m_bar = new Fl_Menu_Bar(0, 0, 1050, 20);
       m_bar->menu(menu_m_bar);
     } // Fl_Menu_Bar* m_bar
-    { m_status_text = new Fl_Output(335, 720, 530, 25);
+    { m_status_text = new Fl_Output(450, 720, 415, 25);
       m_status_text->box(FL_NO_BOX);
     } // Fl_Output* m_status_text
     { m_logview = new LogView(460, 423, 525, 264);
@@ -155,6 +163,18 @@ MainWindowUI::MainWindowUI() {
       m_logview->align(Fl_Align(FL_ALIGN_CENTER));
       m_logview->when(FL_WHEN_RELEASE);
     } // LogView* m_logview
+    { m_offline = new Fl_Output(215, 720, 80, 25);
+      m_offline->box(FL_NO_BOX);
+    } // Fl_Output* m_offline
+    { m_logview_start = new Fl_Output(460, 685, 115, 20);
+      m_logview_start->box(FL_NO_BOX);
+    } // Fl_Output* m_logview_start
+    { m_logview_stop = new Fl_Output(885, 685, 100, 20);
+      m_logview_stop->box(FL_NO_BOX);
+      m_logview_stop->align(Fl_Align(FL_ALIGN_RIGHT));
+    } // Fl_Output* m_logview_stop
+    { m_logview_pause = new Fl_Button(810, 685, 25, 20, "@||");
+    } // Fl_Button* m_logview_pause
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window
