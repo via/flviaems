@@ -201,10 +201,12 @@ void MainWindow::select_table(Fl_Widget *w, void *p) {
   auto mw = (MainWindow *)p;
   auto s = (SelectableTreeWidget *)w;
 
-  auto value = mw->m_model->get_value(s->path);
-  mw->m_table_editor->take_focus();
-  mw->update_table_editor(std::get<viaems::TableValue>(value));
-  mw->detail_path = s->path;
+  auto value = mw->m_model->configuration().get(s->path);
+  if (value) {
+    mw->m_table_editor->take_focus();
+    mw->update_table_editor(std::get<viaems::TableValue>(value.value()));
+    mw->detail_path = s->path;
+  }
 }
 
 void MainWindow::table_value_changed_callback(Fl_Widget *w, void *ptr) {
@@ -248,21 +250,18 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
       parent->add(m_config_tree->prefs(), "", item);
       if (child.second.is_leaf()) {
         auto leaf = child.second.leaf();
-        auto value = m_model->get_value(leaf.path);
+        auto value = m_model->configuration().get(leaf.path).value_or(uint32_t{0});
         SelectableTreeWidget *w;
 
         if (leaf.type == "uint32") {
-          auto value = m_model->get_value(leaf.path);
           w = new NumericTreeWidget<uint32_t>(0, 0, 300, 18, leaf.path);
           w->update_value(value);
           w->callback(structure_value_update_callback, this);
         } else if (leaf.type == "float") {
-          auto value = m_model->get_value(leaf.path);
           w = new NumericTreeWidget<float>(0, 0, 300, 18, leaf.path);
           w->update_value(value);
           w->callback(structure_value_update_callback, this);
         } else if (leaf.type == "string") {
-          auto value = m_model->get_value(leaf.path);
           w = new ChoiceTreeWidget(0, 0, 300, 18, leaf.path, leaf.choices);
           w->update_value(value);
           w->callback(structure_value_update_callback, this);
@@ -318,7 +317,7 @@ void MainWindow::update_model(viaems::Model *model) {
   m_config_tree->clear_children(m_config_tree->root());
 
   m_model = model;
-  update_config_structure(model->structure());
+  update_config_structure(model->configuration().structure);
 }
 
 void MainWindow::update_config_value(viaems::StructurePath path,

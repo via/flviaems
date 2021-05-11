@@ -32,6 +32,7 @@ struct LogChunk {
   std::vector<std::string> keys;
 };
 
+
 struct TableAxis {
   std::string name;
   std::vector<float> labels;
@@ -101,14 +102,31 @@ typedef std::map<std::string, StructureNode> StructureMap;
 typedef std::variant<StructureList, StructureMap, StructureLeaf>
     StructureNodeTypedef;
 struct StructureNode : StructureNodeTypedef {
-  bool is_map() { return std::holds_alternative<StructureMap>(*this); }
+  bool is_map() const { return std::holds_alternative<StructureMap>(*this); }
 
   StructureMap map() { return std::get<StructureMap>(*this); }
 
-  bool is_list() { return std::holds_alternative<StructureList>(*this); }
+  bool is_list() const { return std::holds_alternative<StructureList>(*this); }
   StructureList list() { return std::get<StructureList>(*this); }
-  bool is_leaf() { return std::holds_alternative<StructureLeaf>(*this); }
+  bool is_leaf() const { return std::holds_alternative<StructureLeaf>(*this); }
   StructureLeaf leaf() { return std::get<StructureLeaf>(*this); }
+};
+
+struct Configuration {
+  std::chrono::system_clock::time_point save_time;
+  StructureNode structure;
+  std::map<StructurePath, ConfigValue> values;
+
+  std::optional<ConfigValue> get(StructurePath path) const {
+    auto val = values.find(path);
+    if (val == values.end()) {
+      return {};
+    }
+    return val->second;
+  }      
+
+  void from_json(const json&);
+  json to_json() const;
 };
 
 typedef void (*get_cb)(StructurePath path, ConfigValue val, void *ptr);
@@ -182,15 +200,6 @@ private:
   void ensure_sent();
 };
 
-class Model;
-struct NodeModel {
-  struct StructureLeaf node;
-  ConfigValue value;
-
-  bool m_pending_write;
-  bool valid;
-};
-
 struct InterrogationState {
   bool in_progress;
   int total_nodes;
@@ -206,17 +215,14 @@ class Model {
   value_change_cb value_cb = nullptr;
   void *value_cb_ptr;
 
-  std::map<StructurePath, std::shared_ptr<NodeModel>> m_model;
-  StructureNode root;
+  Configuration config;
 
   /* Interrogation members */
-  interrogation_change_cb interrogate_cb;
+  InterrogationState interrogation_state;
+  interrogation_change_cb interrogate_cb = nullptr;
   void *interrogate_cb_ptr;
   std::shared_ptr<Request> structure_req;
   std::vector<std::shared_ptr<Request>> get_reqs;
-
-  void recurse_model_structure(StructureNode node);
-  json json_from_structure(StructureNode root);
 
   static void handle_model_get(StructurePath path, ConfigValue val, void *ptr);
   static void handle_model_set(StructurePath path, ConfigValue val, void *ptr);
@@ -225,14 +231,8 @@ class Model {
 public:
   Model(Protocol &protocol) : m_protocol{protocol} {};
 
-  StructureNode &structure() { return root; };
-
-  viaems::ConfigValue get_value(StructurePath path) {
-    return m_model.at(path)->value;
-  }
-
-  json to_json();
-  void from_json(const json&);
+  const Configuration& configuration() const { return config; };
+  void set_configuration(const Configuration &c);
 
   void set_value_change_callback(value_change_cb cb, void *ptr) {
     value_cb = cb;
