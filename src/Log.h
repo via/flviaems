@@ -32,7 +32,9 @@ public:
                             std::chrono::system_clock::time_point start,
                             std::chrono::system_clock::time_point end);
 
-  void SaveConfig(std::chrono::system_clock::time_point time, json conf);
+  void SaveConfig(viaems::Configuration);
+  std::vector<viaems::Configuration> LoadConfigs();
+
   std::chrono::system_clock::time_point EndTime();
 };
 

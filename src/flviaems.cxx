@@ -120,8 +120,7 @@ class FLViaems {
     v->ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
     if (!s.in_progress) {
       v->ui.update_model(&v->model);
-      v->log_writer.SaveConfig(std::chrono::system_clock::now(),
-          v->model.to_json());
+      v->log_writer.SaveConfig(v->model.configuration());
     }
   }
 
@@ -132,7 +131,7 @@ class FLViaems {
 
   static void value_update(viaems::StructurePath path, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    auto value = v->model.get_value(path);
+    auto value = v->model.configuration().get(path).value_or(uint32_t{0});
     v->ui.update_config_value(path, value);
   }
 
@@ -162,10 +161,19 @@ class FLViaems {
 
   static void pinger(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
+    static bool done = false;
 
     Fl::add_timeout(0.5, v->failed_ping_callback, v);
     v->ping_req = v->protocol.Ping(v->ping_callback, v);
     Fl::repeat_timeout(1, v->pinger, v);
+
+    /* TODO remove, example of loading config */
+    if (!done) {
+      done = true;
+      auto config = v->log_reader.LoadConfigs().at(0);
+      v->model.set_configuration(config);
+      v->ui.update_model(&v->model);
+    }
   }
 
   static void flash(Fl_Widget *w, void *ptr) {
@@ -219,6 +227,7 @@ public:
     Fl::add_timeout(0.05, feed_refresh_handler, this);
     Fl::add_timeout(1, pinger, this);
     initialize_connection();
+
   };
 
   ~FLViaems(){};

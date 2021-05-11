@@ -276,7 +276,7 @@ static void ensure_configs_table(sqlite3 *db) {
   }
 }
 
-void Log::SaveConfig(std::chrono::system_clock::time_point time, json conf) {
+void Log::SaveConfig(viaems::Configuration conf) {
   ensure_configs_table(db);
 
   std::string insert_query_str = "INSERT INTO configs VALUES(?, ?);";
@@ -292,11 +292,11 @@ void Log::SaveConfig(std::chrono::system_clock::time_point time, json conf) {
 
   sqlite3_reset(insert_stmt);
   uint64_t time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      time.time_since_epoch())
+      conf.save_time.time_since_epoch())
     .count();
   sqlite3_bind_int64(insert_stmt, 1, time_ns);
 
-  std::string conf_dump = conf.dump();
+  std::string conf_dump = conf.to_json().dump();
   sqlite3_bind_text(insert_stmt, 2, conf_dump.c_str(), conf_dump.size(), SQLITE_STATIC);
 
   res = sqlite3_step(insert_stmt);
@@ -305,6 +305,38 @@ void Log::SaveConfig(std::chrono::system_clock::time_point time, json conf) {
     return;
   }
   sqlite3_finalize(insert_stmt);
+}
+
+std::vector<viaems::Configuration> Log::LoadConfigs() {
+  ensure_configs_table(db);
+
+  std::string select_query_str = "SELECT time, config FROM configs ORDER BY time DESC LIMIT 1";
+  sqlite3_stmt *select_stmt;
+  int res = sqlite3_prepare_v2(db, select_query_str.c_str(),
+  select_query_str.size(), &select_stmt, NULL);
+
+  if (res != SQLITE_OK) {
+    std::cerr << "Log: unable to prepare config query statement: "
+              << sqlite3_errmsg(db) << std::endl;
+    return {};
+  }
+
+  sqlite3_reset(select_stmt);
+  res = sqlite3_step(select_stmt);
+  if (res != SQLITE_ROW) {
+    std::cerr << "Log: unable to get config: " << sqlite3_errmsg(db) << std::endl;
+    return {};
+  }
+
+  auto ns = sqlite3_column_int64(select_stmt, 0);
+  auto time_ns = std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
+  auto resp = viaems::Configuration{.save_time = time_ns};
+
+  auto config_json = json::parse(sqlite3_column_text(select_stmt, 1));
+
+  resp.from_json(config_json);
+  sqlite3_finalize(select_stmt);
+  return {resp};
 }
 
 void ThreadedWriteLog::WriteChunk(viaems::LogChunk &&chunk) {

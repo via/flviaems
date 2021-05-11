@@ -3,6 +3,8 @@
 #include <exception>
 #include <streambuf>
 
+#include <iostream> //DELETE
+
 #include "Log.h"
 #include "viaems.h"
 
@@ -511,7 +513,8 @@ void Model::interrogate(interrogation_change_cb cb, void *ptr) {
     m_protocol.Cancel(*r);
   }
   get_reqs.clear();
-  m_model.clear();
+  config = Configuration{.save_time = std::chrono::system_clock::now()};
+  interrogation_state = InterrogationState{.in_progress = true};
 
   if (structure_req) {
     m_protocol.Cancel(structure_req);
@@ -522,62 +525,64 @@ void Model::interrogate(interrogation_change_cb cb, void *ptr) {
 }
 
 InterrogationState Model::interrogation_status() {
-  int n_nodes = 0;
-  int n_complete = 0;
-
-  for (auto &x : m_model) {
-    n_nodes++;
-    if (x.second->valid) {
-      n_complete++;
-    }
-  }
-  return {
-      .in_progress = n_nodes == 0 || n_nodes != n_complete,
-      .total_nodes = n_nodes,
-      .complete_nodes = n_complete,
-  };
+  return interrogation_state;
 }
 
 void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
-  model->m_model.at(path)->value = val;
-  model->m_model.at(path)->valid = true;
-  model->interrogate_cb(model->interrogation_status(),
-                        model->interrogate_cb_ptr);
+  model->config.values.insert_or_assign(path, val);
+  model->interrogation_state.complete_nodes += 1;
+  if (model->interrogation_state.total_nodes ==
+      model->interrogation_state.complete_nodes) {
+    model->interrogation_state.in_progress = false;
+  }
+  if (model->interrogate_cb != nullptr) {
+    model->interrogate_cb(model->interrogation_status(),
+        model->interrogate_cb_ptr);
+  }
 }
 
 void Model::handle_model_set(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
-  model->m_model.at(path)->value = val;
-  model->m_model.at(path)->valid = true;
+  model->config.values.insert_or_assign(path, val);
   if (model->value_cb) {
     model->value_cb(path, model->value_cb_ptr);
   }
 }
 
-void Model::handle_model_structure(StructureNode root, void *ptr) {
-  Model *model = (Model *)ptr;
-  model->root = root;
-  model->recurse_model_structure(root);
-  model->interrogate_cb(model->interrogation_status(),
-                        model->interrogate_cb_ptr);
-}
-
-void Model::recurse_model_structure(StructureNode node) {
+static std::vector<StructurePath> enumerate_structure_paths(StructureNode node) {
+  std::vector<StructurePath> paths;
   if (node.is_leaf()) {
     auto leaf = node.leaf();
-    auto nodemodel = std::make_unique<NodeModel>();
-    nodemodel->node = leaf;
-    m_model.insert(std::make_pair(leaf.path, std::move(nodemodel)));
-    get_reqs.push_back(m_protocol.Get(handle_model_get, leaf.path, this));
+    paths.push_back(leaf.path);
   } else if (node.is_map()) {
     for (auto child : node.map()) {
-      recurse_model_structure(child.second);
+      auto subs = enumerate_structure_paths(child.second);
+      paths.insert(paths.end(), subs.begin(), subs.end());
     }
+
   } else if (node.is_list()) {
     for (auto child : node.list()) {
-      recurse_model_structure(child);
+      auto subs = enumerate_structure_paths(child);
+      paths.insert(paths.end(), subs.begin(), subs.end());
     }
+  }
+  return paths;
+}
+
+
+void Model::handle_model_structure(StructureNode root, void *ptr) {
+  Model *model = (Model *)ptr;
+  model->config.structure = root;
+  auto paths = enumerate_structure_paths(root);
+  model->interrogation_state.total_nodes = paths.size();
+  for (const auto& path : paths) {
+    model->get_reqs.push_back(model->m_protocol.Get(handle_model_get,
+          path, model));
+  }
+  if (model->interrogate_cb != nullptr) {
+    model->interrogate_cb(model->interrogation_status(),
+        model->interrogate_cb_ptr);
   }
 }
 
@@ -585,25 +590,83 @@ void Model::set_value(StructurePath path, ConfigValue value) {
   m_protocol.Set(handle_model_set, path, value, this);
 }
 
+void Model::set_configuration(const Configuration &conf) {
+  config = conf;
+  if (interrogate_cb != nullptr) {
+    interrogate_cb(interrogation_status(), interrogate_cb_ptr);
+  }
+}
 
-json Model::json_from_structure(StructureNode n) {
+
+static json json_config_from_structure(StructureNode n,
+  const Configuration &conf) {
   json j{};
   if (n.is_list()) {
     for (const auto& v : n.list()) {
-      j.push_back(json_from_structure(v));
+      j.push_back(json_config_from_structure(v, conf));
     }
     return j;
   } else if (n.is_map()) {
     for (const auto& v : n.map()) {
-      j[v.first] = json_from_structure(v.second);
+      j[v.first] = json_config_from_structure(v.second, conf);
     }
     return j;
   } else {
-    const auto& val = get_value(n.leaf().path);
+    const auto &val = conf.get(n.leaf().path).value_or(uint32_t{0});
     return std::visit([&](const auto& v) { return cbor_from_value(v); }, val);
   }
 }
-json Model::to_json() {
-  auto config = json_from_structure(root);
-  return config;
+
+static json json_structure_from_structure(StructureNode n) {
+  json j{};
+  if (n.is_list()) {
+    for (const auto& v : n.list()) {
+      j.push_back(json_structure_from_structure(v));
+    }
+    return j;
+  } else if (n.is_map()) {
+    for (const auto& v : n.map()) {
+      j[v.first] = json_structure_from_structure(v.second);
+    }
+    return j;
+  } else {
+    auto leaf = n.leaf();
+    return {
+      {"_type", leaf.type},
+      {"description", leaf.description},
+      {"choices", leaf.choices},
+    };
+  }
+}
+
+
+
+
+json Configuration::to_json() const {
+  auto config = json_config_from_structure(structure, *this);
+  auto s = json_structure_from_structure(structure);
+  return {
+    {"structure", s},
+    {"config", config},
+  };
+}
+
+void Configuration::from_json(const json& j) {
+  auto structure = generate_structure_node_from_cbor(j.at("structure"), {}); 
+  this->structure = structure;
+  values.clear();
+  auto paths = enumerate_structure_paths(structure);
+
+  for (const auto& path : paths) {
+    json val = j["config"];
+    for (const auto& p : path) {
+      if (std::holds_alternative<std::string>(p)) {
+        val = val.at(std::get<std::string>(p));
+      } else {
+        val = val.at(std::get<int>(p));
+      }
+    }
+    auto value = generate_node_value_from_cbor(val);
+    values.insert_or_assign(path, value);
+  }
 }
