@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <atomic>
 #include <fstream>
 #include <memory>
 #include <set>
@@ -42,15 +43,17 @@ class ThreadedWriteLog : public Log {
   std::condition_variable cv;
   std::deque<viaems::LogChunk> chunks;
   std::thread thread;
-  bool running;
+  std::atomic<bool> running;
 
   void write_loop();
 
 public:
 
   ~ThreadedWriteLog() {
+    std::unique_lock<std::mutex> lock(mutex);
     running = false;
     cv.notify_one();
+    lock.unlock();
     thread.join();
   }
 

@@ -346,7 +346,7 @@ void ThreadedWriteLog::WriteChunk(viaems::LogChunk &&chunk) {
 void ThreadedWriteLog::write_loop() {
   while (true) {
     std::unique_lock<std::mutex> lock(mutex);
-    if (chunks.empty()) {
+    if (running && chunks.empty()) {
       cv.wait(lock);
     }
 
