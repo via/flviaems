@@ -4,10 +4,12 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <atomic>
 
 #include "MainWindow.h"
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
+#include <FL/Fl_File_Chooser.H>
 
 #include "viaems.h"
 
@@ -24,7 +26,7 @@ class Connection {
   Fl_Awake_Handler handler;
   void *handler_ptr;
 
-  bool running;
+  std::atomic<bool> running;
 
   static void do_reader_thread(Connection *self) {
     while (self->running) {
@@ -47,8 +49,8 @@ public:
         std::thread([](Connection *s) { s->do_reader_thread(s); }, this);
   }
   ~Connection() {
+    reader_thread.detach();
     running = false;
-    reader_thread.join();
   }
 
   void Write(const json &msg) {
@@ -72,11 +74,12 @@ class FLViaems {
   viaems::Protocol protocol;
   viaems::Model model;
 
-  Log log_reader;
-  ThreadedWriteLog log_writer;
+  std::shared_ptr<Log> log_reader;
+  std::shared_ptr<ThreadedWriteLog> log_writer;
 
   std::unique_ptr<Connection> connector;
   std::shared_ptr<viaems::Request> ping_req;
+  bool offline;
 
   static void feed_refresh_handler(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
@@ -98,7 +101,7 @@ class FLViaems {
 
       v->ui.feed_update(status);
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
-      v->log_writer.WriteChunk(std::move(updates));
+      v->log_writer->WriteChunk(std::move(updates));
     }
     Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
   }
@@ -120,7 +123,7 @@ class FLViaems {
     v->ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
     if (!s.in_progress) {
       v->ui.update_model(&v->model);
-      v->log_writer.SaveConfig(v->model.configuration());
+      v->log_writer->SaveConfig(v->model.configuration());
     }
   }
 
@@ -166,14 +169,6 @@ class FLViaems {
     Fl::add_timeout(0.5, v->failed_ping_callback, v);
     v->ping_req = v->protocol.Ping(v->ping_callback, v);
     Fl::repeat_timeout(1, v->pinger, v);
-
-    /* TODO remove, example of loading config */
-    if (!done) {
-      done = true;
-      auto config = v->log_reader.LoadConfigs().at(0);
-      v->model.set_configuration(config);
-      v->ui.update_model(&v->model);
-    }
   }
 
   static void flash(Fl_Widget *w, void *ptr) {
@@ -188,7 +183,20 @@ class FLViaems {
     v->start_interrogation();
   }
 
+  static void select_log(Fl_Widget *w, void *ptr) {
+    auto v = static_cast<FLViaems *>(ptr);
+    const char *filename = fl_file_chooser("Select Log", "*.vlog", "", 0);
+    if (filename == nullptr) {
+      return;
+    }
+    v->log_reader = std::make_shared<Log>(filename);
+    v->log_writer = std::make_shared<ThreadedWriteLog>(filename);
+    v->ui.update_log(v->log_reader);
+  }
+
   void initialize_connection() {
+    Fl::add_timeout(0.05, feed_refresh_handler, this);
+    Fl::add_timeout(1, pinger, this);
     this->connector =
         std::make_unique<Connection>(std::cin, std::cout, read_message, this);
   }
@@ -214,18 +222,18 @@ public:
   FLViaems()
       : protocol{std::bind(&FLViaems::write_message, this,
                            std::placeholders::_1)},
-        model{protocol} {
+        model{protocol},
+        offline{true} {
     Fl::lock(); /* Necessary to enable awake() functionality */
 
-    log_reader.SetFile("log.vlog");
-    log_writer.SetFile("log.vlog");
+    log_reader = std::make_shared<Log>("log.vlog");
+    log_writer = std::make_shared<ThreadedWriteLog>("log.vlog");
+    ui.update_log(log_reader);
 
     model.set_value_change_callback(value_update, this);
     ui.m_file_flash->callback(flash, this);
     ui.m_file_bootloader->callback(bootloader, this);
-    ui.update_log(&log_reader);
-    Fl::add_timeout(0.05, feed_refresh_handler, this);
-    Fl::add_timeout(1, pinger, this);
+    ui.m_log_select->callback(select_log, this);
     initialize_connection();
 
   };
