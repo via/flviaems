@@ -335,27 +335,30 @@ void Protocol::handle_response_message_from_ems(uint32_t id,
   }
 }
 
-void Protocol::NewData(const json &msg) {
-  if (!msg.is_object()) {
-    return;
-  }
+void Protocol::NewData() {
+  while (const auto& maybe_msg = connection->Read()) {
+    const auto &msg = maybe_msg.value();
+    if (!msg.is_object()) {
+      return;
+    }
 
-  if (!msg.contains("type")) {
-    return;
-  }
-  if ((msg.contains("success") == 1) && (msg["success"] != true)) {
-    return;
-  }
+    if (!msg.contains("type")) {
+      return;
+    }
+    if ((msg.contains("success") == 1) && (msg["success"] != true)) {
+      return;
+    }
 
-  std::string type = msg["type"];
+    std::string type = msg["type"];
 
-  if (type == "feed" && msg.contains("values")) {
-    handle_feed_message_from_ems(msg["values"]);
-  } else if (type == "description" && msg.contains("keys")) {
-    handle_description_message_from_ems(msg["keys"]);
-  } else if (type == "response" && msg.contains("id") &&
-             msg.contains("response")) {
-    handle_response_message_from_ems(msg["id"], msg["response"]);
+    if (type == "feed" && msg.contains("values")) {
+      handle_feed_message_from_ems(msg["values"]);
+    } else if (type == "description" && msg.contains("keys")) {
+      handle_description_message_from_ems(msg["keys"]);
+    } else if (type == "response" && msg.contains("id") &&
+               msg.contains("response")) {
+      handle_response_message_from_ems(msg["id"], msg["response"]);
+    }
   }
 }
 
@@ -501,27 +504,30 @@ void Protocol::ensure_sent() {
     return;
   }
   first->is_sent = true;
-  this->write_cb(first->repr);
+  this->connection->Write(first->repr);
 }
 
 void Model::interrogate(interrogation_change_cb cb, void *ptr) {
+  if (!protocol) {
+    return;
+  }
   interrogate_cb = cb;
   interrogate_cb_ptr = ptr;
 
   /* First clear any ongoing interrogation commands */
   for (auto r = get_reqs.rbegin(); r != get_reqs.rend(); r++) {
-    m_protocol.Cancel(*r);
+    protocol->Cancel(*r);
   }
   get_reqs.clear();
   config = Configuration{.save_time = std::chrono::system_clock::now()};
   interrogation_state = InterrogationState{.in_progress = true};
 
   if (structure_req) {
-    m_protocol.Cancel(structure_req);
+    protocol->Cancel(structure_req);
     structure_req.reset();
   }
 
-  structure_req = m_protocol.Structure(handle_model_structure, this);
+  structure_req = protocol->Structure(handle_model_structure, this);
 }
 
 InterrogationState Model::interrogation_status() {
@@ -577,7 +583,7 @@ void Model::handle_model_structure(StructureNode root, void *ptr) {
   auto paths = enumerate_structure_paths(root);
   model->interrogation_state.total_nodes = paths.size();
   for (const auto& path : paths) {
-    model->get_reqs.push_back(model->m_protocol.Get(handle_model_get,
+    model->get_reqs.push_back(model->protocol->Get(handle_model_get,
           path, model));
   }
   if (model->interrogate_cb != nullptr) {
@@ -587,7 +593,10 @@ void Model::handle_model_structure(StructureNode root, void *ptr) {
 }
 
 void Model::set_value(StructurePath path, ConfigValue value) {
-  m_protocol.Set(handle_model_set, path, value, this);
+  if (!protocol) {
+    return;
+  }
+  protocol->Set(handle_model_set, path, value, this);
 }
 
 void Model::set_configuration(const Configuration &conf) {
@@ -597,6 +606,9 @@ void Model::set_configuration(const Configuration &conf) {
   }
 }
 
+void Model::set_protocol(std::shared_ptr<Protocol> proto) {
+  protocol = proto;
+}
 
 static json json_config_from_structure(StructureNode n,
   const Configuration &conf) {
