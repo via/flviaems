@@ -165,16 +165,27 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_rows->callback(table_value_changed_callback, this);
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
-
-
 }
 
 void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
   if (l) {
-    m_logview->SetLog(l.value().get());
+    auto log = l.value();
+    m_logview->SetLog(log);
     auto stop_time = l.value()->EndTime();
     auto start_time = stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
+    auto old_configs = log->LoadConfigs();
+#if 0
+    for (const auto& conf : old_configs) {
+      auto time_c = std::chrono::system_clock::to_time_t(conf.save_time);
+      char timestr[64];
+      std::strftime(timestr, 64, "%F %T", std::localtime(&time_c));
+      std::string menupath = "Log/Load Config/";
+      menupath += timestr;
+      std::cerr << "got: " << menupath << std::endl;
+      m_bar->add(menupath.c_str(), 0, nullptr, 0, 0);
+    }
+#endif
   }
   log = l;
 }
@@ -250,7 +261,8 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
       parent->add(m_config_tree->prefs(), "", item);
       if (child.second.is_leaf()) {
         auto leaf = child.second.leaf();
-        auto value = m_model->configuration().get(leaf.path).value_or(uint32_t{0});
+        auto value =
+            m_model->configuration().get(leaf.path).value_or(uint32_t{0});
         SelectableTreeWidget *w;
 
         if (leaf.type == "uint32") {

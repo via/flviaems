@@ -32,7 +32,6 @@ struct LogChunk {
   std::vector<std::string> keys;
 };
 
-
 struct TableAxis {
   std::string name;
   std::vector<float> labels;
@@ -123,9 +122,9 @@ struct Configuration {
       return {};
     }
     return val->second;
-  }      
+  }
 
-  void from_json(const json&);
+  void from_json(const json &);
   json to_json() const;
 };
 
@@ -168,12 +167,19 @@ struct Request {
   json repr;
 };
 
+class Connection {
+public:
+  virtual void Write(const json &msg) = 0;
+  virtual std::optional<json> Read() = 0;
+  virtual ~Connection() {}
+};
+
 class Protocol {
 public:
-  Protocol(std::function<void(const json &)> write_cb) : write_cb{write_cb} {};
+  Protocol(std::unique_ptr<Connection> conn) : connection{std::move(conn)} {};
 
   LogChunk FeedUpdates();
-  void NewData(const json &j);
+  void NewData();
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
   std::shared_ptr<Request> Structure(structure_cb, void *);
@@ -184,6 +190,8 @@ public:
   bool Cancel(std::shared_ptr<Request> req);
 
 private:
+  std::unique_ptr<Connection> connection;
+
   std::vector<std::string> m_feed_vars;
   LogChunk m_feed_updates;
   std::function<void(const json &)> write_cb;
@@ -210,7 +218,7 @@ typedef void (*interrogation_change_cb)(InterrogationState, void *ptr);
 typedef void (*value_change_cb)(StructurePath path, void *ptr);
 
 class Model {
-  Protocol &m_protocol;
+  std::shared_ptr<Protocol> protocol;
 
   value_change_cb value_cb = nullptr;
   void *value_cb_ptr;
@@ -229,10 +237,9 @@ class Model {
   static void handle_model_structure(StructureNode root, void *ptr);
 
 public:
-  Model(Protocol &protocol) : m_protocol{protocol} {};
-
-  const Configuration& configuration() const { return config; };
+  const Configuration &configuration() const { return config; };
   void set_configuration(const Configuration &c);
+  void set_protocol(std::shared_ptr<Protocol>);
 
   void set_value_change_callback(value_change_cb cb, void *ptr) {
     value_cb = cb;

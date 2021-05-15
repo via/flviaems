@@ -47,7 +47,7 @@ void Protocol::handle_feed_message_from_ems(const json &a) {
     return;
   }
   LogPoint update;
-  int i;
+  unsigned int i;
   for (i = 0; i < m_feed_vars.size(); i++) {
     if (m_feed_vars[i] == "cputime") {
       break;
@@ -136,7 +136,7 @@ static StructureNode generate_structure_node_from_cbor(const json &entry,
 static TableAxis generate_table_axis_from_cbor(const json &axis) {
   TableAxis res{};
   res.name = axis["name"];
-  for (const auto label : axis["values"]) {
+  for (const auto &label : axis["values"]) {
     res.labels.push_back(label);
   }
   return res;
@@ -149,14 +149,14 @@ static ConfigValue generate_table_value_from_cbor(const json &map) {
   table.axis.push_back(generate_table_axis_from_cbor(map["horizontal-axis"]));
 
   if (n_axis == 1) {
-    for (const auto datum : map["data"]) {
+    for (const auto &datum : map["data"]) {
       table.one.push_back(datum);
     }
   } else if (n_axis == 2) {
     table.axis.push_back(generate_table_axis_from_cbor(map["vertical-axis"]));
-    for (const auto outter : map["data"]) {
+    for (const auto &outter : map["data"]) {
       std::vector<float> values;
-      for (const auto value : outter) {
+      for (const auto &value : outter) {
         values.push_back(value);
       }
       table.two.push_back(values);
@@ -274,32 +274,32 @@ static json cbor_from_value(const TableValue &v) {
 
 static json cbor_from_value(const OutputValue &v) {
   return json{
-    {"type", v.type},
-    {"angle", v.angle},
-    {"pin", v.pin},
-    {"inverted", v.inverted ? 1 : 0},
+      {"type", v.type},
+      {"angle", v.angle},
+      {"pin", v.pin},
+      {"inverted", v.inverted ? 1 : 0},
   };
 }
 
 static json cbor_from_value(const SensorValue &v) {
   return json{
-    {"fault-min", v.fault.min},
-    {"fault-max", v.fault.max},
-    {"fault-value", v.fault.value},
-    {"fixed-value", v.const_value},
-    {"lag", v.lag},
-    {"method", v.method},
-    {"pin", v.pin},
-    {"range-max", v.range_max},
-    {"range-min", v.range_min},
-    {"source", v.source},
-    {"therm-a", v.therm.a},
-    {"therm-b", v.therm.b},
-    {"therm-c", v.therm.c},
-    {"therm-bias", v.therm.bias},
-    {"window-capture-width", v.window.capture_width},
-    {"window-offset", v.window.offset},
-    {"window-total-width", v.window.total_width},
+      {"fault-min", v.fault.min},
+      {"fault-max", v.fault.max},
+      {"fault-value", v.fault.value},
+      {"fixed-value", v.const_value},
+      {"lag", v.lag},
+      {"method", v.method},
+      {"pin", v.pin},
+      {"range-max", v.range_max},
+      {"range-min", v.range_min},
+      {"source", v.source},
+      {"therm-a", v.therm.a},
+      {"therm-b", v.therm.b},
+      {"therm-c", v.therm.c},
+      {"therm-bias", v.therm.bias},
+      {"window-capture-width", v.window.capture_width},
+      {"window-offset", v.window.offset},
+      {"window-total-width", v.window.total_width},
   };
 }
 
@@ -335,27 +335,30 @@ void Protocol::handle_response_message_from_ems(uint32_t id,
   }
 }
 
-void Protocol::NewData(const json &msg) {
-  if (!msg.is_object()) {
-    return;
-  }
+void Protocol::NewData() {
+  while (const auto &maybe_msg = connection->Read()) {
+    const auto &msg = maybe_msg.value();
+    if (!msg.is_object()) {
+      return;
+    }
 
-  if (!msg.contains("type")) {
-    return;
-  }
-  if ((msg.contains("success") == 1) && (msg["success"] != true)) {
-    return;
-  }
+    if (!msg.contains("type")) {
+      return;
+    }
+    if ((msg.contains("success") == 1) && (msg["success"] != true)) {
+      return;
+    }
 
-  std::string type = msg["type"];
+    std::string type = msg["type"];
 
-  if (type == "feed" && msg.contains("values")) {
-    handle_feed_message_from_ems(msg["values"]);
-  } else if (type == "description" && msg.contains("keys")) {
-    handle_description_message_from_ems(msg["keys"]);
-  } else if (type == "response" && msg.contains("id") &&
-             msg.contains("response")) {
-    handle_response_message_from_ems(msg["id"], msg["response"]);
+    if (type == "feed" && msg.contains("values")) {
+      handle_feed_message_from_ems(msg["values"]);
+    } else if (type == "description" && msg.contains("keys")) {
+      handle_description_message_from_ems(msg["keys"]);
+    } else if (type == "response" && msg.contains("id") &&
+               msg.contains("response")) {
+      handle_response_message_from_ems(msg["id"], msg["response"]);
+    }
   }
 }
 
@@ -501,32 +504,33 @@ void Protocol::ensure_sent() {
     return;
   }
   first->is_sent = true;
-  this->write_cb(first->repr);
+  this->connection->Write(first->repr);
 }
 
 void Model::interrogate(interrogation_change_cb cb, void *ptr) {
+  if (!protocol) {
+    return;
+  }
   interrogate_cb = cb;
   interrogate_cb_ptr = ptr;
 
   /* First clear any ongoing interrogation commands */
   for (auto r = get_reqs.rbegin(); r != get_reqs.rend(); r++) {
-    m_protocol.Cancel(*r);
+    protocol->Cancel(*r);
   }
   get_reqs.clear();
   config = Configuration{.save_time = std::chrono::system_clock::now()};
   interrogation_state = InterrogationState{.in_progress = true};
 
   if (structure_req) {
-    m_protocol.Cancel(structure_req);
+    protocol->Cancel(structure_req);
     structure_req.reset();
   }
 
-  structure_req = m_protocol.Structure(handle_model_structure, this);
+  structure_req = protocol->Structure(handle_model_structure, this);
 }
 
-InterrogationState Model::interrogation_status() {
-  return interrogation_state;
-}
+InterrogationState Model::interrogation_status() { return interrogation_state; }
 
 void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   Model *model = (Model *)ptr;
@@ -538,7 +542,7 @@ void Model::handle_model_get(StructurePath path, ConfigValue val, void *ptr) {
   }
   if (model->interrogate_cb != nullptr) {
     model->interrogate_cb(model->interrogation_status(),
-        model->interrogate_cb_ptr);
+                          model->interrogate_cb_ptr);
   }
 }
 
@@ -550,7 +554,8 @@ void Model::handle_model_set(StructurePath path, ConfigValue val, void *ptr) {
   }
 }
 
-static std::vector<StructurePath> enumerate_structure_paths(StructureNode node) {
+static std::vector<StructurePath>
+enumerate_structure_paths(StructureNode node) {
   std::vector<StructurePath> paths;
   if (node.is_leaf()) {
     auto leaf = node.leaf();
@@ -570,24 +575,26 @@ static std::vector<StructurePath> enumerate_structure_paths(StructureNode node) 
   return paths;
 }
 
-
 void Model::handle_model_structure(StructureNode root, void *ptr) {
   Model *model = (Model *)ptr;
   model->config.structure = root;
   auto paths = enumerate_structure_paths(root);
   model->interrogation_state.total_nodes = paths.size();
-  for (const auto& path : paths) {
-    model->get_reqs.push_back(model->m_protocol.Get(handle_model_get,
-          path, model));
+  for (const auto &path : paths) {
+    model->get_reqs.push_back(
+        model->protocol->Get(handle_model_get, path, model));
   }
   if (model->interrogate_cb != nullptr) {
     model->interrogate_cb(model->interrogation_status(),
-        model->interrogate_cb_ptr);
+                          model->interrogate_cb_ptr);
   }
 }
 
 void Model::set_value(StructurePath path, ConfigValue value) {
-  m_protocol.Set(handle_model_set, path, value, this);
+  if (!protocol) {
+    return;
+  }
+  protocol->Set(handle_model_set, path, value, this);
 }
 
 void Model::set_configuration(const Configuration &conf) {
@@ -597,69 +604,69 @@ void Model::set_configuration(const Configuration &conf) {
   }
 }
 
+void Model::set_protocol(std::shared_ptr<Protocol> proto) {
+  protocol = proto;
+}
 
 static json json_config_from_structure(StructureNode n,
-  const Configuration &conf) {
+                                       const Configuration &conf) {
   json j{};
   if (n.is_list()) {
-    for (const auto& v : n.list()) {
+    for (const auto &v : n.list()) {
       j.push_back(json_config_from_structure(v, conf));
     }
     return j;
   } else if (n.is_map()) {
-    for (const auto& v : n.map()) {
+    for (const auto &v : n.map()) {
       j[v.first] = json_config_from_structure(v.second, conf);
     }
     return j;
   } else {
     const auto &val = conf.get(n.leaf().path).value_or(uint32_t{0});
-    return std::visit([&](const auto& v) { return cbor_from_value(v); }, val);
+    return std::visit([&](const auto &v) { return cbor_from_value(v); }, val);
   }
 }
 
 static json json_structure_from_structure(StructureNode n) {
   json j{};
   if (n.is_list()) {
-    for (const auto& v : n.list()) {
+    for (const auto &v : n.list()) {
       j.push_back(json_structure_from_structure(v));
     }
     return j;
   } else if (n.is_map()) {
-    for (const auto& v : n.map()) {
+    for (const auto &v : n.map()) {
       j[v.first] = json_structure_from_structure(v.second);
     }
     return j;
   } else {
     auto leaf = n.leaf();
     return {
-      {"_type", leaf.type},
-      {"description", leaf.description},
-      {"choices", leaf.choices},
+        {"_type", leaf.type},
+        {"description", leaf.description},
+        {"choices", leaf.choices},
     };
   }
 }
-
-
-
 
 json Configuration::to_json() const {
   auto config = json_config_from_structure(structure, *this);
   auto s = json_structure_from_structure(structure);
   return {
-    {"structure", s},
-    {"config", config},
+      {"structure", s},
+      {"config", config},
   };
 }
 
-void Configuration::from_json(const json& j) {
-  auto structure = generate_structure_node_from_cbor(j.at("structure"), {}); 
+void Configuration::from_json(const json &j) {
+  auto structure = generate_structure_node_from_cbor(j.at("structure"), {});
   this->structure = structure;
   values.clear();
   auto paths = enumerate_structure_paths(structure);
 
-  for (const auto& path : paths) {
+  for (const auto &path : paths) {
     json val = j["config"];
-    for (const auto& p : path) {
+    for (const auto &p : path) {
       if (std::holds_alternative<std::string>(p)) {
         val = val.at(std::get<std::string>(p));
       } else {

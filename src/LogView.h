@@ -26,12 +26,12 @@ struct SeriesConfig {
 class LogView : public Fl_Box {
 public:
   LogView(int X, int Y, int W, int H);
-  void SetLog(Log *log);
+  void SetLog(std::shared_ptr<Log> log);
   void update_time_range(std::chrono::system_clock::time_point start,
                          std::chrono::system_clock::time_point stop);
 
 private:
-  Log *log;
+  std::shared_ptr<Log> log;
   std::chrono::system_clock::time_point start, stop;
   int mouse_x, mouse_y;
 

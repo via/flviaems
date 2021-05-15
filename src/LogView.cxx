@@ -134,7 +134,7 @@ void LogView::draw() {
     return;
   }
   int count = 0;
-  for (const auto element : config) {
+  for (const auto &element : config) {
     auto name = element.first;
     auto conf = element.second;
     int cx = 0;
@@ -195,7 +195,7 @@ int LogView::handle(int ev) {
   return 0;
 }
 
-void LogView::SetLog(Log *log) { 
+void LogView::SetLog(std::shared_ptr<Log> log) {
   this->log = log;
   this->cache = viaems::LogChunk{};
 };

@@ -20,3 +20,6 @@ target_link_libraries(flviaems ${SQLite3_LIBRARIES})
 
 add_subdirectory(extern/json)
 target_link_libraries(flviaems nlohmann_json::nlohmann_json)
+
+target_include_directories(flviaems PRIVATE extern/pstreams)
+target_include_directories(flviaems PRIVATE extern/fdstream)

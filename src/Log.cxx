@@ -5,7 +5,8 @@
 
 #include "Log.h"
 
-static std::string points_table_schema_from_update(const viaems::LogChunk &update) {
+static std::string
+points_table_schema_from_update(const viaems::LogChunk &update) {
   std::string query;
 
   int index = 0;
@@ -28,7 +29,8 @@ static std::string points_table_schema_from_update(const viaems::LogChunk &updat
   return query;
 }
 
-static std::string points_table_insert_query(const std::vector<std::string> keys) {
+static std::string
+points_table_insert_query(const std::vector<std::string> keys) {
   std::string query;
   query += "INSERT INTO points (realtime_ns,";
   int remaining = keys.size() - 1;
@@ -51,19 +53,6 @@ static std::string points_table_insert_query(const std::vector<std::string> keys
 
   query += ");";
   return query;
-}
-
-static bool points_schema_matches_update(std::vector<std::string> keys,
-                                         viaems::LogChunk update) {
-  if (update.keys.size() != keys.size()) {
-    return false;
-  }
-  for (int i = 0; i < keys.size(); i++) {
-    if (update.keys[i] != keys[i]) {
-      return false;
-    }
-  }
-  return true;
 }
 
 static std::vector<std::string> current_points_keys(sqlite3 *db) {
@@ -246,7 +235,8 @@ viaems::LogChunk Log::GetRange(std::vector<std::string> keys,
 }
 
 std::chrono::system_clock::time_point Log::EndTime() {
-  std::string query = "SELECT realtime_ns FROM points ORDER BY realtime_ns DESC LIMIT 1";
+  std::string query =
+      "SELECT realtime_ns FROM points ORDER BY realtime_ns DESC LIMIT 1";
 
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
@@ -259,16 +249,15 @@ std::chrono::system_clock::time_point Log::EndTime() {
   return std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
 }
 
-
 static void ensure_configs_table(sqlite3 *db) {
-  std::string create_table_str = "CREATE TABLE configs (time INTEGER, config TEXT);";
+  std::string create_table_str =
+      "CREATE TABLE configs (time INTEGER, config TEXT);";
 
   int res;
   char *sqlerr;
   res = sqlite3_exec(db, create_table_str.c_str(), NULL, 0, &sqlerr);
   if (res) {
-    std::cerr << "Log: unable to create configs table" << sqlerr
-      << std::endl;
+    std::cerr << "Log: unable to create configs table" << sqlerr << std::endl;
     sqlite3_free(sqlerr);
     return;
   }
@@ -280,7 +269,7 @@ void Log::SaveConfig(viaems::Configuration conf) {
   std::string insert_query_str = "INSERT INTO configs VALUES(?, ?);";
   sqlite3_stmt *insert_stmt;
   int res = sqlite3_prepare_v2(db, insert_query_str.c_str(),
-  insert_query_str.size(), &insert_stmt, NULL);
+                               insert_query_str.size(), &insert_stmt, NULL);
 
   if (res != SQLITE_OK) {
     std::cerr << "Log: unable to prepare insert statement: "
@@ -290,16 +279,18 @@ void Log::SaveConfig(viaems::Configuration conf) {
 
   sqlite3_reset(insert_stmt);
   uint64_t time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      conf.save_time.time_since_epoch())
-    .count();
+                         conf.save_time.time_since_epoch())
+                         .count();
   sqlite3_bind_int64(insert_stmt, 1, time_ns);
 
   std::string conf_dump = conf.to_json().dump();
-  sqlite3_bind_text(insert_stmt, 2, conf_dump.c_str(), conf_dump.size(), SQLITE_STATIC);
+  sqlite3_bind_text(insert_stmt, 2, conf_dump.c_str(), conf_dump.size(),
+                    SQLITE_STATIC);
 
   res = sqlite3_step(insert_stmt);
   if (res != SQLITE_DONE) {
-    std::cerr << "Log: unable to save config: " << sqlite3_errmsg(db) << std::endl;
+    std::cerr << "Log: unable to save config: " << sqlite3_errmsg(db)
+              << std::endl;
     return;
   }
   sqlite3_finalize(insert_stmt);
@@ -308,10 +299,12 @@ void Log::SaveConfig(viaems::Configuration conf) {
 std::vector<viaems::Configuration> Log::LoadConfigs() {
   ensure_configs_table(db);
 
-  std::string select_query_str = "SELECT time, config FROM configs ORDER BY time DESC LIMIT 1";
+  std::string select_query_str =
+      "SELECT time, config FROM configs ORDER BY time DESC";
   sqlite3_stmt *select_stmt;
   int res = sqlite3_prepare_v2(db, select_query_str.c_str(),
-  select_query_str.size(), &select_stmt, NULL);
+                               select_query_str.size(), &select_stmt, NULL);
+  std::vector<viaems::Configuration> configs;
 
   if (res != SQLITE_OK) {
     std::cerr << "Log: unable to prepare config query statement: "
@@ -320,21 +313,24 @@ std::vector<viaems::Configuration> Log::LoadConfigs() {
   }
 
   sqlite3_reset(select_stmt);
-  res = sqlite3_step(select_stmt);
-  if (res != SQLITE_ROW) {
-    std::cerr << "Log: unable to get config: " << sqlite3_errmsg(db) << std::endl;
-    return {};
-  }
+  do {
+    res = sqlite3_step(select_stmt);
+    if (res != SQLITE_ROW) {
+      break;
+    }
 
-  auto ns = sqlite3_column_int64(select_stmt, 0);
-  auto time_ns = std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
-  auto resp = viaems::Configuration{.save_time = time_ns};
+    auto ns = sqlite3_column_int64(select_stmt, 0);
+    auto time_ns =
+        std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
+    auto resp = viaems::Configuration{.save_time = time_ns};
 
-  auto config_json = json::parse(sqlite3_column_text(select_stmt, 1));
+    auto config_json = json::parse(sqlite3_column_text(select_stmt, 1));
 
-  resp.from_json(config_json);
+    resp.from_json(config_json);
+    configs.push_back(resp);
+  } while (true);
   sqlite3_finalize(select_stmt);
-  return {resp};
+  return configs;
 }
 
 void ThreadedWriteLog::WriteChunk(viaems::LogChunk &&chunk) {
