@@ -113,6 +113,25 @@ public:
   virtual std::optional<json> Read() {return conn->Read();}
 };
 
+class FileConnection : public viaems::Connection {
+  std::unique_ptr<ThreadedJsonInterface> conn;
+  FILE *file;
+  
+public:
+  FileConnection(Fl_Awake_Handler read_handler, void *ptr, std::string path) {
+    file = fopen(path.c_str(), "wb");
+    if (!file) {
+      throw std::runtime_error{"Unable to open device"};
+      }
+      conn = std::make_unique<ThreadedJsonInterface>(file, file, read_handler, ptr);
+  }
+
+  virtual ~FileConnection() {
+    fclose(file);
+  }
+  virtual void Write(const json &msg) {conn->Write(msg);}
+  virtual std::optional<json> Read() {return conn->Read();}
+};
 
 
 class FLViaems {
@@ -251,6 +270,15 @@ class FLViaems {
     v->offline = false;
   }
 
+  static void initialize_device(Fl_Widget *w,  void *ptr) {
+    auto v = static_cast<FLViaems *>(ptr);
+    auto conn = std::make_unique<FileConnection>(v->message_available, v,
+        "/dev/ttyACM0");
+    v->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
+    v->model.set_protocol(v->protocol);
+    v->offline = false;
+  }
+
   static void initialize_offline(Fl_Widget *w,  void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
     v->protocol.reset();
@@ -276,12 +304,13 @@ public:
     Fl::add_timeout(0.05, feed_refresh_handler, this);
     Fl::add_timeout(1, pinger, this);
 
-    model.set_value_change_callback(value_update, this);
     ui.m_file_flash->callback(flash, this);
     ui.m_file_bootloader->callback(bootloader, this);
     ui.m_log_select->callback(select_log, this);
     ui.m_connection_simulator->callback(initialize_simulator, this);
+    ui.m_connection_device->callback(initialize_device, this);
     ui.m_connection_offline->callback(initialize_offline, this);
+    model.set_value_change_callback(value_update, this);
 
   };
 
