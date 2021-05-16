@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <termios.h>
 
 #include "MainWindow.h"
 #include <FL/Fl.H>
@@ -113,20 +114,35 @@ public:
   virtual std::optional<json> Read() {return conn->Read();}
 };
 
-class FileConnection : public viaems::Connection {
+class DevConnection : public viaems::Connection {
   std::unique_ptr<ThreadedJsonInterface> conn;
   FILE *file;
+
+  bool set_raw_mode() {
+    int fd = fileno(file);
+    struct termios tty;
+    if (tcgetattr(fd, &tty) != 0) {
+      return false;
+    }
+
+    cfmakeraw(&tty);
+    if (tcsetattr(fd, 0, &tty) != 0) {
+      return false;
+    }
+    return true;
+  }
   
 public:
-  FileConnection(Fl_Awake_Handler read_handler, void *ptr, std::string path) {
+  DevConnection(Fl_Awake_Handler read_handler, void *ptr, std::string path) {
     file = fopen(path.c_str(), "wb");
     if (!file) {
       throw std::runtime_error{"Unable to open device"};
       }
+      set_raw_mode();
       conn = std::make_unique<ThreadedJsonInterface>(file, file, read_handler, ptr);
   }
 
-  virtual ~FileConnection() {
+  virtual ~DevConnection() {
     fclose(file);
   }
   virtual void Write(const json &msg) {conn->Write(msg);}
@@ -272,7 +288,7 @@ class FLViaems {
 
   static void initialize_device(Fl_Widget *w,  void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    auto conn = std::make_unique<FileConnection>(v->message_available, v,
+    auto conn = std::make_unique<DevConnection>(v->message_available, v,
         "/dev/ttyACM0");
     v->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
     v->model.set_protocol(v->protocol);

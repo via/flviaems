@@ -169,12 +169,28 @@ MainWindow::MainWindow() : MainWindowUI() {
 
 }
 
+static void bleh() {
+}
+
 void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
   if (l) {
-    m_logview->SetLog(l.value().get());
+    auto log = l.value();
+    m_logview->SetLog(log);
     auto stop_time = l.value()->EndTime();
     auto start_time = stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
+    auto old_configs = log->LoadConfigs();
+#if 0
+    for (const auto& conf : old_configs) {
+      auto time_c = std::chrono::system_clock::to_time_t(conf.save_time);
+      char timestr[64];
+      std::strftime(timestr, 64, "%F %T", std::localtime(&time_c));
+      std::string menupath = "Log/Load Config/";
+      menupath += timestr;
+      std::cerr << "got: " << menupath << std::endl;
+      m_bar->add(menupath.c_str(), 0, nullptr, 0, 0);
+    }
+#endif
   }
   log = l;
 }
