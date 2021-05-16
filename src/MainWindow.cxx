@@ -165,12 +165,9 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_rows->callback(table_value_changed_callback, this);
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
-
-
 }
 
-static void bleh() {
-}
+static void bleh() {}
 
 void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
   if (l) {
@@ -266,7 +263,8 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
       parent->add(m_config_tree->prefs(), "", item);
       if (child.second.is_leaf()) {
         auto leaf = child.second.leaf();
-        auto value = m_model->configuration().get(leaf.path).value_or(uint32_t{0});
+        auto value =
+            m_model->configuration().get(leaf.path).value_or(uint32_t{0});
         SelectableTreeWidget *w;
 
         if (leaf.type == "uint32") {

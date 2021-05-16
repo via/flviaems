@@ -1,7 +1,7 @@
 #pragma once
 
-#include <chrono>
 #include <atomic>
+#include <chrono>
 #include <fstream>
 #include <memory>
 #include <set>
@@ -48,7 +48,6 @@ class ThreadedWriteLog : public Log {
   void write_loop();
 
 public:
-
   ~ThreadedWriteLog() {
     std::unique_lock<std::mutex> lock(mutex);
     running = false;

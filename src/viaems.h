@@ -32,7 +32,6 @@ struct LogChunk {
   std::vector<std::string> keys;
 };
 
-
 struct TableAxis {
   std::string name;
   std::vector<float> labels;
@@ -123,9 +122,9 @@ struct Configuration {
       return {};
     }
     return val->second;
-  }      
+  }
 
-  void from_json(const json&);
+  void from_json(const json &);
   json to_json() const;
 };
 
@@ -169,10 +168,10 @@ struct Request {
 };
 
 class Connection {
-  public:
-    virtual void Write(const json &msg) = 0;
-    virtual std::optional<json> Read() = 0;
-    virtual ~Connection() {}
+public:
+  virtual void Write(const json &msg) = 0;
+  virtual std::optional<json> Read() = 0;
+  virtual ~Connection() {}
 };
 
 class Protocol {
@@ -238,7 +237,7 @@ class Model {
   static void handle_model_structure(StructureNode root, void *ptr);
 
 public:
-  const Configuration& configuration() const { return config; };
+  const Configuration &configuration() const { return config; };
   void set_configuration(const Configuration &c);
   void set_protocol(std::shared_ptr<Protocol>);
 

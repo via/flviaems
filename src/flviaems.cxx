@@ -1,21 +1,21 @@
+#include <atomic>
 #include <cstdio>
+#include <exception>
 #include <fcntl.h>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <numeric>
-#include <atomic>
-#include <exception>
 
-#include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <termios.h>
+#include <unistd.h>
 
 #include "MainWindow.h"
 #include <FL/Fl.H>
-#include <FL/Fl_Window.H>
 #include <FL/Fl_File_Chooser.H>
+#include <FL/Fl_Window.H>
 
 #include "viaems.h"
 
@@ -48,12 +48,14 @@ struct ThreadedJsonInterface {
   }
 
 public:
-  ThreadedJsonInterface(FILE *read, FILE *write, Fl_Awake_Handler read_handler, void *ptr)
-    : write_file{write}, read_file{read}, handler{read_handler}, handler_ptr{ptr} {
-      running = true;
-      this->reader_thread =
-        std::thread([](ThreadedJsonInterface *s) { s->do_reader_thread(s); }, this);
-    }
+  ThreadedJsonInterface(FILE *read, FILE *write, Fl_Awake_Handler read_handler,
+                        void *ptr)
+      : write_file{write}, read_file{read}, handler{read_handler}, handler_ptr{
+                                                                       ptr} {
+    running = true;
+    this->reader_thread = std::thread(
+        [](ThreadedJsonInterface *s) { s->do_reader_thread(s); }, this);
+  }
 
   ~ThreadedJsonInterface() {
     running = false;
@@ -80,7 +82,7 @@ public:
 class ExecConnection : public viaems::Connection {
   int pid;
   std::unique_ptr<ThreadedJsonInterface> conn;
-  
+
 public:
   ExecConnection(Fl_Awake_Handler read_handler, void *ptr, std::string path) {
     int outfds[2];
@@ -102,16 +104,14 @@ public:
       if (!write_file || !read_file) {
         throw std::runtime_error{"Unable to open pipes to viaems"};
       }
-      conn = std::make_unique<ThreadedJsonInterface>(read_file, write_file, read_handler, ptr);
+      conn = std::make_unique<ThreadedJsonInterface>(read_file, write_file,
+                                                     read_handler, ptr);
     }
-
   }
 
-  virtual ~ExecConnection() {
-    kill(pid, SIGTERM);
-  }
-  virtual void Write(const json &msg) {conn->Write(msg);}
-  virtual std::optional<json> Read() {return conn->Read();}
+  virtual ~ExecConnection() { kill(pid, SIGTERM); }
+  virtual void Write(const json &msg) { conn->Write(msg); }
+  virtual std::optional<json> Read() { return conn->Read(); }
 };
 
 class DevConnection : public viaems::Connection {
@@ -131,24 +131,22 @@ class DevConnection : public viaems::Connection {
     }
     return true;
   }
-  
+
 public:
   DevConnection(Fl_Awake_Handler read_handler, void *ptr, std::string path) {
     file = fopen(path.c_str(), "wb");
     if (!file) {
       throw std::runtime_error{"Unable to open device"};
-      }
-      set_raw_mode();
-      conn = std::make_unique<ThreadedJsonInterface>(file, file, read_handler, ptr);
+    }
+    set_raw_mode();
+    conn =
+        std::make_unique<ThreadedJsonInterface>(file, file, read_handler, ptr);
   }
 
-  virtual ~DevConnection() {
-    fclose(file);
-  }
-  virtual void Write(const json &msg) {conn->Write(msg);}
-  virtual std::optional<json> Read() {return conn->Read();}
+  virtual ~DevConnection() { fclose(file); }
+  virtual void Write(const json &msg) { conn->Write(msg); }
+  virtual std::optional<json> Read() { return conn->Read(); }
 };
-
 
 class FLViaems {
   MainWindow ui;
@@ -164,7 +162,8 @@ class FLViaems {
   static void feed_refresh_handler(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
-    auto updates = v->protocol ? v->protocol->FeedUpdates() : viaems::LogChunk{};
+    auto updates =
+        v->protocol ? v->protocol->FeedUpdates() : viaems::LogChunk{};
     static std::deque<int> rates;
 
     /* Keep average over 1 second */
@@ -176,7 +175,8 @@ class FLViaems {
     if (updates.points.size() > 0) {
       std::map<std::string, viaems::FeedValue> status;
       for (unsigned int i = 0; i < updates.keys.size(); i++) {
-        status.insert(std::make_pair(updates.keys[i], updates.points[0].values[i]));
+        status.insert(
+            std::make_pair(updates.keys[i], updates.points[0].values[i]));
       }
 
       v->ui.feed_update(status);
@@ -278,24 +278,25 @@ class FLViaems {
     v->ui.update_log(v->log_reader);
   }
 
-  static void initialize_simulator(Fl_Widget *w,  void *ptr) {
+  static void initialize_simulator(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    auto conn = std::make_unique<ExecConnection>(v->message_available, v, "/home/via/dev/viaems/obj/hosted/viaems");
+    auto conn = std::make_unique<ExecConnection>(
+        v->message_available, v, "/home/via/dev/viaems/obj/hosted/viaems");
     v->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
     v->model.set_protocol(v->protocol);
     v->offline = false;
   }
 
-  static void initialize_device(Fl_Widget *w,  void *ptr) {
+  static void initialize_device(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
     auto conn = std::make_unique<DevConnection>(v->message_available, v,
-        "/dev/ttyACM0");
+                                                "/dev/ttyACM0");
     v->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
     v->model.set_protocol(v->protocol);
     v->offline = false;
   }
 
-  static void initialize_offline(Fl_Widget *w,  void *ptr) {
+  static void initialize_offline(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
     v->protocol.reset();
     v->model.set_protocol(v->protocol);
@@ -327,7 +328,6 @@ public:
     ui.m_connection_device->callback(initialize_device, this);
     ui.m_connection_offline->callback(initialize_offline, this);
     model.set_value_change_callback(value_update, this);
-
   };
 
   ~FLViaems(){};

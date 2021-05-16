@@ -195,7 +195,7 @@ int LogView::handle(int ev) {
   return 0;
 }
 
-void LogView::SetLog(std::shared_ptr<Log> log) { 
+void LogView::SetLog(std::shared_ptr<Log> log) {
   this->log = log;
   this->cache = viaems::LogChunk{};
 };
