@@ -338,6 +338,7 @@ void Protocol::handle_response_message_from_ems(uint32_t id,
 void Protocol::NewData() {
   while (const auto &maybe_msg = connection->Read()) {
     const auto &msg = maybe_msg.value();
+    std::cerr << msg << std::endl;
     if (!msg.is_object()) {
       return;
     }

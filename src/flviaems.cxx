@@ -22,9 +22,67 @@
 #include <nlohmann/json.hpp>
 using json = json;
 
+class Reader {
+  int fd;
+
+  const static size_t size = 4096;
+  char buffer[size];
+  size_t position = 0;
+  size_t length = 0;
+
+  void fill() {
+    if (fd >= 0) {
+      length = read(fd, buffer, size);
+      if (length == 0) {
+        /* Signal end of file */
+        fd = -1;
+      }
+      position = 0;
+    }
+  }
+
+
+public:
+  typedef char                     value_type;
+  typedef std::ptrdiff_t          difference_type;
+  typedef char*                    pointer;
+  typedef char&                    reference;
+  typedef std::input_iterator_tag iterator_category;
+
+  static Reader empty_reader() {
+    return Reader{-1};
+  }
+
+  explicit Reader(int fd) : fd(fd) {
+    fill();
+  }
+  Reader(const Reader& r) = delete;
+  Reader(Reader&& rv) {
+    memmove(buffer, rv.buffer, rv.length);
+    position = rv.position;
+    rv.length = 0;
+    rv.position = 0;
+    fd = rv.fd;
+  };
+  char operator*() {
+    return buffer[position];
+  }
+  bool operator==(const Reader& other) const { return this->fd == other.fd; }
+  bool operator!=(const Reader& other) const { return this->fd != other.fd; }
+  Reader& operator++(int) = delete;
+  Reader& operator++() {
+    position += 1;
+    if (position == length) {
+      fill();
+    }
+    return *this;
+  }
+};
+
+
 struct ThreadedJsonInterface {
-  FILE *write_file;
-  FILE *read_file;
+  int write_fd;
+  int read_fd;
 
   std::thread reader_thread;
   std::deque<json> in_messages;
@@ -37,7 +95,8 @@ struct ThreadedJsonInterface {
   static void do_reader_thread(ThreadedJsonInterface *self) {
     while (self->running) {
       try {
-        auto msg = json::from_cbor(self->read_file, false);
+        Reader reader{self->read_fd};
+        auto msg = json::from_cbor(std::move(reader), Reader::empty_reader(), false);
         std::unique_lock<std::mutex> lock(self->in_mutex);
         self->in_messages.push_back(std::move(msg));
         lock.unlock();
@@ -48,10 +107,10 @@ struct ThreadedJsonInterface {
   }
 
 public:
-  ThreadedJsonInterface(FILE *read, FILE *write, Fl_Awake_Handler read_handler,
+  ThreadedJsonInterface(int read_fd, int write_fd, Fl_Awake_Handler read_handler,
                         void *ptr)
-      : write_file{write}, read_file{read}, handler{read_handler}, handler_ptr{
-                                                                       ptr} {
+      : write_fd{write_fd}, read_fd{read_fd}, handler{read_handler},
+    handler_ptr{ptr} {
     running = true;
     this->reader_thread = std::thread(
         [](ThreadedJsonInterface *s) { s->do_reader_thread(s); }, this);
@@ -64,8 +123,7 @@ public:
 
   void Write(const json &msg) {
     auto encoded = json::to_cbor(msg);
-    fwrite(encoded.data(), encoded.size(), 1, write_file);
-    fflush(write_file);
+    auto len = write(write_fd, encoded.data(), encoded.size());
   }
 
   std::optional<json> Read() {
@@ -99,12 +157,9 @@ public:
         throw std::runtime_error{strerror(errno)};
       }
     } else {
-      FILE *write_file = fdopen(outfds[1], "wb");
-      FILE *read_file = fdopen(infds[0], "rb");
-      if (!write_file || !read_file) {
-        throw std::runtime_error{"Unable to open pipes to viaems"};
-      }
-      conn = std::make_unique<ThreadedJsonInterface>(read_file, write_file,
+      int write_fd = outfds[1];
+      int read_fd = infds[0];
+      conn = std::make_unique<ThreadedJsonInterface>(read_fd, write_fd,
                                                      read_handler, ptr);
     }
   }
@@ -116,10 +171,9 @@ public:
 
 class DevConnection : public viaems::Connection {
   std::unique_ptr<ThreadedJsonInterface> conn;
-  FILE *file;
+  int fd;
 
   bool set_raw_mode() {
-    int fd = fileno(file);
     struct termios tty;
     if (tcgetattr(fd, &tty) != 0) {
       return false;
@@ -132,18 +186,19 @@ class DevConnection : public viaems::Connection {
     return true;
   }
 
+
 public:
   DevConnection(Fl_Awake_Handler read_handler, void *ptr, std::string path) {
-    file = fopen(path.c_str(), "wb");
-    if (!file) {
+    fd = open(path.c_str(), 0);
+    if (fd < 0) {
       throw std::runtime_error{"Unable to open device"};
     }
     set_raw_mode();
     conn =
-        std::make_unique<ThreadedJsonInterface>(file, file, read_handler, ptr);
+        std::make_unique<ThreadedJsonInterface>(fd, fd, read_handler, ptr);
   }
 
-  virtual ~DevConnection() { fclose(file); }
+  virtual ~DevConnection() { close(fd); }
   virtual void Write(const json &msg) { conn->Write(msg); }
   virtual std::optional<json> Read() { return conn->Read(); }
 };
