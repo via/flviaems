@@ -113,6 +113,7 @@ struct StructureNode : StructureNodeTypedef {
 
 struct Configuration {
   std::chrono::system_clock::time_point save_time;
+  std::string name;
   StructureNode structure;
   std::map<StructurePath, ConfigValue> values;
 

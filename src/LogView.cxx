@@ -52,18 +52,22 @@ void LogView::update_time_range(
   /* Is new start before potentially cached start? Determine a range to fetch
    * and fetch it (either newstart ->cachedstart or newstart -> newend. */
 
+  auto log_locked = log.lock();
+  if (!log_locked) {
+    return;
+  }
   if (!cache.points.size()) {
-    cache = log->GetRange(keys, new_start, new_stop);
+    cache = log_locked->GetRange(keys, new_start, new_stop);
   } else {
     auto cached_start = cache.points[0].time;
     if (new_start < cached_start) {
-      auto updates = log->GetRange(keys, new_start, cached_start);
+      auto updates = log_locked->GetRange(keys, new_start, cached_start);
       cache.points.insert(cache.points.begin(), updates.points.begin(),
                           updates.points.end());
     }
     auto cached_stop = cache.points[cache.points.size() - 1].time;
     if (new_stop > cached_stop) {
-      auto updates = log->GetRange(keys, cached_stop, new_stop);
+      auto updates = log_locked->GetRange(keys, cached_stop, new_stop);
       cache.points.insert(cache.points.end(), updates.points.begin(),
                           updates.points.end());
     }
@@ -130,9 +134,11 @@ void LogView::update_time_range(
 
 void LogView::draw() {
   draw_box();
+#if 0
   if (log == nullptr) {
     return;
   }
+#endif
   int count = 0;
   for (const auto &element : config) {
     auto name = element.first;
@@ -195,7 +201,7 @@ int LogView::handle(int ev) {
   return 0;
 }
 
-void LogView::SetLog(std::shared_ptr<Log> log) {
+void LogView::SetLog(std::weak_ptr<Log> log) {
   this->log = log;
   this->cache = viaems::LogChunk{};
 };

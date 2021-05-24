@@ -519,7 +519,8 @@ void Model::interrogate(interrogation_change_cb cb, void *ptr) {
     protocol->Cancel(*r);
   }
   get_reqs.clear();
-  config = Configuration{.save_time = std::chrono::system_clock::now()};
+  config = Configuration{.save_time = std::chrono::system_clock::now(),
+    .name="automatic"};
   interrogation_state = InterrogationState{.in_progress = true};
 
   if (structure_req) {

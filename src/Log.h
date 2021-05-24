@@ -20,9 +20,11 @@ class Log {
 
 public:
   Log(std::string path);
+  Log(const Log &) = delete;
+  Log& operator=(const Log&) = delete;
   ~Log() {
     if (db != nullptr) {
-      sqlite3_close(db);
+      auto res = sqlite3_close(db);
     }
   };
 
