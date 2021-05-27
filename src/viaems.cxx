@@ -105,7 +105,7 @@ static StructureNode generate_structure_node_from_cbor(const json &entry,
     }
 
     /* This is actually a map, we should descend */
-    auto result = StructureMap{};
+    auto result = StructureNode::StructureMap{};
     for (const auto &map_entry : entry.items()) {
       StructurePath new_path = curpath;
       new_path.push_back(map_entry.key());
@@ -117,7 +117,7 @@ static StructureNode generate_structure_node_from_cbor(const json &entry,
     }
     return StructureNode{result};
   } else if (entry.is_array()) {
-    auto result = StructureList{};
+    auto result = StructureNode::StructureList{};
     int index = 0;
     for (const auto &list_entry : entry) {
       StructurePath new_path = curpath;
@@ -520,7 +520,7 @@ void Model::interrogate(interrogation_change_cb cb, void *ptr) {
   }
   get_reqs.clear();
   config = Configuration{.save_time = std::chrono::system_clock::now(),
-    .name="automatic"};
+    .name="autosave"};
   interrogation_state = InterrogationState{.in_progress = true};
 
   if (structure_req) {

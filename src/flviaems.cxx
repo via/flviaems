@@ -290,6 +290,11 @@ class FLViaems {
     }
   }
 
+  void load_config(viaems::Configuration conf) {
+    model.set_configuration(conf);
+    ui.update_model(&model);
+  }
+
 public:
   FLViaems() {
     Fl::lock(); /* Necessary to enable awake() functionality */
@@ -307,6 +312,8 @@ public:
     ui.m_connection_simulator->callback(initialize_simulator, this);
     ui.m_connection_device->callback(initialize_device, this);
     ui.m_connection_offline->callback(initialize_offline, this);
+    ui.set_load_config_callback(std::bind(&FLViaems::load_config, this,
+          std::placeholders::_1));
     model.set_value_change_callback(value_update, this);
   };
 

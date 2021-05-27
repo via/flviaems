@@ -10,13 +10,16 @@ class MainWindow : public MainWindowUI {
   viaems::StructurePath detail_path;
   std::optional<std::shared_ptr<Log>> log;
 
-  void update_config_structure(viaems::StructureNode top);
+  std::vector<Fl_Menu_Item> prev_config_menu_items;
+  std::function<void(viaems::Configuration)> load_config_callback;
 
+  void update_config_structure(viaems::StructureNode top);
   void update_table_editor(viaems::TableValue t);
 
   static void select_table(Fl_Widget *w, void *p);
   static void structure_value_update_callback(Fl_Widget *w, void *p);
   static void table_value_changed_callback(Fl_Widget *w, void *ptr);
+  static void select_prev_config_callback(Fl_Widget *w, void *v);
 
   void add_config_structure_entry(Fl_Tree_Item *, viaems::StructureNode);
 
@@ -30,6 +33,10 @@ public:
   void update_config_value(viaems::StructurePath path,
                            viaems::ConfigValue value);
   void update_log(std::optional<std::shared_ptr<Log>>);
+
+  void set_load_config_callback(std::function<void(viaems::Configuration)> cb) {
+    load_config_callback = cb;
+  }
 };
 
 #endif

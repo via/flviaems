@@ -167,6 +167,19 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_editor_box->callback(table_value_changed_callback, this);
 }
 
+
+struct LogMenuData {
+  MainWindow *mw;
+  std::string text;
+  viaems::Configuration config;
+};
+
+void MainWindow::select_prev_config_callback(Fl_Widget *w, void *v) {
+  auto item = (LogMenuData *)v;
+  auto clicked_item = item->mw->m_bar->mvalue();
+  item->mw->load_config_callback(item->config);
+}
+
 void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
   if (l) {
     auto log = l.value();
@@ -175,17 +188,22 @@ void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
     auto start_time = stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
     auto old_configs = log->LoadConfigs();
-#if 0
+
+    m_log_loadconfig->flags = FL_SUBMENU;
+    prev_config_menu_items.clear();
     for (const auto& conf : old_configs) {
       auto time_c = std::chrono::system_clock::to_time_t(conf.save_time);
       char timestr[64];
       std::strftime(timestr, 64, "%F %T", std::localtime(&time_c));
-      std::string menupath = "Log/Load Config/";
-      menupath += timestr;
-      std::cerr << "got: " << menupath << std::endl;
-      m_bar->add(menupath.c_str(), 0, nullptr, 0, 0);
+      std::string menu_text = conf.name + " (" + timestr + ")";
+      
+      auto item = new LogMenuData{.mw = this, .text = menu_text, .config = conf};
+      prev_config_menu_items.push_back({item->text.c_str(), 0,
+          select_prev_config_callback, item, 0,
+          FL_NORMAL_LABEL, 0, 14, 0});
     }
-#endif
+    m_log_loadconfig->user_data(prev_config_menu_items.data());
+    m_log_loadconfig->flags = FL_SUBMENU_POINTER;
   }
   log = l;
 }
@@ -304,6 +322,9 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
   m_config_tree->showroot(0);
   m_config_tree->selectmode(FL_TREE_SELECT_NONE);
   auto root = m_config_tree->root();
+  if (!top.is_map()) {
+    return;
+  }
   m_config_tree->begin();
   for (auto child : top.map()) {
     auto item = new Fl_Tree_Item(m_config_tree->prefs());

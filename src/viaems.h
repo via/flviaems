@@ -94,21 +94,21 @@ struct StructureLeaf {
   StructurePath path;
 };
 
-struct StructureNode;
-typedef std::vector<StructureNode> StructureList;
-typedef std::map<std::string, StructureNode> StructureMap;
+struct StructureNode {
+  using StructureMap = std::map<std::string, StructureNode>;
+  using StructureList = std::vector<StructureNode>;
+  using StructureType = std::variant<StructureList, StructureMap, StructureLeaf>;
 
-typedef std::variant<StructureList, StructureMap, StructureLeaf>
-    StructureNodeTypedef;
-struct StructureNode : StructureNodeTypedef {
-  bool is_map() const { return std::holds_alternative<StructureMap>(*this); }
+  StructureType data;
 
-  StructureMap map() { return std::get<StructureMap>(*this); }
+  bool is_map() { return std::holds_alternative<StructureMap>(this->data); }
+  StructureMap map() { return std::get<StructureMap>(this->data); }
 
-  bool is_list() const { return std::holds_alternative<StructureList>(*this); }
-  StructureList list() { return std::get<StructureList>(*this); }
-  bool is_leaf() const { return std::holds_alternative<StructureLeaf>(*this); }
-  StructureLeaf leaf() { return std::get<StructureLeaf>(*this); }
+  bool is_list() const { return std::holds_alternative<StructureList>(this->data); }
+  StructureList list() { return std::get<StructureList>(this->data); }
+
+  bool is_leaf() const { return std::holds_alternative<StructureLeaf>(this->data); }
+  StructureLeaf leaf() { return std::get<StructureLeaf>(this->data); }
 };
 
 struct Configuration {
