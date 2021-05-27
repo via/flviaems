@@ -4,6 +4,8 @@
 
 #include "LogView.h"
 
+#include <iostream>
+
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
   series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
@@ -24,29 +26,16 @@ void LogView::update_time_range(
     std::chrono::system_clock::time_point new_start,
     std::chrono::system_clock::time_point new_stop) {
 
-  auto start_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                           new_start.time_since_epoch())
-                           .count();
-  auto stop_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                          new_stop.time_since_epoch())
-                          .count();
+  start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                 new_start.time_since_epoch())
+                 .count();
+  stop_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                new_stop.time_since_epoch())
+                .count();
 
   std::vector<std::string> keys;
   for (auto i : config) {
     keys.push_back(i.first);
-    series[i.first].clear();
-    for (auto k = 0; k < w(); k++) {
-      PointGroup pg{};
-      series[i.first].push_back(pg);
-    }
-  }
-
-  std::vector<range> pixel_ranges;
-  auto ns_per_pixel = (stop_time_ns - start_time_ns) / w();
-  for (auto k = 0; k < w(); k++) {
-    uint64_t start = start_time_ns + (k * ns_per_pixel);
-    uint64_t stop = start_time_ns + ((k + 1) * ns_per_pixel);
-    pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
   }
 
   /* Is new start before potentially cached start? Determine a range to fetch
@@ -89,23 +78,50 @@ void LogView::update_time_range(
       break;
     }
   }
+  recompute();
+  redraw();
+}
+
+void LogView::recompute() {
+  if (stop_ns == start_ns) {
+    return;
+  }
+
+  for (auto i : config) {
+    series[i.first].clear();
+    for (auto k = 0; k < w(); k++) {
+      PointGroup pg{};
+      series[i.first].push_back(pg);
+    }
+  }
 
   std::vector<std::vector<PointGroup> *> keymap;
-  for (auto k : keys) {
+  for (auto i : config) {
+    auto k = i.first;
     keymap.push_back(&series[k]);
   }
+
+  std::vector<range> pixel_ranges;
+  auto ns_per_pixel = (stop_ns - start_ns) / w();
+  for (auto k = 0; k < w(); k++) {
+    uint64_t start = start_ns + (k * ns_per_pixel);
+    uint64_t stop = start_ns + ((k + 1) * ns_per_pixel);
+    pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
+  }
+
   int pixel = 0;
   for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
                  i->time.time_since_epoch())
                  .count();
-    while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w())
+    while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w()) {
       pixel++;
+    }
     if (pixel == w()) {
       break;
     }
 
-    for (int k = 0; k < keys.size(); k++) {
+    for (int k = 0; k < keymap.size(); k++) {
       auto &s = keymap[k]->at(pixel);
       viaems::FeedValue fv = i->values[k];
       float v;
@@ -129,16 +145,11 @@ void LogView::update_time_range(
       s.set = true;
     }
   }
-  redraw();
 }
 
 void LogView::draw() {
   draw_box();
-#if 0
-  if (log == nullptr) {
-    return;
-  }
-#endif
+  fl_push_clip(x(), y(), w(), h());
   int count = 0;
   for (const auto &element : config) {
     auto name = element.first;
@@ -186,6 +197,7 @@ void LogView::draw() {
 
   fl_color(FL_LIGHT1);
   fl_line(mouse_x, y(), mouse_x, y() + h());
+  fl_pop_clip();
 }
 
 int LogView::handle(int ev) {
@@ -199,6 +211,11 @@ int LogView::handle(int ev) {
   }
 
   return 0;
+}
+
+void LogView::resize(int X, int Y, int W, int H) {
+  Fl_Box::resize(X, Y, W, H);
+  recompute();
 }
 
 void LogView::SetLog(std::weak_ptr<Log> log) {

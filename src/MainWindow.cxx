@@ -167,7 +167,6 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_editor_box->callback(table_value_changed_callback, this);
 }
 
-
 struct LogMenuData {
   MainWindow *mw;
   std::string text;
@@ -191,17 +190,19 @@ void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
 
     m_log_loadconfig->flags = FL_SUBMENU;
     prev_config_menu_items.clear();
-    for (const auto& conf : old_configs) {
+    for (const auto &conf : old_configs) {
       auto time_c = std::chrono::system_clock::to_time_t(conf.save_time);
       char timestr[64];
       std::strftime(timestr, 64, "%F %T", std::localtime(&time_c));
       std::string menu_text = conf.name + " (" + timestr + ")";
-      
-      auto item = new LogMenuData{.mw = this, .text = menu_text, .config = conf};
+
+      auto item =
+          new LogMenuData{.mw = this, .text = menu_text, .config = conf};
       prev_config_menu_items.push_back({item->text.c_str(), 0,
-          select_prev_config_callback, item, 0,
-          FL_NORMAL_LABEL, 0, 14, 0});
+                                        select_prev_config_callback, item, 0,
+                                        FL_NORMAL_LABEL, 0, 14, 0});
     }
+    prev_config_menu_items.push_back({0, 0, 0, 0, 0, 0, 0, 0, 0});
     m_log_loadconfig->user_data(prev_config_menu_items.data());
     m_log_loadconfig->flags = FL_SUBMENU_POINTER;
   }

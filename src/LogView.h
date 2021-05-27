@@ -32,7 +32,7 @@ public:
 
 private:
   std::weak_ptr<Log> log;
-  std::chrono::system_clock::time_point start, stop;
+  uint64_t start_ns, stop_ns;
   int mouse_x, mouse_y;
 
   std::map<std::string, SeriesConfig> config;
@@ -40,5 +40,7 @@ private:
   viaems::LogChunk cache;
 
   int handle(int);
+  void resize(int, int, int, int);
+  void recompute();
   void draw();
 };

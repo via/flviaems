@@ -47,7 +47,7 @@ struct ThreadedJsonInterface {
 
 public:
   ThreadedJsonInterface(std::shared_ptr<std::istream> is,
-      std::shared_ptr<std::ostream> os,
+                        std::shared_ptr<std::ostream> os,
                         Fl_Awake_Handler read_handler, void *ptr)
       : writer{os}, reader{is}, handler{read_handler}, handler_ptr{ptr} {
     running = true;
@@ -83,8 +83,8 @@ class ExecConnection : public viaems::Connection {
 public:
   ExecConnection(Fl_Awake_Handler read_handler, void *ptr, std::string path) {
     stream = std::make_shared<redi::pstream>(path);
-    conn = std::make_unique<ThreadedJsonInterface>(stream, stream,
-                                                   read_handler, ptr);
+    conn = std::make_unique<ThreadedJsonInterface>(stream, stream, read_handler,
+                                                   ptr);
   }
 
   virtual void Write(const json &msg) { conn->Write(msg); }
@@ -312,8 +312,8 @@ public:
     ui.m_connection_simulator->callback(initialize_simulator, this);
     ui.m_connection_device->callback(initialize_device, this);
     ui.m_connection_offline->callback(initialize_offline, this);
-    ui.set_load_config_callback(std::bind(&FLViaems::load_config, this,
-          std::placeholders::_1));
+    ui.set_load_config_callback(
+        std::bind(&FLViaems::load_config, this, std::placeholders::_1));
     model.set_value_change_callback(value_update, this);
   };
 

@@ -520,7 +520,7 @@ void Model::interrogate(interrogation_change_cb cb, void *ptr) {
   }
   get_reqs.clear();
   config = Configuration{.save_time = std::chrono::system_clock::now(),
-    .name="autosave"};
+                         .name = "autosave"};
   interrogation_state = InterrogationState{.in_progress = true};
 
   if (structure_req) {
@@ -605,9 +605,7 @@ void Model::set_configuration(const Configuration &conf) {
   }
 }
 
-void Model::set_protocol(std::shared_ptr<Protocol> proto) {
-  protocol = proto;
-}
+void Model::set_protocol(std::shared_ptr<Protocol> proto) { protocol = proto; }
 
 static json json_config_from_structure(StructureNode n,
                                        const Configuration &conf) {

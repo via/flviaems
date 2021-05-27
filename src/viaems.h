@@ -97,17 +97,22 @@ struct StructureLeaf {
 struct StructureNode {
   using StructureMap = std::map<std::string, StructureNode>;
   using StructureList = std::vector<StructureNode>;
-  using StructureType = std::variant<StructureList, StructureMap, StructureLeaf>;
+  using StructureType =
+      std::variant<StructureList, StructureMap, StructureLeaf>;
 
   StructureType data;
 
   bool is_map() { return std::holds_alternative<StructureMap>(this->data); }
   StructureMap map() { return std::get<StructureMap>(this->data); }
 
-  bool is_list() const { return std::holds_alternative<StructureList>(this->data); }
+  bool is_list() const {
+    return std::holds_alternative<StructureList>(this->data);
+  }
   StructureList list() { return std::get<StructureList>(this->data); }
 
-  bool is_leaf() const { return std::holds_alternative<StructureLeaf>(this->data); }
+  bool is_leaf() const {
+    return std::holds_alternative<StructureLeaf>(this->data);
+  }
   StructureLeaf leaf() { return std::get<StructureLeaf>(this->data); }
 };
 

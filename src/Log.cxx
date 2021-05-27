@@ -288,12 +288,11 @@ void Log::SaveConfig(viaems::Configuration conf) {
   sqlite3_bind_int64(insert_stmt, 1, time_ns);
 
   sqlite3_bind_text(insert_stmt, 2, conf.name.c_str(), conf.name.size(),
-      SQLITE_STATIC);
+                    SQLITE_STATIC);
 
   std::string conf_dump = conf.to_json().dump();
   sqlite3_bind_text(insert_stmt, 3, conf_dump.c_str(), conf_dump.size(),
                     SQLITE_STATIC);
-
 
   res = sqlite3_step(insert_stmt);
   if (res != SQLITE_DONE) {
@@ -331,10 +330,11 @@ std::vector<viaems::Configuration> Log::LoadConfigs() {
     auto time_ns =
         std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
 
-    std::string config_name = reinterpret_cast<const char *>(sqlite3_column_text(select_stmt, 1));
+    std::string config_name =
+        reinterpret_cast<const char *>(sqlite3_column_text(select_stmt, 1));
 
-    auto resp = viaems::Configuration{.save_time = time_ns, .name =
-      config_name};
+    auto resp =
+        viaems::Configuration{.save_time = time_ns, .name = config_name};
     auto config_json = json::parse(sqlite3_column_text(select_stmt, 2));
 
     resp.from_json(config_json);
