@@ -8,7 +8,7 @@ class MainWindowUI {open
   } {
     Fl_Window m_main_window {
       label mainWindow open
-      protected xywh {1 16 1022 751} type Double box THIN_DOWN_BOX resizable non_modal visible
+      protected xywh {628 203 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -37,7 +37,7 @@ class MainWindowUI {open
         protected xywh {875 724 135 21}
       }
       Fl_Group m_table_editor_box {open
-        protected xywh {455 40 525 345} box DOWN_BOX resizable
+        protected xywh {455 40 525 345} box DOWN_BOX hide
       } {
         Fl_Input m_table_title {
           label Title
@@ -62,92 +62,105 @@ class MainWindowUI {open
           protected xywh {880 50 50 15} down_box DOWN_BOX
         }
       }
-      Fl_Group m_sensor_editor_box {open
-        protected xywh {455 40 545 345} box DOWN_BOX hide
+      Fl_Scroll m_sensor_editor_box {open
+        protected xywh {455 40 545 345} box DOWN_BOX
       } {
         Fl_Group {} {
           label Input open
-          protected xywh {490 60 155 90} box THIN_DOWN_BOX
+          protected xywh {490 60 260 100} box THIN_DOWN_BOX
         } {
           Fl_Choice m_sensor_source {
             label Source open
-            protected xywh {560 65 72 15} down_box BORDER_BOX
+            protected xywh {645 65 95 20} down_box BORDER_BOX
           } {}
           Fl_Choice m_sensor_method {
             label Method open
-            protected xywh {560 95 72 15} down_box BORDER_BOX
+            protected xywh {645 88 95 20} down_box BORDER_BOX
           } {}
-          Fl_Input m_sensor_pin {
+          Fl_Value_Input m_sensor_pin {
             label Pin
-            protected xywh {560 120 70 20}
+            protected xywh {645 112 95 20}
+          }
+          Fl_Value_Input m_sensor_lag {
+            label {Lag Filter}
+            protected xywh {645 135 95 20}
           }
         }
         Fl_Group {} {
           label {Linear Mapping} open
-          protected xywh {795 60 155 65} box THIN_DOWN_BOX
+          protected xywh {785 60 195 55} box THIN_DOWN_BOX
         } {
-          Fl_Input m_sensor_range_min {
+          Fl_Value_Input m_sensor_range_min {
             label Minimum
-            protected xywh {885 65 50 25}
+            protected xywh {875 65 95 20}
           }
-          Fl_Input m_sensor_range_max {
+          Fl_Value_Input m_sensor_range_max {
             label Maximum
-            protected xywh {885 90 50 25}
+            protected xywh {875 88 95 20}
           }
         }
         Fl_Group {} {
           label Thermistor open
-          protected xywh {795 170 155 110} box THIN_DOWN_BOX
+          protected xywh {785 140 195 105} box THIN_DOWN_BOX
         } {
-          Fl_Input m_sensor_therm_bias {
+          Fl_Value_Input m_sensor_therm_bias {
             label Bias
-            protected xywh {865 175 55 25}
+            protected xywh {875 145 95 20}
           }
-          Fl_Input m_sensor_therm_A {
+          Fl_Value_Input m_sensor_therm_A {
             label A
-            protected xywh {865 200 55 25}
+            protected xywh {875 170 95 20}
           }
-          Fl_Input m_sensor_therm_B {
+          Fl_Value_Input m_sensor_therm_B {
             label B
-            protected xywh {865 225 55 25}
+            protected xywh {875 195 95 20}
           }
-          Fl_Input m_sensor_therm_C {
+          Fl_Value_Input m_sensor_therm_C {
             label C
-            protected xywh {865 250 55 25}
+            protected xywh {875 220 95 20}
           }
         }
         Fl_Group {} {
           label Windowing open
-          protected xywh {490 290 195 95} box THIN_DOWN_BOX
+          protected xywh {490 280 260 80} box THIN_DOWN_BOX
         } {
-          Fl_Input m_sensor_window_width {
+          Fl_Value_Input m_sensor_window_width {
             label {Capture Width}
-            protected xywh {640 300 35 25}
+            protected xywh {645 285 95 20}
           }
-          Fl_Input m_sensor_window_total {
+          Fl_Value_Input m_sensor_window_total {
             label {Total Width}
-            protected xywh {640 325 35 25}
+            protected xywh {645 308 95 20}
           }
-          Fl_Input m_sensor_window_offset {
+          Fl_Value_Input m_sensor_window_offset {
             label {Window Start Offset}
-            protected xywh {640 350 35 25}
+            protected xywh {645 333 95 20}
           }
         }
         Fl_Group {} {
           label Fault open
-          protected xywh {490 170 155 95} box THIN_DOWN_BOX
+          protected xywh {490 180 260 80} box THIN_DOWN_BOX
         } {
-          Fl_Input m_sensor_fault_min {
+          Fl_Value_Input m_sensor_fault_min {
             label Minimum
-            protected xywh {575 180 50 25}
+            protected xywh {645 185 95 20}
           }
-          Fl_Input m_sensor_fault_max {
+          Fl_Value_Input m_sensor_fault_max {
             label Maximum
-            protected xywh {575 205 50 25}
+            protected xywh {645 209 95 20}
           }
-          Fl_Input m_sensor_fault_value {
+          Fl_Value_Input m_sensor_fault_value {
             label Value
-            protected xywh {575 230 50 25}
+            protected xywh {645 233 95 20}
+          }
+        }
+        Fl_Group {} {
+          label Constant open
+          protected xywh {785 265 195 30} box THIN_DOWN_BOX
+        } {
+          Fl_Value_Input m_sensor_const {
+            label Value
+            protected xywh {875 270 95 20}
           }
         }
       }
@@ -155,7 +168,7 @@ class MainWindowUI {open
         xywh {0 0 1050 20}
       } {
         Submenu m_target_menu {
-          label Target open
+          label Target open selected
           protected xywh {0 0 70 21}
         } {
           MenuItem m_file_flash {
@@ -163,7 +176,7 @@ class MainWindowUI {open
             xywh {5 5 36 21}
           }
           MenuItem m_file_bootloader {
-            label {Reset to bootloader} selected
+            label {Reset to bootloader}
             xywh {0 0 36 21}
           }
         }

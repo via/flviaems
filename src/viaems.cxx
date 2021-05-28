@@ -131,6 +131,19 @@ static StructureNode generate_structure_node_from_cbor(const json &entry,
   return StructureNode{StructureLeaf{}};
 }
 
+static std::map<std::string, StructureNode>
+generate_types_from_cbor(const json &entry) {
+  if (!entry.is_object()) {
+    return {};
+  }
+
+  std::map<std::string, StructureNode> types;
+  for (auto &[name, t] : entry.items()) {
+    types[name] = generate_structure_node_from_cbor(t, {});
+  }
+  return types;
+}
+
 static TableAxis generate_table_axis_from_cbor(const json &axis) {
   TableAxis res{};
   res.name = axis["name"];
@@ -280,7 +293,7 @@ static json cbor_from_value(const OutputValue &v) {
 }
 
 static json cbor_from_value(const SensorValue &v) {
-  return json{
+  auto j = json{
       {"fault-min", v.fault.min},
       {"fault-max", v.fault.max},
       {"fault-value", v.fault.value},
@@ -299,10 +312,13 @@ static json cbor_from_value(const SensorValue &v) {
       {"window-offset", v.window.offset},
       {"window-total-width", v.window.total_width},
   };
+  return j;
 }
 
-void Protocol::handle_response_message_from_ems(uint32_t id,
-                                                const json &response) {
+void Protocol::handle_response_message_from_ems(const json &msg) {
+  const auto &response = msg["response"];
+  int id = msg["id"];
+
   if (m_requests.empty()) {
     return;
   }
@@ -321,7 +337,9 @@ void Protocol::handle_response_message_from_ems(uint32_t id,
   } else if (std::holds_alternative<StructureRequest>(req->request)) {
     auto structurereq = std::get<StructureRequest>(req->request);
     auto c = generate_structure_node_from_cbor(response, {});
-    structurereq.cb(c, structurereq.ptr);
+    const auto &types = msg["types"];
+    auto t = generate_types_from_cbor(types);
+    structurereq.cb(c, t, structurereq.ptr);
   } else if (std::holds_alternative<GetRequest>(req->request)) {
     auto getreq = std::get<GetRequest>(req->request);
     auto val = generate_node_value_from_cbor(response);
@@ -355,7 +373,7 @@ void Protocol::NewData() {
       handle_description_message_from_ems(msg["keys"]);
     } else if (type == "response" && msg.contains("id") &&
                msg.contains("response")) {
-      handle_response_message_from_ems(msg["id"], msg["response"]);
+      handle_response_message_from_ems(msg);
     }
   }
 }
@@ -574,9 +592,12 @@ enumerate_structure_paths(StructureNode node) {
   return paths;
 }
 
-void Model::handle_model_structure(StructureNode root, void *ptr) {
+void Model::handle_model_structure(StructureNode root,
+                                   std::map<std::string, StructureNode> types,
+                                   void *ptr) {
   Model *model = (Model *)ptr;
   model->config.structure = root;
+  model->config.types = types;
   auto paths = enumerate_structure_paths(root);
   model->interrogation_state.total_nodes = paths.size();
   for (const auto &path : paths) {
@@ -649,9 +670,15 @@ static json json_structure_from_structure(StructureNode n) {
 json Configuration::to_json() const {
   auto config = json_config_from_structure(structure, *this);
   auto s = json_structure_from_structure(structure);
+  json jsontypes;
+  for (auto &[name, type] : types) {
+    jsontypes[name] = json_structure_from_structure(type);
+  }
+
   return {
       {"structure", s},
       {"config", config},
+      {"types", jsontypes},
   };
 }
 
@@ -659,8 +686,14 @@ void Configuration::from_json(const json &j) {
   auto structure = generate_structure_node_from_cbor(j.at("structure"), {});
   this->structure = structure;
   values.clear();
-  auto paths = enumerate_structure_paths(structure);
 
+  types.clear();
+  for (auto &[name, jsontype] : j.at("types").items()) {
+    auto type = generate_structure_node_from_cbor(jsontype, {});
+    types[name] = type;
+  }
+
+  auto paths = enumerate_structure_paths(structure);
   for (const auto &path : paths) {
     json val = j["config"];
     for (const auto &p : path) {

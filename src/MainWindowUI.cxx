@@ -31,7 +31,7 @@ Fl_Menu_Item* MainWindowUI::m_log_select = MainWindowUI::menu_m_bar + 10;
 Fl_Menu_Item* MainWindowUI::m_log_loadconfig = MainWindowUI::menu_m_bar + 11;
 
 MainWindowUI::MainWindowUI() {
-  { m_main_window = new Fl_Double_Window(1022, 751, "mainWindow");
+  { m_main_window = new Fl_Double_Window(1020, 750, "mainWindow");
     m_main_window->box(FL_THIN_DOWN_BOX);
     m_main_window->user_data((void*)(this));
     { m_config_tree = new Fl_Tree(20, 40, 400, 345, "Configuration");
@@ -63,6 +63,7 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Progress* m_interrogation_progress
     { m_table_editor_box = new Fl_Group(455, 40, 525, 345);
       m_table_editor_box->box(FL_DOWN_BOX);
+      m_table_editor_box->hide();
       { m_table_title = new Fl_Input(496, 45, 119, 30, "Title");
       } // Fl_Input* m_table_title
       { m_table_editor = new TableEditor(460, 75, 510, 305);
@@ -87,65 +88,71 @@ MainWindowUI::MainWindowUI() {
         m_tracing->down_box(FL_DOWN_BOX);
       } // Fl_Check_Button* m_tracing
       m_table_editor_box->end();
-      Fl_Group::current()->resizable(m_table_editor_box);
     } // Fl_Group* m_table_editor_box
-    { m_sensor_editor_box = new Fl_Group(455, 40, 545, 345);
+    { m_sensor_editor_box = new Fl_Scroll(455, 40, 545, 345);
       m_sensor_editor_box->box(FL_DOWN_BOX);
-      m_sensor_editor_box->hide();
-      { Fl_Group* o = new Fl_Group(490, 60, 155, 90, "Input");
+      { Fl_Group* o = new Fl_Group(490, 60, 260, 100, "Input");
         o->box(FL_THIN_DOWN_BOX);
-        { m_sensor_source = new Fl_Choice(560, 65, 72, 15, "Source");
+        { m_sensor_source = new Fl_Choice(645, 65, 95, 20, "Source");
           m_sensor_source->down_box(FL_BORDER_BOX);
         } // Fl_Choice* m_sensor_source
-        { m_sensor_method = new Fl_Choice(560, 95, 72, 15, "Method");
+        { m_sensor_method = new Fl_Choice(645, 88, 95, 20, "Method");
           m_sensor_method->down_box(FL_BORDER_BOX);
         } // Fl_Choice* m_sensor_method
-        { m_sensor_pin = new Fl_Input(560, 120, 70, 20, "Pin");
-        } // Fl_Input* m_sensor_pin
+        { m_sensor_pin = new Fl_Value_Input(645, 112, 95, 20, "Pin");
+        } // Fl_Value_Input* m_sensor_pin
+        { m_sensor_lag = new Fl_Value_Input(645, 135, 95, 20, "Lag Filter");
+        } // Fl_Value_Input* m_sensor_lag
         o->end();
       } // Fl_Group* o
-      { Fl_Group* o = new Fl_Group(795, 60, 155, 65, "Linear Mapping");
+      { Fl_Group* o = new Fl_Group(785, 60, 195, 55, "Linear Mapping");
         o->box(FL_THIN_DOWN_BOX);
-        { m_sensor_range_min = new Fl_Input(885, 65, 50, 25, "Minimum");
-        } // Fl_Input* m_sensor_range_min
-        { m_sensor_range_max = new Fl_Input(885, 90, 50, 25, "Maximum");
-        } // Fl_Input* m_sensor_range_max
+        { m_sensor_range_min = new Fl_Value_Input(875, 65, 95, 20, "Minimum");
+        } // Fl_Value_Input* m_sensor_range_min
+        { m_sensor_range_max = new Fl_Value_Input(875, 88, 95, 20, "Maximum");
+        } // Fl_Value_Input* m_sensor_range_max
         o->end();
       } // Fl_Group* o
-      { Fl_Group* o = new Fl_Group(795, 170, 155, 110, "Thermistor");
+      { Fl_Group* o = new Fl_Group(785, 140, 195, 105, "Thermistor");
         o->box(FL_THIN_DOWN_BOX);
-        { m_sensor_therm_bias = new Fl_Input(865, 175, 55, 25, "Bias");
-        } // Fl_Input* m_sensor_therm_bias
-        { m_sensor_therm_A = new Fl_Input(865, 200, 55, 25, "A");
-        } // Fl_Input* m_sensor_therm_A
-        { m_sensor_therm_B = new Fl_Input(865, 225, 55, 25, "B");
-        } // Fl_Input* m_sensor_therm_B
-        { m_sensor_therm_C = new Fl_Input(865, 250, 55, 25, "C");
-        } // Fl_Input* m_sensor_therm_C
+        { m_sensor_therm_bias = new Fl_Value_Input(875, 145, 95, 20, "Bias");
+        } // Fl_Value_Input* m_sensor_therm_bias
+        { m_sensor_therm_A = new Fl_Value_Input(875, 170, 95, 20, "A");
+        } // Fl_Value_Input* m_sensor_therm_A
+        { m_sensor_therm_B = new Fl_Value_Input(875, 195, 95, 20, "B");
+        } // Fl_Value_Input* m_sensor_therm_B
+        { m_sensor_therm_C = new Fl_Value_Input(875, 220, 95, 20, "C");
+        } // Fl_Value_Input* m_sensor_therm_C
         o->end();
       } // Fl_Group* o
-      { Fl_Group* o = new Fl_Group(490, 290, 195, 95, "Windowing");
+      { Fl_Group* o = new Fl_Group(490, 280, 260, 80, "Windowing");
         o->box(FL_THIN_DOWN_BOX);
-        { m_sensor_window_width = new Fl_Input(640, 300, 35, 25, "Capture Width");
-        } // Fl_Input* m_sensor_window_width
-        { m_sensor_window_total = new Fl_Input(640, 325, 35, 25, "Total Width");
-        } // Fl_Input* m_sensor_window_total
-        { m_sensor_window_offset = new Fl_Input(640, 350, 35, 25, "Window Start Offset");
-        } // Fl_Input* m_sensor_window_offset
+        { m_sensor_window_width = new Fl_Value_Input(645, 285, 95, 20, "Capture Width");
+        } // Fl_Value_Input* m_sensor_window_width
+        { m_sensor_window_total = new Fl_Value_Input(645, 308, 95, 20, "Total Width");
+        } // Fl_Value_Input* m_sensor_window_total
+        { m_sensor_window_offset = new Fl_Value_Input(645, 333, 95, 20, "Window Start Offset");
+        } // Fl_Value_Input* m_sensor_window_offset
         o->end();
       } // Fl_Group* o
-      { Fl_Group* o = new Fl_Group(490, 170, 155, 95, "Fault");
+      { Fl_Group* o = new Fl_Group(490, 180, 260, 80, "Fault");
         o->box(FL_THIN_DOWN_BOX);
-        { m_sensor_fault_min = new Fl_Input(575, 180, 50, 25, "Minimum");
-        } // Fl_Input* m_sensor_fault_min
-        { m_sensor_fault_max = new Fl_Input(575, 205, 50, 25, "Maximum");
-        } // Fl_Input* m_sensor_fault_max
-        { m_sensor_fault_value = new Fl_Input(575, 230, 50, 25, "Value");
-        } // Fl_Input* m_sensor_fault_value
+        { m_sensor_fault_min = new Fl_Value_Input(645, 185, 95, 20, "Minimum");
+        } // Fl_Value_Input* m_sensor_fault_min
+        { m_sensor_fault_max = new Fl_Value_Input(645, 209, 95, 20, "Maximum");
+        } // Fl_Value_Input* m_sensor_fault_max
+        { m_sensor_fault_value = new Fl_Value_Input(645, 233, 95, 20, "Value");
+        } // Fl_Value_Input* m_sensor_fault_value
+        o->end();
+      } // Fl_Group* o
+      { Fl_Group* o = new Fl_Group(785, 265, 195, 30, "Constant");
+        o->box(FL_THIN_DOWN_BOX);
+        { m_sensor_const = new Fl_Value_Input(875, 270, 95, 20, "Value");
+        } // Fl_Value_Input* m_sensor_const
         o->end();
       } // Fl_Group* o
       m_sensor_editor_box->end();
-    } // Fl_Group* m_sensor_editor_box
+    } // Fl_Scroll* m_sensor_editor_box
     { m_bar = new Fl_Menu_Bar(0, 0, 1050, 20);
       m_bar->menu(menu_m_bar);
     } // Fl_Menu_Bar* m_bar
@@ -177,6 +184,7 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Button* m_logview_pause
     m_main_window->set_non_modal();
     m_main_window->end();
+    m_main_window->resizable(m_main_window);
   } // Fl_Double_Window* m_main_window
   m_main_window->show();
 }

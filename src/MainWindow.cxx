@@ -165,6 +165,24 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_table_rows->callback(table_value_changed_callback, this);
   m_table_cols->callback(table_value_changed_callback, this);
   m_table_editor_box->callback(table_value_changed_callback, this);
+
+  m_sensor_source->callback(sensor_value_changed_callback, this);
+  m_sensor_method->callback(sensor_value_changed_callback, this);
+  m_sensor_pin->callback(sensor_value_changed_callback, this);
+  m_sensor_lag->callback(sensor_value_changed_callback, this);
+  m_sensor_range_min->callback(sensor_value_changed_callback, this);
+  m_sensor_range_max->callback(sensor_value_changed_callback, this);
+  m_sensor_therm_bias->callback(sensor_value_changed_callback, this);
+  m_sensor_therm_A->callback(sensor_value_changed_callback, this);
+  m_sensor_therm_B->callback(sensor_value_changed_callback, this);
+  m_sensor_therm_C->callback(sensor_value_changed_callback, this);
+  m_sensor_window_width->callback(sensor_value_changed_callback, this);
+  m_sensor_window_total->callback(sensor_value_changed_callback, this);
+  m_sensor_window_offset->callback(sensor_value_changed_callback, this);
+  m_sensor_fault_min->callback(sensor_value_changed_callback, this);
+  m_sensor_fault_max->callback(sensor_value_changed_callback, this);
+  m_sensor_fault_value->callback(sensor_value_changed_callback, this);
+  m_sensor_const->callback(sensor_value_changed_callback, this);
 }
 
 struct LogMenuData {
@@ -227,6 +245,89 @@ void MainWindow::feed_update(std::map<std::string, viaems::FeedValue> status) {
   m_logview->update_time_range(start_time, stop_time);
 }
 
+void MainWindow::sensor_value_changed_callback(Fl_Widget *w, void *ptr) {
+  auto mw = static_cast<MainWindow *>(ptr);
+  auto sensor = std::get<viaems::SensorValue>(
+      mw->m_model->configuration().get(mw->detail_path).value());
+
+  sensor.pin = static_cast<uint32_t>(mw->m_sensor_pin->value());
+  sensor.lag = static_cast<float>(mw->m_sensor_lag->value());
+
+  sensor.method = mw->m_sensor_method->text();
+  sensor.source = mw->m_sensor_source->text();
+
+  sensor.range_min = mw->m_sensor_range_min->value();
+  sensor.range_max = mw->m_sensor_range_max->value();
+
+  sensor.fault.min = mw->m_sensor_fault_min->value();
+  sensor.fault.max = mw->m_sensor_fault_max->value();
+  sensor.fault.value = mw->m_sensor_fault_value->value();
+  sensor.therm.a = mw->m_sensor_therm_A->value();
+  sensor.therm.b = mw->m_sensor_therm_B->value();
+  sensor.therm.c = mw->m_sensor_therm_C->value();
+  sensor.therm.bias = mw->m_sensor_therm_bias->value();
+
+  sensor.const_value = mw->m_sensor_const->value();
+
+  mw->m_model->set_value(mw->detail_path, sensor);
+  auto item = get_config_tree_widget(mw->m_config_tree, mw->detail_path);
+  item->dirty(true);
+}
+
+void MainWindow::update_sensor_editor(viaems::SensorValue s) {
+  auto sensor_type = m_model->configuration().types.at("sensor");
+
+  m_sensor_method->clear();
+  for (auto choice : sensor_type.map()["method"].leaf().choices) {
+    m_sensor_method->add(choice.c_str());
+  }
+  m_sensor_method->value(m_sensor_method->find_index(s.method.c_str()));
+
+  m_sensor_source->clear();
+  for (auto choice : sensor_type.map()["source"].leaf().choices) {
+    m_sensor_source->add(choice.c_str());
+  }
+  m_sensor_source->value(m_sensor_source->find_index(s.source.c_str()));
+
+  m_sensor_pin->value(s.pin);
+  m_sensor_lag->value(s.lag);
+
+  m_sensor_range_min->value(s.range_min);
+  m_sensor_range_max->value(s.range_max);
+
+  m_sensor_therm_bias->value(s.therm.bias);
+  m_sensor_therm_A->value(s.therm.a);
+  m_sensor_therm_B->value(s.therm.b);
+  m_sensor_therm_C->value(s.therm.c);
+
+  m_sensor_window_width->value(s.window.capture_width);
+  m_sensor_window_total->value(s.window.total_width);
+  m_sensor_window_offset->value(s.window.offset);
+
+  m_sensor_fault_min->value(s.fault.min);
+  m_sensor_fault_max->value(s.fault.max);
+  m_sensor_fault_value->value(s.fault.value);
+
+  m_sensor_const->value(s.const_value);
+
+  m_table_editor_box->hide();
+  m_sensor_editor_box->show();
+}
+
+void MainWindow::select_sensor(Fl_Widget *w, void *p) {
+  auto mw = (MainWindow *)p;
+  auto s = (SelectableTreeWidget *)w;
+
+  auto value = mw->m_model->configuration().get(s->path);
+  if (value) {
+    mw->m_sensor_editor_box->take_focus();
+    mw->update_sensor_editor(std::get<viaems::SensorValue>(value.value()));
+    mw->detail_path = s->path;
+  }
+  const auto &name = std::get<std::string>(s->path[s->path.size() - 1]);
+  mw->m_sensor_editor_box->label(name.c_str());
+}
+
 void MainWindow::select_table(Fl_Widget *w, void *p) {
   auto mw = (MainWindow *)p;
   auto s = (SelectableTreeWidget *)w;
@@ -237,6 +338,8 @@ void MainWindow::select_table(Fl_Widget *w, void *p) {
     mw->update_table_editor(std::get<viaems::TableValue>(value.value()));
     mw->detail_path = s->path;
   }
+  const auto &name = std::get<std::string>(s->path[s->path.size() - 1]);
+  mw->m_table_editor_box->label(name.c_str());
 }
 
 void MainWindow::table_value_changed_callback(Fl_Widget *w, void *ptr) {
@@ -299,6 +402,9 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
         } else if (leaf.type == "table") {
           w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
           w->select_callback(select_table, this);
+        } else if (leaf.type == "sensor") {
+          w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
+          w->select_callback(select_sensor, this);
         } else {
           w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
         }
@@ -364,6 +470,10 @@ void MainWindow::update_config_value(viaems::StructurePath path,
   w->update_value(value);
 
   if (path == detail_path) {
-    update_table_editor(std::get<viaems::TableValue>(value));
+    if (std::holds_alternative<viaems::TableValue>(value)) {
+      update_table_editor(std::get<viaems::TableValue>(value));
+    } else if (std::holds_alternative<viaems::SensorValue>(value)) {
+      update_sensor_editor(std::get<viaems::SensorValue>(value));
+    }
   }
 }

@@ -120,6 +120,7 @@ struct Configuration {
   std::chrono::system_clock::time_point save_time;
   std::string name;
   StructureNode structure;
+  std::map<std::string, StructureNode> types;
   std::map<StructurePath, ConfigValue> values;
 
   std::optional<ConfigValue> get(StructurePath path) const {
@@ -141,7 +142,9 @@ struct GetRequest {
   void *ptr;
 };
 
-typedef void (*structure_cb)(StructureNode top, void *ptr);
+typedef void (*structure_cb)(StructureNode top,
+                             std::map<std::string, StructureNode> types,
+                             void *ptr);
 struct StructureRequest {
   structure_cb cb;
   void *ptr;
@@ -210,7 +213,7 @@ private:
 
   void handle_feed_message_from_ems(const json &m);
   void handle_description_message_from_ems(const json &m);
-  void handle_response_message_from_ems(uint32_t id, const json &response);
+  void handle_response_message_from_ems(const json &msg);
   void ensure_sent();
 };
 
@@ -240,7 +243,9 @@ class Model {
 
   static void handle_model_get(StructurePath path, ConfigValue val, void *ptr);
   static void handle_model_set(StructurePath path, ConfigValue val, void *ptr);
-  static void handle_model_structure(StructureNode root, void *ptr);
+  static void handle_model_structure(StructureNode root,
+                                     std::map<std::string, StructureNode> types,
+                                     void *ptr);
 
 public:
   const Configuration &configuration() const { return config; };

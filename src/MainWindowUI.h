@@ -14,7 +14,9 @@
 #include "TableEditor.h"
 #include <FL/Fl_Spinner.H>
 #include <FL/Fl_Check_Button.H>
+#include <FL/Fl_Scroll.H>
 #include <FL/Fl_Choice.H>
+#include <FL/Fl_Value_Input.H>
 #include <FL/Fl_Menu_Bar.H>
 #include "LogView.h"
 #include <FL/Fl_Button.H>
@@ -37,22 +39,24 @@ protected:
   Fl_Spinner *m_table_rows;
   Fl_Spinner *m_table_cols;
   Fl_Check_Button *m_tracing;
-  Fl_Group *m_sensor_editor_box;
+  Fl_Scroll *m_sensor_editor_box;
   Fl_Choice *m_sensor_source;
   Fl_Choice *m_sensor_method;
-  Fl_Input *m_sensor_pin;
-  Fl_Input *m_sensor_range_min;
-  Fl_Input *m_sensor_range_max;
-  Fl_Input *m_sensor_therm_bias;
-  Fl_Input *m_sensor_therm_A;
-  Fl_Input *m_sensor_therm_B;
-  Fl_Input *m_sensor_therm_C;
-  Fl_Input *m_sensor_window_width;
-  Fl_Input *m_sensor_window_total;
-  Fl_Input *m_sensor_window_offset;
-  Fl_Input *m_sensor_fault_min;
-  Fl_Input *m_sensor_fault_max;
-  Fl_Input *m_sensor_fault_value;
+  Fl_Value_Input *m_sensor_pin;
+  Fl_Value_Input *m_sensor_lag;
+  Fl_Value_Input *m_sensor_range_min;
+  Fl_Value_Input *m_sensor_range_max;
+  Fl_Value_Input *m_sensor_therm_bias;
+  Fl_Value_Input *m_sensor_therm_A;
+  Fl_Value_Input *m_sensor_therm_B;
+  Fl_Value_Input *m_sensor_therm_C;
+  Fl_Value_Input *m_sensor_window_width;
+  Fl_Value_Input *m_sensor_window_total;
+  Fl_Value_Input *m_sensor_window_offset;
+  Fl_Value_Input *m_sensor_fault_min;
+  Fl_Value_Input *m_sensor_fault_max;
+  Fl_Value_Input *m_sensor_fault_value;
+  Fl_Value_Input *m_sensor_const;
 public:
   Fl_Menu_Bar *m_bar;
   static Fl_Menu_Item menu_m_bar[];
