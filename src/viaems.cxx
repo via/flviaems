@@ -3,8 +3,6 @@
 #include <exception>
 #include <streambuf>
 
-#include <iostream> //DELETE
-
 #include "Log.h"
 #include "viaems.h"
 

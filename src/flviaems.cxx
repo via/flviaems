@@ -293,6 +293,14 @@ class FLViaems {
   void load_config(viaems::Configuration conf) {
     model.set_configuration(conf);
     ui.update_model(&model);
+
+    /* Write all new config to target explicitly */
+    if (offline) {
+      return;
+    }
+    for (auto &[path, value] : conf.values) {
+      model.set_value(path, value);
+    }
   }
 
 public:
