@@ -294,6 +294,43 @@ void MainWindow::update_sensor_editor(viaems::SensorValue s) {
   }
   m_sensor_source->value(m_sensor_source->find_index(s.source.c_str()));
 
+  if (s.source == "const") {
+    m_sensor_const->activate();
+  } else {
+    m_sensor_const->deactivate();
+  }
+
+  if (s.source != "const" && (s.method == "linear" || s.method ==
+        "linear-window")) {
+    m_sensor_range_min->activate();
+    m_sensor_range_max->activate();
+  } else {
+    m_sensor_range_min->deactivate();
+    m_sensor_range_max->deactivate();
+  }
+
+  if (s.method == "therm") {
+    m_sensor_therm_A->activate();
+    m_sensor_therm_B->activate();
+    m_sensor_therm_C->activate();
+    m_sensor_therm_bias->activate();
+  } else {
+    m_sensor_therm_A->deactivate();
+    m_sensor_therm_B->deactivate();
+    m_sensor_therm_C->deactivate();
+    m_sensor_therm_bias->deactivate();
+  }
+
+  if (s.method == "linear-window") {
+    m_sensor_window_offset->activate();
+    m_sensor_window_total->activate();
+    m_sensor_window_width->activate();
+  } else {
+    m_sensor_window_offset->deactivate();
+    m_sensor_window_total->deactivate();
+    m_sensor_window_width->deactivate();
+  }
+
   m_sensor_pin->value(s.pin);
   m_sensor_lag->value(s.lag);
 

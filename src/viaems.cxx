@@ -196,15 +196,18 @@ static ConfigValue generate_sensor_value_from_cbor(const json &map) {
   v.fault.max = map.at("fault-max");
   v.fault.value = map.at("fault-value");
 
-  v.range_min = map.at("range-min");
-  v.range_max = map.at("range-max");
+  if (v.source == "const") {
+    v.const_value = map.at("fixed-value");
+  } else if (v.source == "therm") {
+    v.therm.a = map.at("therm-a");
+    v.therm.b = map.at("therm-b");
+    v.therm.c = map.at("therm-c");
+    v.therm.bias = map.at("therm-bias");
+  } else {
+    v.range_min = map.at("range-min");
+    v.range_max = map.at("range-max");
+  }
 
-  v.const_value = map.at("fixed-value");
-
-  v.therm.a = map.at("therm-a");
-  v.therm.b = map.at("therm-b");
-  v.therm.c = map.at("therm-c");
-  v.therm.bias = map.at("therm-bias");
 
   v.window.offset = map.at("window-offset");
   v.window.capture_width = map.at("window-capture-width");
@@ -297,21 +300,26 @@ static json cbor_from_value(const SensorValue &v) {
       {"fault-min", v.fault.min},
       {"fault-max", v.fault.max},
       {"fault-value", v.fault.value},
-      {"fixed-value", v.const_value},
       {"lag", v.lag},
       {"method", v.method},
       {"pin", v.pin},
-      {"range-max", v.range_max},
-      {"range-min", v.range_min},
       {"source", v.source},
-      {"therm-a", v.therm.a},
-      {"therm-b", v.therm.b},
-      {"therm-c", v.therm.c},
-      {"therm-bias", v.therm.bias},
       {"window-capture-width", v.window.capture_width},
       {"window-offset", v.window.offset},
       {"window-total-width", v.window.total_width},
   };
+
+  if (v.source == "const") {
+    j["fixed-value"] =  v.const_value;
+  } else if (v.source == "therm") {
+    j["therm-a"] = v.therm.a;
+    j["therm-b"] = v.therm.b;
+    j["therm-c"] = v.therm.c;
+    j["therm-bias"] = v.therm.bias;
+  } else {
+    j["range-max"] = v.range_max;
+    j["range-min"] = v.range_min;
+  }
   return j;
 }
 
