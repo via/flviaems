@@ -83,6 +83,11 @@ protected:
   Fl_Output *m_logview_start;
   Fl_Output *m_logview_stop;
   Fl_Button *m_logview_pause;
+  Fl_Scroll *m_output_editor_box;
+  Fl_Choice *m_output_type;
+  Fl_Value_Input *m_output_pin;
+  Fl_Value_Input *m_output_angle;
+  Fl_Check_Button *m_output_inverted;
 public:
   void show();
 };

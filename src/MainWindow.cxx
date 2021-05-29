@@ -183,6 +183,11 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_sensor_fault_max->callback(sensor_value_changed_callback, this);
   m_sensor_fault_value->callback(sensor_value_changed_callback, this);
   m_sensor_const->callback(sensor_value_changed_callback, this);
+
+  m_output_angle->callback(output_value_changed_callback, this);
+  m_output_pin->callback(output_value_changed_callback, this);
+  m_output_inverted->callback(output_value_changed_callback, this);
+  m_output_type->callback(output_value_changed_callback, this);
 }
 
 struct LogMenuData {
@@ -311,7 +316,26 @@ void MainWindow::update_sensor_editor(viaems::SensorValue s) {
   m_sensor_const->value(s.const_value);
 
   m_table_editor_box->hide();
+  m_output_editor_box->hide();
   m_sensor_editor_box->show();
+}
+
+void MainWindow::update_output_editor(viaems::OutputValue o) {
+  auto output_type = m_model->configuration().types.at("output");
+
+  m_output_type->clear();
+  for (auto choice : output_type.map()["type"].leaf().choices) {
+    m_output_type->add(choice.c_str());
+  }
+  m_output_type->value(m_output_type->find_index(o.type.c_str()));
+
+  m_output_pin->value(o.pin);
+  m_output_angle->value(o.angle);
+  m_output_inverted->value(o.inverted ? 1 : 0);
+
+  m_table_editor_box->hide();
+  m_sensor_editor_box->hide();
+  m_output_editor_box->show();
 }
 
 void MainWindow::select_sensor(Fl_Widget *w, void *p) {
@@ -326,6 +350,33 @@ void MainWindow::select_sensor(Fl_Widget *w, void *p) {
   }
   const auto &name = std::get<std::string>(s->path[s->path.size() - 1]);
   mw->m_sensor_editor_box->label(name.c_str());
+}
+
+void MainWindow::output_value_changed_callback(Fl_Widget *w, void *ptr) {
+  auto mw = static_cast<MainWindow *>(ptr);
+  auto output = std::get<viaems::OutputValue>(
+      mw->m_model->configuration().get(mw->detail_path).value());
+
+  output.pin = static_cast<uint32_t>(mw->m_output_pin->value());
+  output.angle = static_cast<float>(mw->m_output_angle->value());
+  output.inverted = mw->m_output_inverted->value() == 1;
+  output.type = mw->m_output_type->text();
+
+  mw->m_model->set_value(mw->detail_path, output);
+  auto item = get_config_tree_widget(mw->m_config_tree, mw->detail_path);
+  item->dirty(true);
+}
+
+void MainWindow::select_output(Fl_Widget *w, void *p) {
+  auto mw = (MainWindow *)p;
+  auto s = (SelectableTreeWidget *)w;
+
+  auto value = mw->m_model->configuration().get(s->path);
+  if (value) {
+    mw->m_output_editor_box->take_focus();
+    mw->update_output_editor(std::get<viaems::OutputValue>(value.value()));
+    mw->detail_path = s->path;
+  }
 }
 
 void MainWindow::select_table(Fl_Widget *w, void *p) {
@@ -365,6 +416,7 @@ void MainWindow::update_table_editor(viaems::TableValue val) {
 
   m_table_editor_box->show();
   m_sensor_editor_box->hide();
+  m_output_editor_box->hide();
 }
 
 void MainWindow::structure_value_update_callback(Fl_Widget *w, void *p) {
@@ -419,7 +471,16 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
       auto item = new Fl_Tree_Item(m_config_tree->prefs());
       item->label(std::to_string(index).c_str());
       parent->add(m_config_tree->prefs(), "", item);
-      add_config_structure_entry(item, child);
+      if (child.is_leaf()) {
+        auto leaf = child.leaf();
+        auto w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
+        if (leaf.type == "output") {
+          w->select_callback(select_output, this);
+        }
+        item->widget(w);
+      } else {
+        add_config_structure_entry(item, child);
+      }
       index += 1;
     }
   }

@@ -16,12 +16,15 @@ class MainWindow : public MainWindowUI {
   void update_config_structure(viaems::StructureNode top);
   void update_table_editor(viaems::TableValue t);
   void update_sensor_editor(viaems::SensorValue s);
+  void update_output_editor(viaems::OutputValue v);
 
+  static void select_output(Fl_Widget *w, void *p);
   static void select_table(Fl_Widget *w, void *p);
   static void select_sensor(Fl_Widget *w, void *p);
   static void structure_value_update_callback(Fl_Widget *w, void *p);
   static void table_value_changed_callback(Fl_Widget *w, void *ptr);
   static void sensor_value_changed_callback(Fl_Widget *w, void *ptr);
+  static void output_value_changed_callback(Fl_Widget *w, void *ptr);
   static void select_prev_config_callback(Fl_Widget *w, void *v);
 
   void add_config_structure_entry(Fl_Tree_Item *, viaems::StructureNode);

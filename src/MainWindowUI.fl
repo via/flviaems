@@ -63,7 +63,7 @@ class MainWindowUI {open
         }
       }
       Fl_Scroll m_sensor_editor_box {open
-        protected xywh {455 40 545 345} box DOWN_BOX
+        protected xywh {455 40 545 345} box DOWN_BOX hide
       } {
         Fl_Group {} {
           label Input open
@@ -168,7 +168,7 @@ class MainWindowUI {open
         xywh {0 0 1050 20}
       } {
         Submenu m_target_menu {
-          label Target open selected
+          label Target open
           protected xywh {0 0 70 21}
         } {
           MenuItem m_file_flash {
@@ -231,6 +231,26 @@ class MainWindowUI {open
       Fl_Button m_logview_pause {
         label {@||}
         protected xywh {810 685 25 20}
+      }
+      Fl_Scroll m_output_editor_box {open
+        protected xywh {455 40 545 345} box DOWN_BOX
+      } {
+        Fl_Choice m_output_type {
+          label Type open
+          protected xywh {515 65 85 20} down_box BORDER_BOX
+        } {}
+        Fl_Value_Input m_output_pin {
+          label Pin
+          protected xywh {660 65 50 20}
+        }
+        Fl_Value_Input m_output_angle {
+          label Angle
+          protected xywh {775 65 50 20}
+        }
+        Fl_Check_Button m_output_inverted {
+          label Inverted selected
+          protected xywh {850 65 70 20} down_box DOWN_BOX
+        }
       }
     }
     code {m_main_window->show();} {}

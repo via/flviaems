@@ -91,6 +91,7 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Group* m_table_editor_box
     { m_sensor_editor_box = new Fl_Scroll(455, 40, 545, 345);
       m_sensor_editor_box->box(FL_DOWN_BOX);
+      m_sensor_editor_box->hide();
       { Fl_Group* o = new Fl_Group(490, 60, 260, 100, "Input");
         o->box(FL_THIN_DOWN_BOX);
         { m_sensor_source = new Fl_Choice(645, 65, 95, 20, "Source");
@@ -182,6 +183,20 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Output* m_logview_stop
     { m_logview_pause = new Fl_Button(810, 685, 25, 20, "@||");
     } // Fl_Button* m_logview_pause
+    { m_output_editor_box = new Fl_Scroll(455, 40, 545, 345);
+      m_output_editor_box->box(FL_DOWN_BOX);
+      { m_output_type = new Fl_Choice(515, 65, 85, 20, "Type");
+        m_output_type->down_box(FL_BORDER_BOX);
+      } // Fl_Choice* m_output_type
+      { m_output_pin = new Fl_Value_Input(660, 65, 50, 20, "Pin");
+      } // Fl_Value_Input* m_output_pin
+      { m_output_angle = new Fl_Value_Input(775, 65, 50, 20, "Angle");
+      } // Fl_Value_Input* m_output_angle
+      { m_output_inverted = new Fl_Check_Button(850, 65, 70, 20, "Inverted");
+        m_output_inverted->down_box(FL_DOWN_BOX);
+      } // Fl_Check_Button* m_output_inverted
+      m_output_editor_box->end();
+    } // Fl_Scroll* m_output_editor_box
     m_main_window->set_non_modal();
     m_main_window->end();
     m_main_window->resizable(m_main_window);
