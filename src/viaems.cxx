@@ -208,7 +208,6 @@ static ConfigValue generate_sensor_value_from_cbor(const json &map) {
     v.range_max = map.at("range-max");
   }
 
-
   v.window.offset = map.at("window-offset");
   v.window.capture_width = map.at("window-capture-width");
   v.window.total_width = map.at("window-total-width");
@@ -310,7 +309,7 @@ static json cbor_from_value(const SensorValue &v) {
   };
 
   if (v.source == "const") {
-    j["fixed-value"] =  v.const_value;
+    j["fixed-value"] = v.const_value;
   } else if (v.source == "therm") {
     j["therm-a"] = v.therm.a;
     j["therm-b"] = v.therm.b;

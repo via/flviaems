@@ -8,7 +8,7 @@ class MainWindowUI {open
   } {
     Fl_Window m_main_window {
       label mainWindow open
-      protected xywh {628 203 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
+      protected xywh {632 207 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -36,7 +36,7 @@ class MainWindowUI {open
         label Interrogation
         protected xywh {875 724 135 21}
       }
-      Fl_Group m_table_editor_box {open
+      Fl_Group m_table_editor_box {open resizable
         protected xywh {455 40 525 345} box DOWN_BOX hide
       } {
         Fl_Input m_table_title {
@@ -79,11 +79,11 @@ class MainWindowUI {open
           } {}
           Fl_Value_Input m_sensor_pin {
             label Pin
-            protected xywh {645 112 95 20}
+            protected xywh {645 112 95 20} when 4
           }
           Fl_Value_Input m_sensor_lag {
             label {Lag Filter}
-            protected xywh {645 135 95 20}
+            protected xywh {645 135 95 20} when 4
           }
         }
         Fl_Group {} {
@@ -92,11 +92,11 @@ class MainWindowUI {open
         } {
           Fl_Value_Input m_sensor_range_min {
             label Minimum
-            protected xywh {875 65 95 20}
+            protected xywh {875 65 95 20} when 4
           }
           Fl_Value_Input m_sensor_range_max {
             label Maximum
-            protected xywh {875 88 95 20}
+            protected xywh {875 88 95 20} when 4
           }
         }
         Fl_Group {} {
@@ -105,19 +105,19 @@ class MainWindowUI {open
         } {
           Fl_Value_Input m_sensor_therm_bias {
             label Bias
-            protected xywh {875 145 95 20}
+            protected xywh {875 145 95 20} when 4
           }
           Fl_Value_Input m_sensor_therm_A {
             label A
-            protected xywh {875 170 95 20}
+            protected xywh {875 170 95 20} when 4
           }
           Fl_Value_Input m_sensor_therm_B {
             label B
-            protected xywh {875 195 95 20}
+            protected xywh {875 195 95 20} when 4
           }
           Fl_Value_Input m_sensor_therm_C {
             label C
-            protected xywh {875 220 95 20}
+            protected xywh {875 220 95 20} when 4
           }
         }
         Fl_Group {} {
@@ -126,15 +126,15 @@ class MainWindowUI {open
         } {
           Fl_Value_Input m_sensor_window_width {
             label {Capture Width}
-            protected xywh {645 285 95 20}
+            protected xywh {645 285 95 20} when 4
           }
           Fl_Value_Input m_sensor_window_total {
             label {Total Width}
-            protected xywh {645 308 95 20}
+            protected xywh {645 308 95 20} when 4
           }
           Fl_Value_Input m_sensor_window_offset {
             label {Window Start Offset}
-            protected xywh {645 333 95 20}
+            protected xywh {645 333 95 20} when 4
           }
         }
         Fl_Group {} {
@@ -143,15 +143,15 @@ class MainWindowUI {open
         } {
           Fl_Value_Input m_sensor_fault_min {
             label Minimum
-            protected xywh {645 185 95 20}
+            protected xywh {645 185 95 20} when 4
           }
           Fl_Value_Input m_sensor_fault_max {
             label Maximum
-            protected xywh {645 209 95 20}
+            protected xywh {645 209 95 20} when 4
           }
           Fl_Value_Input m_sensor_fault_value {
             label Value
-            protected xywh {645 233 95 20}
+            protected xywh {645 233 95 20} when 4
           }
         }
         Fl_Group {} {
@@ -160,7 +160,7 @@ class MainWindowUI {open
         } {
           Fl_Value_Input m_sensor_const {
             label Value
-            protected xywh {875 270 95 20}
+            protected xywh {875 270 95 20} when 4
           }
         }
       }
@@ -232,25 +232,14 @@ class MainWindowUI {open
         label {@||}
         protected xywh {810 685 25 20}
       }
-      Fl_Scroll m_output_editor_box {open
-        protected xywh {455 40 545 345} box DOWN_BOX
+      Fl_Group m_output_editor_box {open resizable
+        protected xywh {455 40 525 345} box DOWN_BOX hide
       } {
-        Fl_Choice m_output_type {
-          label Type open
-          protected xywh {515 65 85 20} down_box BORDER_BOX
+        Fl_Table m_output_editor {selected
+          protected xywh {460 75 510 305} resizable
+          code0 {\#include "OutputEditor.h"}
+          class OutputEditor
         } {}
-        Fl_Value_Input m_output_pin {
-          label Pin
-          protected xywh {660 65 50 20}
-        }
-        Fl_Value_Input m_output_angle {
-          label Angle
-          protected xywh {775 65 50 20}
-        }
-        Fl_Check_Button m_output_inverted {
-          label Inverted selected
-          protected xywh {850 65 70 20} down_box DOWN_BOX
-        }
       }
     }
     code {m_main_window->show();} {}

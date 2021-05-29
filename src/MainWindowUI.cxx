@@ -101,54 +101,69 @@ MainWindowUI::MainWindowUI() {
           m_sensor_method->down_box(FL_BORDER_BOX);
         } // Fl_Choice* m_sensor_method
         { m_sensor_pin = new Fl_Value_Input(645, 112, 95, 20, "Pin");
+          m_sensor_pin->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_pin
         { m_sensor_lag = new Fl_Value_Input(645, 135, 95, 20, "Lag Filter");
+          m_sensor_lag->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_lag
         o->end();
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(785, 60, 195, 55, "Linear Mapping");
         o->box(FL_THIN_DOWN_BOX);
         { m_sensor_range_min = new Fl_Value_Input(875, 65, 95, 20, "Minimum");
+          m_sensor_range_min->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_range_min
         { m_sensor_range_max = new Fl_Value_Input(875, 88, 95, 20, "Maximum");
+          m_sensor_range_max->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_range_max
         o->end();
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(785, 140, 195, 105, "Thermistor");
         o->box(FL_THIN_DOWN_BOX);
         { m_sensor_therm_bias = new Fl_Value_Input(875, 145, 95, 20, "Bias");
+          m_sensor_therm_bias->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_therm_bias
         { m_sensor_therm_A = new Fl_Value_Input(875, 170, 95, 20, "A");
+          m_sensor_therm_A->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_therm_A
         { m_sensor_therm_B = new Fl_Value_Input(875, 195, 95, 20, "B");
+          m_sensor_therm_B->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_therm_B
         { m_sensor_therm_C = new Fl_Value_Input(875, 220, 95, 20, "C");
+          m_sensor_therm_C->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_therm_C
         o->end();
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(490, 280, 260, 80, "Windowing");
         o->box(FL_THIN_DOWN_BOX);
         { m_sensor_window_width = new Fl_Value_Input(645, 285, 95, 20, "Capture Width");
+          m_sensor_window_width->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_window_width
         { m_sensor_window_total = new Fl_Value_Input(645, 308, 95, 20, "Total Width");
+          m_sensor_window_total->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_window_total
         { m_sensor_window_offset = new Fl_Value_Input(645, 333, 95, 20, "Window Start Offset");
+          m_sensor_window_offset->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_window_offset
         o->end();
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(490, 180, 260, 80, "Fault");
         o->box(FL_THIN_DOWN_BOX);
         { m_sensor_fault_min = new Fl_Value_Input(645, 185, 95, 20, "Minimum");
+          m_sensor_fault_min->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_fault_min
         { m_sensor_fault_max = new Fl_Value_Input(645, 209, 95, 20, "Maximum");
+          m_sensor_fault_max->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_fault_max
         { m_sensor_fault_value = new Fl_Value_Input(645, 233, 95, 20, "Value");
+          m_sensor_fault_value->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_fault_value
         o->end();
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(785, 265, 195, 30, "Constant");
         o->box(FL_THIN_DOWN_BOX);
         { m_sensor_const = new Fl_Value_Input(875, 270, 95, 20, "Value");
+          m_sensor_const->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_const
         o->end();
       } // Fl_Group* o
@@ -183,23 +198,27 @@ MainWindowUI::MainWindowUI() {
     } // Fl_Output* m_logview_stop
     { m_logview_pause = new Fl_Button(810, 685, 25, 20, "@||");
     } // Fl_Button* m_logview_pause
-    { m_output_editor_box = new Fl_Scroll(455, 40, 545, 345);
+    { m_output_editor_box = new Fl_Group(455, 40, 525, 345);
       m_output_editor_box->box(FL_DOWN_BOX);
-      { m_output_type = new Fl_Choice(515, 65, 85, 20, "Type");
-        m_output_type->down_box(FL_BORDER_BOX);
-      } // Fl_Choice* m_output_type
-      { m_output_pin = new Fl_Value_Input(660, 65, 50, 20, "Pin");
-      } // Fl_Value_Input* m_output_pin
-      { m_output_angle = new Fl_Value_Input(775, 65, 50, 20, "Angle");
-      } // Fl_Value_Input* m_output_angle
-      { m_output_inverted = new Fl_Check_Button(850, 65, 70, 20, "Inverted");
-        m_output_inverted->down_box(FL_DOWN_BOX);
-      } // Fl_Check_Button* m_output_inverted
+      m_output_editor_box->hide();
+      { m_output_editor = new OutputEditor(460, 75, 510, 305);
+        m_output_editor->box(FL_THIN_DOWN_FRAME);
+        m_output_editor->color(FL_BACKGROUND_COLOR);
+        m_output_editor->selection_color(FL_BACKGROUND_COLOR);
+        m_output_editor->labeltype(FL_NORMAL_LABEL);
+        m_output_editor->labelfont(0);
+        m_output_editor->labelsize(14);
+        m_output_editor->labelcolor(FL_FOREGROUND_COLOR);
+        m_output_editor->align(Fl_Align(FL_ALIGN_TOP));
+        m_output_editor->when(FL_WHEN_RELEASE);
+        m_output_editor->end();
+        Fl_Group::current()->resizable(m_output_editor);
+      } // OutputEditor* m_output_editor
       m_output_editor_box->end();
-    } // Fl_Scroll* m_output_editor_box
+      Fl_Group::current()->resizable(m_output_editor_box);
+    } // Fl_Group* m_output_editor_box
     m_main_window->set_non_modal();
     m_main_window->end();
-    m_main_window->resizable(m_main_window);
   } // Fl_Double_Window* m_main_window
   m_main_window->show();
 }

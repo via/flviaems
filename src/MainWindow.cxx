@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 
+#include <functional>
 #include <memory>
 
 #include <FL/Fl_Button.H>
@@ -184,10 +185,9 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_sensor_fault_value->callback(sensor_value_changed_callback, this);
   m_sensor_const->callback(sensor_value_changed_callback, this);
 
-  m_output_angle->callback(output_value_changed_callback, this);
-  m_output_pin->callback(output_value_changed_callback, this);
-  m_output_inverted->callback(output_value_changed_callback, this);
-  m_output_type->callback(output_value_changed_callback, this);
+  m_output_editor->changed_callback(std::bind(output_value_changed_callback,
+                                              this, std::placeholders::_1,
+                                              std::placeholders::_2));
 }
 
 struct LogMenuData {
@@ -300,8 +300,8 @@ void MainWindow::update_sensor_editor(viaems::SensorValue s) {
     m_sensor_const->deactivate();
   }
 
-  if (s.source != "const" && (s.method == "linear" || s.method ==
-        "linear-window")) {
+  if (s.source != "const" &&
+      (s.method == "linear" || s.method == "linear-window")) {
     m_sensor_range_min->activate();
     m_sensor_range_max->activate();
   } else {
@@ -357,24 +357,6 @@ void MainWindow::update_sensor_editor(viaems::SensorValue s) {
   m_sensor_editor_box->show();
 }
 
-void MainWindow::update_output_editor(viaems::OutputValue o) {
-  auto output_type = m_model->configuration().types.at("output");
-
-  m_output_type->clear();
-  for (auto choice : output_type.map()["type"].leaf().choices) {
-    m_output_type->add(choice.c_str());
-  }
-  m_output_type->value(m_output_type->find_index(o.type.c_str()));
-
-  m_output_pin->value(o.pin);
-  m_output_angle->value(o.angle);
-  m_output_inverted->value(o.inverted ? 1 : 0);
-
-  m_table_editor_box->hide();
-  m_sensor_editor_box->hide();
-  m_output_editor_box->show();
-}
-
 void MainWindow::select_sensor(Fl_Widget *w, void *p) {
   auto mw = (MainWindow *)p;
   auto s = (SelectableTreeWidget *)w;
@@ -389,31 +371,42 @@ void MainWindow::select_sensor(Fl_Widget *w, void *p) {
   mw->m_sensor_editor_box->label(name.c_str());
 }
 
-void MainWindow::output_value_changed_callback(Fl_Widget *w, void *ptr) {
-  auto mw = static_cast<MainWindow *>(ptr);
-  auto output = std::get<viaems::OutputValue>(
-      mw->m_model->configuration().get(mw->detail_path).value());
-
-  output.pin = static_cast<uint32_t>(mw->m_output_pin->value());
-  output.angle = static_cast<float>(mw->m_output_angle->value());
-  output.inverted = mw->m_output_inverted->value() == 1;
-  output.type = mw->m_output_type->text();
-
-  mw->m_model->set_value(mw->detail_path, output);
-  auto item = get_config_tree_widget(mw->m_config_tree, mw->detail_path);
+void MainWindow::output_value_changed_callback(MainWindow *mw, int index,
+                                               viaems::OutputValue v) {
+  viaems::StructurePath path = {"outputs", index};
+  mw->m_model->set_value(path, v);
+  auto item = get_config_tree_widget(mw->m_config_tree, {"outputs"});
   item->dirty(true);
+}
+
+static std::vector<viaems::OutputValue> get_model_outputs(viaems::Model *m) {
+  viaems::StructurePath basepath = {"outputs"};
+  std::vector<viaems::OutputValue> values;
+  int index = 0;
+  while (true) {
+    auto thispath = basepath;
+    thispath.push_back({index});
+    auto value = m->configuration().get(thispath);
+    if (value) {
+      values.push_back(std::get<viaems::OutputValue>(value.value()));
+    } else {
+      break;
+    }
+    index += 1;
+  }
+  return values;
 }
 
 void MainWindow::select_output(Fl_Widget *w, void *p) {
   auto mw = (MainWindow *)p;
-  auto s = (SelectableTreeWidget *)w;
 
-  auto value = mw->m_model->configuration().get(s->path);
-  if (value) {
-    mw->m_output_editor_box->take_focus();
-    mw->update_output_editor(std::get<viaems::OutputValue>(value.value()));
-    mw->detail_path = s->path;
-  }
+  auto values = get_model_outputs(mw->m_model);
+  mw->m_output_editor->set_outputs(values);
+  mw->detail_path = {"outputs"};
+
+  mw->m_table_editor_box->hide();
+  mw->m_sensor_editor_box->hide();
+  mw->m_output_editor_box->show();
 }
 
 void MainWindow::select_table(Fl_Widget *w, void *p) {
@@ -511,9 +504,6 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
       if (child.is_leaf()) {
         auto leaf = child.leaf();
         auto w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
-        if (leaf.type == "output") {
-          w->select_callback(select_output, this);
-        }
         item->widget(w);
       } else {
         add_config_structure_entry(item, child);
@@ -535,7 +525,14 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
     auto item = new Fl_Tree_Item(m_config_tree->prefs());
     item->label(child.first.c_str());
     root->add(m_config_tree->prefs(), "", item);
-    add_config_structure_entry(item, child.second);
+    if (child.first == "outputs") {
+      /* Special handling for outputs, present the list as a single item */
+      auto w = new SelectableTreeWidget(0, 0, 300, 18, {"outputs"});
+      w->select_callback(select_output, this);
+      item->widget(w);
+    } else {
+      add_config_structure_entry(item, child.second);
+    }
   }
   m_config_tree->end();
   m_config_tree->redraw();
@@ -560,6 +557,10 @@ void MainWindow::update_model(viaems::Model *model) {
 
 void MainWindow::update_config_value(viaems::StructurePath path,
                                      viaems::ConfigValue value) {
+  if (std::get<std::string>(path.at(0)) == "outputs") {
+    path = {"outputs"};
+  }
+
   auto w = get_config_tree_widget(m_config_tree, path);
   if (w == nullptr) {
     return;
@@ -572,6 +573,8 @@ void MainWindow::update_config_value(viaems::StructurePath path,
       update_table_editor(std::get<viaems::TableValue>(value));
     } else if (std::holds_alternative<viaems::SensorValue>(value)) {
       update_sensor_editor(std::get<viaems::SensorValue>(value));
+    } else if (std::holds_alternative<viaems::OutputValue>(value)) {
+      m_output_editor->set_outputs(get_model_outputs(m_model));
     }
   }
 }
