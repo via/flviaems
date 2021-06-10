@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0305
+version 1.0306
 header_name {.h}
 code_name {.cxx}
 class MainWindowUI {open
@@ -8,7 +8,7 @@ class MainWindowUI {open
   } {
     Fl_Window m_main_window {
       label mainWindow open
-      protected xywh {632 207 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
+      protected xywh {2 306 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -36,7 +36,7 @@ class MainWindowUI {open
         label Interrogation
         protected xywh {875 724 135 21}
       }
-      Fl_Group m_table_editor_box {open resizable
+      Fl_Group m_table_editor_box {open
         protected xywh {455 40 525 345} box DOWN_BOX hide
       } {
         Fl_Input m_table_title {
@@ -205,10 +205,18 @@ class MainWindowUI {open
             label {Select File...}
             xywh {0 0 36 21}
           }
-          Submenu m_log_loadconfig {
+          MenuItem m_log_loadconfig {
             label {Load Config} open
             protected xywh {5 5 70 21}
-          } {}
+          }
+          MenuItem m_log_export {
+            label {Export Config} selected
+            xywh {0 0 36 21}
+          }
+          MenuItem m_log_import {
+            label {Import Config}
+            xywh {0 0 36 21}
+          }
         }
       }
       Fl_Output m_status_text {
@@ -232,10 +240,10 @@ class MainWindowUI {open
         label {@||}
         protected xywh {810 685 25 20}
       }
-      Fl_Group m_output_editor_box {open resizable
-        protected xywh {455 40 525 345} box DOWN_BOX hide
+      Fl_Group m_output_editor_box {open
+        protected xywh {455 40 525 345} box DOWN_BOX hide resizable
       } {
-        Fl_Table m_output_editor {selected
+        Fl_Table m_output_editor {
           protected xywh {460 75 510 305} resizable
           code0 {\#include "OutputEditor.h"}
           class OutputEditor

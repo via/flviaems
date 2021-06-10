@@ -303,6 +303,35 @@ class FLViaems {
     }
   }
 
+  static void export_config(Fl_Widget *w, void *ptr) {
+    auto v = static_cast<FLViaems *>(ptr);
+    const char *filename = fl_file_chooser("Export", "*.json", "", 0);
+    if (filename == nullptr) {
+      return;
+    }
+    auto jsonconf = v->model.configuration().to_json();
+    std::ofstream dump_file{filename};
+    dump_file << jsonconf.dump(4);
+    dump_file.close();
+  }
+
+  static void import_config(Fl_Widget *w, void *ptr) {
+    auto v = static_cast<FLViaems *>(ptr);
+    const char *filename = fl_file_chooser("Import", "*.json", "", 0);
+    if (filename == nullptr) {
+      return;
+    }
+    json jsonconf;
+
+    std::ifstream load_file{filename};
+    load_file >> jsonconf;
+    load_file.close();
+
+    viaems::Configuration conf;
+    conf.from_json(jsonconf);
+    v->load_config(conf);
+  }
+
 public:
   FLViaems() {
     Fl::lock(); /* Necessary to enable awake() functionality */
@@ -317,6 +346,8 @@ public:
     ui.m_file_flash->callback(flash, this);
     ui.m_file_bootloader->callback(bootloader, this);
     ui.m_log_select->callback(select_log, this);
+    ui.m_log_export->callback(export_config, this);
+    ui.m_log_import->callback(import_config, this);
     ui.m_connection_simulator->callback(initialize_simulator, this);
     ui.m_connection_device->callback(initialize_device, this);
     ui.m_connection_offline->callback(initialize_offline, this);
