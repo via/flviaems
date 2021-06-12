@@ -211,7 +211,7 @@ void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
     m_logview->update_time_range(start_time, stop_time);
     auto old_configs = log->LoadConfigs();
 
-    m_log_loadconfig->flags = FL_SUBMENU;
+    m_file_loadconfig->flags = FL_SUBMENU;
     prev_config_menu_items.clear();
     for (const auto &conf : old_configs) {
       auto time_c = std::chrono::system_clock::to_time_t(conf.save_time);
@@ -226,8 +226,8 @@ void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
                                         FL_NORMAL_LABEL, 0, 14, 0});
     }
     prev_config_menu_items.push_back({0, 0, 0, 0, 0, 0, 0, 0, 0});
-    m_log_loadconfig->user_data(prev_config_menu_items.data());
-    m_log_loadconfig->flags = FL_SUBMENU_POINTER;
+    m_file_loadconfig->user_data(prev_config_menu_items.data());
+    m_file_loadconfig->flags = FL_SUBMENU_POINTER;
   }
   log = l;
 }

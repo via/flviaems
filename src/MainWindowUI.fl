@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0306
+version 1.0305
 header_name {.h}
 code_name {.cxx}
 class MainWindowUI {open
@@ -8,7 +8,7 @@ class MainWindowUI {open
   } {
     Fl_Window m_main_window {
       label mainWindow open
-      protected xywh {2 306 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
+      protected xywh {642 490 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
       Fl_Tree m_config_tree {
         label Configuration
@@ -167,16 +167,37 @@ class MainWindowUI {open
       Fl_Menu_Bar m_bar {open
         xywh {0 0 1050 20}
       } {
+        Submenu m_file_menu {
+          label File open
+          protected xywh {15 15 70 21}
+        } {
+          MenuItem m_file_open {
+            label Open
+            xywh {15 15 36 21}
+          }
+          MenuItem m_file_loadconfig {
+            label {Load Config}
+            protected xywh {20 20 70 21}
+          }
+          MenuItem m_file_export {
+            label {Export Config}
+            xywh {15 15 36 21}
+          }
+          MenuItem m_file_import {
+            label {Import Config}
+            xywh {15 15 36 21}
+          }
+        }
         Submenu m_target_menu {
           label Target open
           protected xywh {0 0 70 21}
         } {
-          MenuItem m_file_flash {
+          MenuItem m_target_flash {
             label Flash
             xywh {5 5 36 21}
           }
-          MenuItem m_file_bootloader {
-            label {Reset to bootloader}
+          MenuItem m_target_bootloader {
+            label {Reset to bootloader} selected
             xywh {0 0 36 21}
           }
         }
@@ -194,27 +215,6 @@ class MainWindowUI {open
           }
           MenuItem m_connection_offline {
             label Offline
-            xywh {0 0 36 21}
-          }
-        }
-        Submenu m_log_menu {
-          label Log open
-          protected xywh {0 0 70 21}
-        } {
-          MenuItem m_log_select {
-            label {Select File...}
-            xywh {0 0 36 21}
-          }
-          MenuItem m_log_loadconfig {
-            label {Load Config} open
-            protected xywh {5 5 70 21}
-          }
-          MenuItem m_log_export {
-            label {Export Config} selected
-            xywh {0 0 36 21}
-          }
-          MenuItem m_log_import {
-            label {Import Config}
             xywh {0 0 36 21}
           }
         }

@@ -343,11 +343,11 @@ public:
     Fl::add_timeout(0.05, feed_refresh_handler, this);
     Fl::add_timeout(1, pinger, this);
 
-    ui.m_file_flash->callback(flash, this);
-    ui.m_file_bootloader->callback(bootloader, this);
-    ui.m_log_select->callback(select_log, this);
-    ui.m_log_export->callback(export_config, this);
-    ui.m_log_import->callback(import_config, this);
+    ui.m_target_flash->callback(flash, this);
+    ui.m_target_bootloader->callback(bootloader, this);
+    ui.m_file_open->callback(select_log, this);
+    ui.m_file_export->callback(export_config, this);
+    ui.m_file_import->callback(import_config, this);
     ui.m_connection_simulator->callback(initialize_simulator, this);
     ui.m_connection_device->callback(initialize_device, this);
     ui.m_connection_offline->callback(initialize_offline, this);
