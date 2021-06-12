@@ -277,6 +277,8 @@ void MainWindow::feed_update(std::map<std::string, viaems::FeedValue> status) {
     auto stop_time = log.value()->EndTime();
     auto start_time = stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
+  } else {
+    m_logview->update();
   }
 }
 

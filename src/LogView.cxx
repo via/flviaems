@@ -1,10 +1,12 @@
+#include <algorithm>
 #include <chrono>
+#include <iostream>
+#include <cmath>
 
 #include <FL/fl_draw.H>
 
 #include "LogView.h"
 
-#include <iostream>
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
@@ -22,21 +24,36 @@ struct range {
   uint64_t stop_ns;
 };
 
-void LogView::update_time_range(
-    std::chrono::system_clock::time_point new_start,
-    std::chrono::system_clock::time_point new_stop) {
-
+void LogView::update_time_range(std::chrono::system_clock::time_point start,
+    std::chrono::system_clock::time_point stop) {
   start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 new_start.time_since_epoch())
+                 start.time_since_epoch())
                  .count();
   stop_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                new_stop.time_since_epoch())
+                stop.time_since_epoch())
                 .count();
+  update_cache_time_range();
+  recompute_pointgroups(0, w() - 1);
+  redraw();
+}
+
+void LogView::update() {
+  update_cache_time_range();
+  recompute_pointgroups(0, w() - 1);
+  redraw();
+}
+
+void LogView::update_cache_time_range() {
 
   std::vector<std::string> keys;
   for (auto i : config) {
     keys.push_back(i.first);
   }
+
+  auto new_start = std::chrono::system_clock::time_point{
+    std::chrono::nanoseconds{start_ns}};
+  auto new_stop = std::chrono::system_clock::time_point{
+    std::chrono::nanoseconds{stop_ns}};
 
   /* Is new start before potentially cached start? Determine a range to fetch
    * and fetch it (either newstart ->cachedstart or newstart -> newend. */
@@ -78,20 +95,23 @@ void LogView::update_time_range(
       break;
     }
   }
-  recompute();
-  redraw();
 }
 
-void LogView::recompute() {
+/* Recompute pointgroups for pixels x1 through x1 inclusive */
+void LogView::recompute_pointgroups(int x1, int x2) {
   if (stop_ns == start_ns) {
     return;
   }
 
+  /* Ensure pointgroups exist for all pixels */
   for (auto i : config) {
-    series[i.first].clear();
-    for (auto k = 0; k < w(); k++) {
+    while (series[i.first].size() <= x2) {
       PointGroup pg{};
       series[i.first].push_back(pg);
+    }
+    /* Clear out the range we're touching */
+    for (int j = x1; j <= x2; j++) {
+      series[i.first][j] = PointGroup{};
     }
   }
 
@@ -103,21 +123,30 @@ void LogView::recompute() {
 
   std::vector<range> pixel_ranges;
   auto ns_per_pixel = (stop_ns - start_ns) / w();
-  for (auto k = 0; k < w(); k++) {
+  for (auto k = x1; k <= x2; k++) {
     uint64_t start = start_ns + (k * ns_per_pixel);
     uint64_t stop = start_ns + ((k + 1) * ns_per_pixel);
     pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
   }
 
-  int pixel = 0;
-  for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
+  auto start = std::lower_bound(cache.points.begin(), cache.points.end(),
+      pixel_ranges[0].start_ns, [](const auto & point, uint64_t time) {
+      return std::chrono::duration_cast<std::chrono::nanoseconds>(
+                 point.time.time_since_epoch()).count() < time; 
+      });
+  auto stop = std::upper_bound(start, cache.points.end(),
+      pixel_ranges[pixel_ranges.size() - 1].stop_ns, [](uint64_t time, const
+        auto& point) {
+      return time < std::chrono::duration_cast<std::chrono::nanoseconds>(
+                 point.time.time_since_epoch()).count();
+      });
+
+  int pixel = x1;
+  for (auto i = start; i < stop; i++) {
     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
                  i->time.time_since_epoch())
                  .count();
-    if (t < pixel_ranges[pixel].start_ns) {
-      continue;
-    }
-    while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w()) {
+    while ((t >= pixel_ranges[pixel - x1].stop_ns) && pixel < w()) {
       pixel++;
     }
     if (pixel == w()) {
@@ -238,31 +267,59 @@ int LogView::handle(int ev) {
   return 0;
 }
 
-void LogView::shift(std::chrono::system_clock::duration amt) {
-  uint64_t shift_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                          amt).count(); 
-  auto new_start = std::chrono::system_clock::time_point{
-    std::chrono::nanoseconds{start_ns + shift_ns}};
-  auto new_stop = std::chrono::system_clock::time_point{
-    std::chrono::nanoseconds{stop_ns + shift_ns}};
+void LogView::shift_pointgroups(int amt) {
+  /* For a given shift, preserve the pointgroups that are unaffected */
+  for (auto i : config) {
+    if (amt > 0) {
+      /* We're moving points to the left, start at the beginning */
+      for (int pos = amt; pos < series[i.first].size(); pos++) {
+        series[i.first][pos - amt] = series[i.first][pos];
+      }
+    } else {
+      /* We're moving existing points to the right, start at the end and count
+       * backwards */
+      int namt = -amt;
+      for (int pos = series[i.first].size() - 1; pos >= namt; pos--) {
+        series[i.first][pos] = series[i.first][pos - namt];
+      }
+    }
+  }
+}
 
-  update_time_range(new_start, new_stop);
+void LogView::shift(std::chrono::system_clock::duration amt) {
+  int64_t shift_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                          amt).count(); 
+  start_ns += shift_ns;
+  stop_ns += shift_ns;
+
+  int64_t ns_per_pixel = (stop_ns - start_ns) / w();
+  int shifted_pixels = shift_ns / ns_per_pixel;
+
+  if (shifted_pixels != 0) {
+    update_cache_time_range();
+    shift_pointgroups(shifted_pixels);
+    if (shift_ns > 0) {
+      recompute_pointgroups(w() - 1 - shifted_pixels, w() - 1);
+    } else {
+      recompute_pointgroups(0, -shifted_pixels - 1);
+    }
+    redraw();
+  }
 }
 
 void LogView::zoom(double amt) {
   int64_t delta = (stop_ns - start_ns) / 2 * amt;
 
-  auto new_start = std::chrono::system_clock::time_point{
-    std::chrono::nanoseconds{start_ns - delta}};
-  auto new_stop = std::chrono::system_clock::time_point{
-    std::chrono::nanoseconds{stop_ns + delta}};
-
-  update_time_range(new_start, new_stop);
+  start_ns -= delta;
+  stop_ns += delta;
+  update_cache_time_range();
+  recompute_pointgroups(0, w() - 1);
+  redraw();
 }
 
 void LogView::resize(int X, int Y, int W, int H) {
   Fl_Box::resize(X, Y, W, H);
-  recompute();
+  recompute_pointgroups(0, w() - 1);
 }
 
 void LogView::SetLog(std::weak_ptr<Log> log) {

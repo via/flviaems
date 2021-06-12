@@ -29,6 +29,7 @@ public:
   void SetLog(std::weak_ptr<Log> log);
   void update_time_range(std::chrono::system_clock::time_point start,
                          std::chrono::system_clock::time_point stop);
+  void update();
   void zoom(double amt);
   void shift(std::chrono::system_clock::duration amt);
 
@@ -44,6 +45,8 @@ private:
 
   int handle(int);
   void resize(int, int, int, int);
-  void recompute();
+  void recompute_pointgroups(int x1, int x2);
+  void shift_pointgroups(int amt);
+  void update_cache_time_range();
   void draw();
 };
