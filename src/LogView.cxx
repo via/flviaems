@@ -221,31 +221,43 @@ int LogView::handle(int ev) {
     int diff_x = mouse_press_x - Fl::event_x();
     auto ns_per_pixel = (stop_ns - start_ns) / w();
     uint64_t shift_ns = diff_x * ns_per_pixel;
-
-    auto new_start = std::chrono::system_clock::time_point{
-        std::chrono::nanoseconds{start_ns + shift_ns}};
-    auto new_stop = std::chrono::system_clock::time_point{
-        std::chrono::nanoseconds{stop_ns + shift_ns}};
-
-    update_time_range(new_start, new_stop);
-
+    auto amt =
+      std::chrono::system_clock::duration{std::chrono::nanoseconds{shift_ns}};
+    shift(amt);
     mouse_press_x = Fl::event_x();
     mouse_press_y = Fl::event_y();
+    do_callback();
   }
   if (ev == FL_MOUSEWHEEL) {
     double amt = Fl::event_dy() * 0.2; /* 20% up or down */
-    int64_t delta = (stop_ns - start_ns) / 2 * amt;
-
-    auto new_start = std::chrono::system_clock::time_point{
-        std::chrono::nanoseconds{start_ns - delta}};
-    auto new_stop = std::chrono::system_clock::time_point{
-        std::chrono::nanoseconds{stop_ns + delta}};
-
-    update_time_range(new_start, new_stop);
+    zoom(amt);
+    do_callback();
     return 1;
   }
 
   return 0;
+}
+
+void LogView::shift(std::chrono::system_clock::duration amt) {
+  uint64_t shift_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                          amt).count(); 
+  auto new_start = std::chrono::system_clock::time_point{
+    std::chrono::nanoseconds{start_ns + shift_ns}};
+  auto new_stop = std::chrono::system_clock::time_point{
+    std::chrono::nanoseconds{stop_ns + shift_ns}};
+
+  update_time_range(new_start, new_stop);
+}
+
+void LogView::zoom(double amt) {
+  int64_t delta = (stop_ns - start_ns) / 2 * amt;
+
+  auto new_start = std::chrono::system_clock::time_point{
+    std::chrono::nanoseconds{start_ns - delta}};
+  auto new_stop = std::chrono::system_clock::time_point{
+    std::chrono::nanoseconds{stop_ns + delta}};
+
+  update_time_range(new_start, new_stop);
 }
 
 void LogView::resize(int X, int Y, int W, int H) {

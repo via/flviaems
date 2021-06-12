@@ -85,12 +85,17 @@ protected:
   Fl_Output *m_status_text;
   LogView *m_logview;
   Fl_Output *m_offline;
-  Fl_Output *m_logview_start;
-  Fl_Output *m_logview_stop;
-  Fl_Button *m_logview_pause;
+public:
+  Fl_Button *m_logview_follow;
+protected:
   Fl_Group *m_output_editor_box;
   OutputEditor *m_output_editor;
 public:
+  Fl_Button *m_logview_forward;
+  Fl_Button *m_logview_pause;
+  Fl_Button *m_logview_back;
+  Fl_Button *m_logview_in;
+  Fl_Button *m_logview_out;
   void show();
 };
 #endif

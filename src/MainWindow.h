@@ -9,6 +9,7 @@ class MainWindow : public MainWindowUI {
   viaems::Model *m_model;
   viaems::StructurePath detail_path;
   std::optional<std::shared_ptr<Log>> log;
+  bool logview_paused = false;
 
   std::vector<Fl_Menu_Item> prev_config_menu_items;
   std::function<void(viaems::Configuration)> load_config_callback;

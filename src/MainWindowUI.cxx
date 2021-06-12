@@ -192,15 +192,8 @@ MainWindowUI::MainWindowUI() {
     { m_offline = new Fl_Output(215, 720, 80, 25);
       m_offline->box(FL_NO_BOX);
     } // Fl_Output* m_offline
-    { m_logview_start = new Fl_Output(460, 685, 115, 20);
-      m_logview_start->box(FL_NO_BOX);
-    } // Fl_Output* m_logview_start
-    { m_logview_stop = new Fl_Output(885, 685, 100, 20);
-      m_logview_stop->box(FL_NO_BOX);
-      m_logview_stop->align(Fl_Align(FL_ALIGN_RIGHT));
-    } // Fl_Output* m_logview_stop
-    { m_logview_pause = new Fl_Button(810, 685, 25, 20, "@||");
-    } // Fl_Button* m_logview_pause
+    { m_logview_follow = new Fl_Button(810, 685, 25, 20, "@>|");
+    } // Fl_Button* m_logview_follow
     { m_output_editor_box = new Fl_Group(455, 40, 525, 345);
       m_output_editor_box->box(FL_DOWN_BOX);
       m_output_editor_box->hide();
@@ -220,6 +213,16 @@ MainWindowUI::MainWindowUI() {
       m_output_editor_box->end();
       Fl_Group::current()->resizable(m_output_editor_box);
     } // Fl_Group* m_output_editor_box
+    { m_logview_forward = new Fl_Button(785, 685, 25, 20, "@>>");
+    } // Fl_Button* m_logview_forward
+    { m_logview_pause = new Fl_Button(760, 685, 25, 20, "@||");
+    } // Fl_Button* m_logview_pause
+    { m_logview_back = new Fl_Button(735, 685, 25, 20, "@<<");
+    } // Fl_Button* m_logview_back
+    { m_logview_in = new Fl_Button(695, 685, 25, 20, "@8UpArrow");
+    } // Fl_Button* m_logview_in
+    { m_logview_out = new Fl_Button(670, 685, 25, 20, "@2UpArrow");
+    } // Fl_Button* m_logview_out
     m_main_window->set_non_modal();
     m_main_window->end();
   } // Fl_Double_Window* m_main_window

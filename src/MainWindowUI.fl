@@ -197,7 +197,7 @@ class MainWindowUI {open
             xywh {5 5 36 21}
           }
           MenuItem m_target_bootloader {
-            label {Reset to bootloader} selected
+            label {Reset to bootloader}
             xywh {0 0 36 21}
           }
         }
@@ -230,24 +230,38 @@ class MainWindowUI {open
       Fl_Output m_offline {
         protected xywh {215 720 80 25} box NO_BOX
       }
-      Fl_Output m_logview_start {
-        protected xywh {460 685 115 20} box NO_BOX
+      Fl_Button m_logview_follow {
+        label {@>|} selected
+        xywh {810 685 25 20}
       }
-      Fl_Output m_logview_stop {
-        protected xywh {885 685 100 20} box NO_BOX align 8
-      }
-      Fl_Button m_logview_pause {
-        label {@||}
-        protected xywh {810 685 25 20}
-      }
-      Fl_Group m_output_editor_box {open
-        protected xywh {455 40 525 345} box DOWN_BOX hide resizable
+      Fl_Group m_output_editor_box {open resizable
+        protected xywh {455 40 525 345} box DOWN_BOX hide
       } {
         Fl_Table m_output_editor {
           protected xywh {460 75 510 305} resizable
           code0 {\#include "OutputEditor.h"}
           class OutputEditor
         } {}
+      }
+      Fl_Button m_logview_forward {
+        label {@>>}
+        xywh {785 685 25 20}
+      }
+      Fl_Button m_logview_pause {
+        label {@||}
+        xywh {760 685 25 20}
+      }
+      Fl_Button m_logview_back {
+        label {@<<}
+        xywh {735 685 25 20}
+      }
+      Fl_Button m_logview_in {
+        label {@8UpArrow}
+        xywh {695 685 25 20}
+      }
+      Fl_Button m_logview_out {
+        label {@2UpArrow}
+        xywh {670 685 25 20}
       }
     }
     code {m_main_window->show();} {}
