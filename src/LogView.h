@@ -34,6 +34,7 @@ private:
   std::weak_ptr<Log> log;
   uint64_t start_ns, stop_ns;
   int mouse_x, mouse_y;
+  int mouse_press_x, mouse_press_y;
 
   std::map<std::string, SeriesConfig> config;
   std::map<std::string, std::vector<PointGroup>> series;

@@ -114,6 +114,9 @@ void LogView::recompute() {
     auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
                  i->time.time_since_epoch())
                  .count();
+    if (t < pixel_ranges[pixel].start_ns) {
+      continue;
+    }
     while ((t >= pixel_ranges[pixel].stop_ns) && pixel < w()) {
       pixel++;
     }
@@ -204,10 +207,42 @@ int LogView::handle(int ev) {
   if (auto ret = Fl_Box::handle(ev)) {
     return ret;
   }
+  if (ev == FL_PUSH) {
+    mouse_press_x = Fl::event_x();
+    mouse_press_y = Fl::event_y();
+    return 1;
+  }
   if (ev == FL_MOVE) {
     mouse_x = Fl::event_x();
     mouse_y = Fl::event_y();
     redraw();
+  }
+  if (ev == FL_DRAG) {
+    int diff_x = mouse_press_x - Fl::event_x();
+    auto ns_per_pixel = (stop_ns - start_ns) / w();
+    uint64_t shift_ns = diff_x * ns_per_pixel;
+
+    auto new_start = std::chrono::system_clock::time_point{
+        std::chrono::nanoseconds{start_ns + shift_ns}};
+    auto new_stop = std::chrono::system_clock::time_point{
+        std::chrono::nanoseconds{stop_ns + shift_ns}};
+
+    update_time_range(new_start, new_stop);
+
+    mouse_press_x = Fl::event_x();
+    mouse_press_y = Fl::event_y();
+  }
+  if (ev == FL_MOUSEWHEEL) {
+    double amt = Fl::event_dy() * 0.2; /* 20% up or down */
+    int64_t delta = (stop_ns - start_ns) / 2 * amt;
+
+    auto new_start = std::chrono::system_clock::time_point{
+        std::chrono::nanoseconds{start_ns - delta}};
+    auto new_stop = std::chrono::system_clock::time_point{
+        std::chrono::nanoseconds{stop_ns + delta}};
+
+    update_time_range(new_start, new_stop);
+    return 1;
   }
 
   return 0;
