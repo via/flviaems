@@ -190,30 +190,34 @@ MainWindow::MainWindow() : MainWindowUI() {
                                               std::placeholders::_2));
 
   /* Hook up buttons to logview */
-  m_logview_in->callback([](Fl_Widget *w, void *v){
-      ((LogView *)v)->zoom(0.2);
-      }, m_logview);
-  m_logview_out->callback([](Fl_Widget *w, void *v){
-      ((LogView *)v)->zoom(-0.2);
-      }, m_logview);
-  m_logview_back->callback([](Fl_Widget *w, void *v){
-      ((LogView *)v)->shift(std::chrono::seconds{-5});
-      }, m_logview);
-  m_logview_forward->callback([](Fl_Widget *w, void *v){
-      ((LogView *)v)->shift(std::chrono::seconds{5});
-      }, m_logview);
-  m_logview->callback([](Fl_Widget *, void *v){
-      auto mw = (MainWindow *)v;
-      mw->logview_paused = true;
-      mw->m_logview_pause->set();
-      mw->m_logview_follow->clear();
-      }, this);
-  auto pause_cb = [](Fl_Widget *w, void *v){
-      auto mw = (MainWindow *)v;
-      mw->logview_paused = !mw->logview_paused;
-      mw->m_logview_pause->value(mw->logview_paused ? 1 : 0);
-      mw->m_logview_follow->value(mw->logview_paused ? 0 : 1);
-      };
+  m_logview_in->callback(
+      [](Fl_Widget *w, void *v) { ((LogView *)v)->zoom(0.2); }, m_logview);
+  m_logview_out->callback(
+      [](Fl_Widget *w, void *v) { ((LogView *)v)->zoom(-0.2); }, m_logview);
+  m_logview_back->callback(
+      [](Fl_Widget *w, void *v) {
+        ((LogView *)v)->shift(std::chrono::seconds{-5});
+      },
+      m_logview);
+  m_logview_forward->callback(
+      [](Fl_Widget *w, void *v) {
+        ((LogView *)v)->shift(std::chrono::seconds{5});
+      },
+      m_logview);
+  m_logview->callback(
+      [](Fl_Widget *, void *v) {
+        auto mw = (MainWindow *)v;
+        mw->logview_paused = true;
+        mw->m_logview_pause->set();
+        mw->m_logview_follow->clear();
+      },
+      this);
+  auto pause_cb = [](Fl_Widget *w, void *v) {
+    auto mw = (MainWindow *)v;
+    mw->logview_paused = !mw->logview_paused;
+    mw->m_logview_pause->value(mw->logview_paused ? 1 : 0);
+    mw->m_logview_follow->value(mw->logview_paused ? 0 : 1);
+  };
   m_logview_follow->set();
   m_logview_pause->callback(pause_cb, this);
   m_logview_follow->callback(pause_cb, this);

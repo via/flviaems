@@ -1,12 +1,11 @@
 #include <algorithm>
 #include <chrono>
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
 #include <FL/fl_draw.H>
 
 #include "LogView.h"
-
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
   config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
@@ -25,7 +24,7 @@ struct range {
 };
 
 void LogView::update_time_range(std::chrono::system_clock::time_point start,
-    std::chrono::system_clock::time_point stop) {
+                                std::chrono::system_clock::time_point stop) {
   start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
                  start.time_since_epoch())
                  .count();
@@ -50,10 +49,10 @@ void LogView::update_cache_time_range() {
     keys.push_back(i.first);
   }
 
-  auto new_start = std::chrono::system_clock::time_point{
-    std::chrono::nanoseconds{start_ns}};
-  auto new_stop = std::chrono::system_clock::time_point{
-    std::chrono::nanoseconds{stop_ns}};
+  auto new_start =
+      std::chrono::system_clock::time_point{std::chrono::nanoseconds{start_ns}};
+  auto new_stop =
+      std::chrono::system_clock::time_point{std::chrono::nanoseconds{stop_ns}};
 
   /* Is new start before potentially cached start? Determine a range to fetch
    * and fetch it (either newstart ->cachedstart or newstart -> newend. */
@@ -129,16 +128,19 @@ void LogView::recompute_pointgroups(int x1, int x2) {
     pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
   }
 
-  auto start = std::lower_bound(cache.points.begin(), cache.points.end(),
-      pixel_ranges[0].start_ns, [](const auto & point, uint64_t time) {
-      return std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 point.time.time_since_epoch()).count() < time; 
+  auto start = std::lower_bound(
+      cache.points.begin(), cache.points.end(), pixel_ranges[0].start_ns,
+      [](const auto &point, uint64_t time) {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   point.time.time_since_epoch())
+                   .count() < time;
       });
-  auto stop = std::upper_bound(start, cache.points.end(),
-      pixel_ranges[pixel_ranges.size() - 1].stop_ns, [](uint64_t time, const
-        auto& point) {
-      return time < std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 point.time.time_since_epoch()).count();
+  auto stop = std::upper_bound(
+      start, cache.points.end(), pixel_ranges[pixel_ranges.size() - 1].stop_ns,
+      [](uint64_t time, const auto &point) {
+        return time < std::chrono::duration_cast<std::chrono::nanoseconds>(
+                          point.time.time_since_epoch())
+                          .count();
       });
 
   int pixel = x1;
@@ -227,6 +229,23 @@ void LogView::draw() {
     count += 1;
   }
 
+  fl_color(FL_WHITE);
+  char buf[32];
+  int mw, mh;
+
+  auto start_ctime = std::chrono::system_clock::to_time_t(
+      std::chrono::system_clock::time_point{
+          std::chrono::nanoseconds{start_ns}});
+  std::strftime(buf, 32, "%F %T", std::localtime(&start_ctime));
+  fl_measure(buf, mw, mh);
+  fl_draw(buf, x() + 5, y() + h() - mh - 5);
+
+  auto stop_ctime = std::chrono::system_clock::to_time_t(
+      std::chrono::system_clock::time_point{std::chrono::nanoseconds{stop_ns}});
+  std::strftime(buf, 32, "%F %T", std::localtime(&stop_ctime));
+  fl_measure(buf, mw, mh);
+  fl_draw(buf, x() + w() - mw - 5, y() + h() - mh - 5);
+
   fl_color(FL_LIGHT1);
   fl_line(mouse_x, y(), mouse_x, y() + h());
   fl_pop_clip();
@@ -251,7 +270,7 @@ int LogView::handle(int ev) {
     auto ns_per_pixel = (stop_ns - start_ns) / w();
     uint64_t shift_ns = diff_x * ns_per_pixel;
     auto amt =
-      std::chrono::system_clock::duration{std::chrono::nanoseconds{shift_ns}};
+        std::chrono::system_clock::duration{std::chrono::nanoseconds{shift_ns}};
     shift(amt);
     mouse_press_x = Fl::event_x();
     mouse_press_y = Fl::event_y();
@@ -287,8 +306,8 @@ void LogView::shift_pointgroups(int amt) {
 }
 
 void LogView::shift(std::chrono::system_clock::duration amt) {
-  int64_t shift_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                          amt).count(); 
+  int64_t shift_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(amt).count();
   start_ns += shift_ns;
   stop_ns += shift_ns;
 
