@@ -185,6 +185,10 @@ void LogView::draw() {
   draw_box();
   fl_push_clip(x(), y(), w(), h());
   int count = 0;
+  int total_y_space = (config.size() + 2) * 15;
+  int hover_text_x_offset = (mouse_x > (x() + 0.75 * w())) ? -150 : 5;
+  int hover_text_y_offset =
+      (mouse_y - y() + total_y_space > h()) ? -total_y_space : 20;
   for (const auto &element : config) {
     auto name = element.first;
     auto conf = element.second;
@@ -218,21 +222,43 @@ void LogView::draw() {
       cx += 1;
     }
 
-    fl_color(FL_WHITE);
+    fl_color(conf.color);
     if ((mouse_x > x()) && (mouse_x < x() + w()) &&
         (series[element.first].size() == w())) {
       char txt[32];
       sprintf(txt, "%s  %.2f", name.c_str(),
               series[element.first][mouse_x - x()].max);
-      fl_draw(txt, mouse_x + 5, mouse_y + (count + 1) * 15);
+      fl_draw(txt, mouse_x + hover_text_x_offset,
+              mouse_y + hover_text_y_offset + (count + 2) * 15);
     }
     count += 1;
   }
 
   fl_color(FL_WHITE);
-  char buf[32];
+  char buf[64];
   int mw, mh;
 
+  /* Printing milliseconds with strftime can't be done, so seperately extract
+   * the ms components and append it to the strftime output */
+  auto point_time =
+      std::chrono::system_clock::time_point{std::chrono::nanoseconds{
+          start_ns + (stop_ns - start_ns) * (mouse_x - x()) / w()}};
+  auto point_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      point_time.time_since_epoch())
+                      .count() -
+                  (std::chrono::duration_cast<std::chrono::seconds>(
+                       point_time.time_since_epoch())
+                       .count() *
+                   1000);
+  char ms[32];
+  sprintf(ms, ".%ld", point_ms);
+
+  auto point_ctime = std::chrono::system_clock::to_time_t(point_time);
+  std::strftime(buf, 32, "%F %T", std::localtime(&point_ctime));
+  strcat(buf, ms);
+  fl_draw(buf, mouse_x + hover_text_x_offset, mouse_y + hover_text_y_offset);
+
+  /* Print the logview start time in the bottom left corner */
   auto start_ctime = std::chrono::system_clock::to_time_t(
       std::chrono::system_clock::time_point{
           std::chrono::nanoseconds{start_ns}});
@@ -240,6 +266,7 @@ void LogView::draw() {
   fl_measure(buf, mw, mh);
   fl_draw(buf, x() + 5, y() + h() - mh - 5);
 
+  /* Print the logview stop time in the bottom right corner */
   auto stop_ctime = std::chrono::system_clock::to_time_t(
       std::chrono::system_clock::time_point{std::chrono::nanoseconds{stop_ns}});
   std::strftime(buf, 32, "%F %T", std::localtime(&stop_ctime));
