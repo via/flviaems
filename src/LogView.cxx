@@ -304,8 +304,9 @@ int LogView::handle(int ev) {
     do_callback();
   }
   if (ev == FL_MOUSEWHEEL) {
-    double amt = Fl::event_dy() * 0.2; /* 20% up or down */
-    zoom(amt);
+    float amt = Fl::event_dy() * 0.2; /* 20% up or down */
+    float centerpoint = (Fl::event_x() - x()) / (float)w();
+    zoom(amt, centerpoint);
     do_callback();
     return 1;
   }
@@ -353,11 +354,14 @@ void LogView::shift(std::chrono::system_clock::duration amt) {
   }
 }
 
-void LogView::zoom(double amt) {
-  int64_t delta = (stop_ns - start_ns) / 2 * amt;
+/* Zoom in by amt (0.0 means no zoom, 0.2 increases 20%, with the zoom
+ * centered at centerpoint (0.0 - 1.0, 0.0 represents far left)
+ */
+void LogView::zoom(double amt, double centerpoint) {
+  int64_t delta = (int64_t)(stop_ns - start_ns) * amt;
 
-  start_ns -= delta;
-  stop_ns += delta;
+  start_ns -= delta * centerpoint;
+  stop_ns += delta * (1.0 - centerpoint);
   update_cache_time_range();
   recompute_pointgroups(0, w() - 1);
   redraw();

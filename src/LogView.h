@@ -30,7 +30,7 @@ public:
   void update_time_range(std::chrono::system_clock::time_point start,
                          std::chrono::system_clock::time_point stop);
   void update();
-  void zoom(double amt);
+  void zoom(double amt, double centerpoint = 0.5f);
   void shift(std::chrono::system_clock::duration amt);
 
 private:
