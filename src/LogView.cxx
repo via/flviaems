@@ -197,6 +197,7 @@ void LogView::draw() {
     int last_y = -1;
 
     fl_color(conf.color);
+    PointGroup last_valid_before_x;
     for (const auto pointgroup : series[element.first]) {
 
       if (pointgroup.set) {
@@ -214,6 +215,10 @@ void LogView::draw() {
           fl_line(x() + last_x, y() + h() - last_y, x() + cx,
                   y() + h() - cyfirst);
         }
+        /* Save this pointgroup to use with the mouse cursor */
+        if (cx < mouse_x - x()) {
+          last_valid_before_x = pointgroup;
+        }
 
         last_x = cx;
         last_y = cylast;
@@ -223,11 +228,10 @@ void LogView::draw() {
     }
 
     fl_color(conf.color);
-    if ((mouse_x > x()) && (mouse_x < x() + w()) &&
-        (series[element.first].size() == w())) {
+    if ((mouse_x > x()) && (mouse_x < x() + w())) {
       char txt[32];
       sprintf(txt, "%s  %.3f", name.c_str(),
-              series[element.first][mouse_x - x()].max);
+              last_valid_before_x.max);
       fl_draw(txt, mouse_x + hover_text_x_offset,
               mouse_y + hover_text_y_offset + (count + 2) * 15);
     }

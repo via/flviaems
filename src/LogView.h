@@ -32,6 +32,7 @@ public:
   void update();
   void zoom(double amt, double centerpoint = 0.5f);
   void shift(std::chrono::system_clock::duration amt);
+  void resize(int, int, int, int);
 
 private:
   std::weak_ptr<Log> log;
@@ -44,7 +45,6 @@ private:
   viaems::LogChunk cache;
 
   int handle(int);
-  void resize(int, int, int, int);
   void recompute_pointgroups(int x1, int x2);
   void shift_pointgroups(int amt);
   void update_cache_time_range();
