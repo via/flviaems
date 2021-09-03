@@ -17,19 +17,56 @@ using json = nlohmann::json;
 
 namespace viaems {
 
-typedef std::chrono::time_point<std::chrono::system_clock> FeedTime;
-typedef std::variant<uint32_t, float> FeedValue;
+using time_point = std::chrono::time_point<std::chrono::system_clock>;
 
+typedef std::variant<uint32_t, float> FeedValue;
 typedef std::vector<std::variant<int, std::string>> StructurePath;
 
-struct LogPoint {
-  std::chrono::system_clock::time_point time;
-  std::vector<viaems::FeedValue> values;
+struct LogPoint : public std::map<std::string, FeedValue> {
+  time_point time;
 };
 
-struct LogChunk {
-  std::deque<LogPoint> points;
-  std::vector<std::string> keys;
+class LogChunk;
+class LogSeriesIterator {
+private:
+  int current;
+  int end;
+
+  const LogChunk &chunk;
+public:
+    typedef std::tuple<time_point, FeedValue> value_type;
+    typedef std::ptrdiff_t          difference_type;
+    typedef value_type*                    pointer;
+    typedef value_type&                    reference;
+    typedef std::input_iterator_tag iterator_category;
+
+    LogSeriesIterator(const LogChunk& chunk, std::string series, int start, int stop) :
+      chunk{chunk}, current{start}, end{end} {}
+    value_type operator*() const { return value_type{chunk.times[current], chunk; }
+    bool operator==(const myit& other) const { return value_ == other.value_; }
+    bool operator!=(const myit& other) const { return !(*this == other); }
+    intholder operator++(int)
+    {
+        intholder ret(value_);
+        ++*this;
+        return ret;
+    }
+    myit& operator++()
+    {
+        ++value_;
+        return *this;
+    }
+};
+
+class LogChunk {
+  std::map<std::string, std::vector<FeedValue>> data;
+  std::vector<time_point> times;
+
+public:
+  LogChunk(std::vector<std::string> keys);
+
+  void addPoint(const LogPoint&);
+  void getSeries()
 };
 
 struct TableAxis {
@@ -117,7 +154,7 @@ struct StructureNode {
 };
 
 struct Configuration {
-  std::chrono::system_clock::time_point save_time;
+  time_point save_time;
   std::string name;
   StructureNode structure;
   std::map<std::string, StructureNode> types;
@@ -206,7 +243,7 @@ private:
   std::function<void(const json &)> write_cb;
   std::deque<std::shared_ptr<Request>> m_requests;
 
-  std::chrono::system_clock::time_point zero_time;
+  time_point zero_time;
   uint32_t last_feed_time = -1;
 
   const int max_inflight_reqs = 1;
