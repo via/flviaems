@@ -6,18 +6,24 @@ project(flviaems VERSION 0.1
   LANGUAGES CXX)
 
 add_executable(flviaems src/TableEditor.cxx src/flviaems.cxx src/StatusTable.cxx src/MainWindow.cxx src/MainWindowUI.cxx src/viaems.cxx src/Log.cxx src/LogView.cxx src/OutputEditor.cxx)
+add_executable(flbench src/viaems.cxx src/Log.cxx src/LogView.cxx src/bench.cxx)
+
 target_compile_features(flviaems PUBLIC cxx_std_17)
+target_compile_features(flbench PUBLIC cxx_std_17)
 
 find_package(Threads REQUIRED)
 target_link_libraries(flviaems Threads::Threads)
 
 find_library(FLTK fltk)
 target_link_libraries(flviaems ${FLTK})
+target_link_libraries(flbench ${FLTK})
 
 find_package(SQLite3)
 target_link_libraries(flviaems ${SQLite3_LIBRARIES})
+target_link_libraries(flbench ${SQLite3_LIBRARIES})
 
 add_subdirectory(extern/json)
 target_link_libraries(flviaems nlohmann_json::nlohmann_json)
+target_link_libraries(flbench nlohmann_json::nlohmann_json)
 
 target_include_directories(flviaems PRIVATE extern/pstreams)
