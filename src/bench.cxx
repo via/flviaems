@@ -30,10 +30,10 @@ std::unique_ptr<viaems::LogChunk> generate_chunk(uint64_t start_time, uint64_t
 
 int main() {
   LogView lv{0, 0, 100, 100};
-  auto log = std::make_shared<Log>("bench.vlog");
+  auto log = std::make_shared<Log>(":memory:");
 
-  std::chrono::system_clock::duration generate_time;
-  std::chrono::system_clock::duration write_time;
+  std::chrono::system_clock::duration generate_time{};
+  std::chrono::system_clock::duration write_time{};
 
   int count = 0;
   for (uint64_t start = 1000000000; start < 60000000000; start += 1000000000, count++) {
