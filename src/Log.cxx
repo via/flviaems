@@ -183,7 +183,7 @@ static std::string table_search_statement(std::vector<std::string> keys) {
   return query;
 }
 
-viaems::LogChunk Log::GetRange(std::vector<std::string> keys,
+viaems::LogRange Log::GetRange(std::vector<std::string> keys,
                                std::chrono::system_clock::time_point start,
                                std::chrono::system_clock::time_point stop) {
   if (db == nullptr) {
@@ -205,8 +205,13 @@ viaems::LogChunk Log::GetRange(std::vector<std::string> keys,
   sqlite3_bind_int64(stmt, 2, stop_ns);
 
   int res;
-  viaems::LogChunk retval;
-  retval.keys = keys;
+  viaems::LogRange retval;
+  for (auto k : keys) {
+    retval.values.push_back({k, {}});
+  }
+  for (auto &x : retval.values) {
+    x.second.reserve(50000);
+  }
   while (true) {
     res = sqlite3_step(stmt);
     if ((res == SQLITE_DONE) || (res == SQLITE_MISUSE)) {
@@ -216,22 +221,21 @@ viaems::LogChunk Log::GetRange(std::vector<std::string> keys,
     viaems::LogPoint point;
     uint64_t ts = sqlite3_column_int64(stmt, 0);
     auto since_epoch = std::chrono::nanoseconds{ts};
-    point.time = std::chrono::system_clock::time_point{since_epoch};
+    retval.times.push_back(std::chrono::system_clock::time_point{since_epoch});
 
     for (int i = 1; i < sqlite3_column_count(stmt); i++) {
       auto coltype = sqlite3_column_type(stmt, i);
       switch (coltype) {
       case SQLITE_INTEGER:
-        point.values.push_back((uint32_t)sqlite3_column_int64(stmt, i));
+        retval.values[i - 1].second.push_back((uint32_t)sqlite3_column_int64(stmt, i));
         break;
       case SQLITE_FLOAT:
-        point.values.push_back((float)sqlite3_column_double(stmt, i));
+        retval.values[i - 1].second.push_back((float)sqlite3_column_double(stmt, i));
         break;
       default:
         break;
       }
     }
-    retval.points.emplace_back(point);
   }
   sqlite3_finalize(stmt);
   return retval;

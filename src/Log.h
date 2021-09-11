@@ -30,14 +30,14 @@ public:
 
   void WriteChunk(viaems::LogChunk &&);
 
-  viaems::LogChunk GetRange(std::vector<std::string> keys,
-                            std::chrono::system_clock::time_point start,
-                            std::chrono::system_clock::time_point end);
+  viaems::LogRange GetRange(std::vector<std::string> keys,
+                            viaems::time_point start,
+                            viaems::time_point end);
 
   void SaveConfig(viaems::Configuration);
   std::vector<viaems::Configuration> LoadConfigs();
 
-  std::chrono::system_clock::time_point EndTime();
+  viaems::time_point EndTime();
 };
 
 class ThreadedWriteLog : public Log {

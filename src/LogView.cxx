@@ -54,49 +54,18 @@ void LogView::update_cache_time_range() {
   auto new_stop =
       std::chrono::system_clock::time_point{std::chrono::nanoseconds{stop_ns}};
 
-  /* Is new start before potentially cached start? Determine a range to fetch
-   * and fetch it (either newstart ->cachedstart or newstart -> newend. */
-
   auto log_locked = log.lock();
   if (!log_locked) {
     return;
   }
-  if (!cache.points.size()) {
-    cache = log_locked->GetRange(keys, new_start, new_stop);
-  } else {
-    auto cached_start = cache.points[0].time;
-    if (new_start < cached_start) {
-      auto updates = log_locked->GetRange(keys, new_start, cached_start);
-      cache.points.insert(cache.points.begin(), updates.points.begin(),
-                          updates.points.end());
-    }
-    auto cached_stop = cache.points[cache.points.size() - 1].time;
-    if (new_stop > cached_stop) {
-      auto updates = log_locked->GetRange(keys, cached_stop, new_stop);
-      cache.points.insert(cache.points.end(), updates.points.begin(),
-                          updates.points.end());
-    }
-  }
+  cache = log_locked->GetRange(keys, new_start, new_stop);
 
-  if (!cache.points.size()) {
+  if (!cache.size()) {
     return;
-  }
-
-  for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
-    if (i->time >= new_start) {
-      cache.points.erase(cache.points.begin(), i);
-      break;
-    }
-  }
-  for (auto i = cache.points.end() - 1; i != cache.points.begin(); i--) {
-    if (i->time < new_stop) {
-      cache.points.erase(i + 1, cache.points.end());
-      break;
-    }
   }
 }
 
-/* Recompute pointgroups for pixels x1 through x1 inclusive */
+/* Recompute pointgroups for pixels x1 through x2 inclusive */
 void LogView::recompute_pointgroups(int x1, int x2) {
   if (stop_ns == start_ns) {
     return;
@@ -114,12 +83,6 @@ void LogView::recompute_pointgroups(int x1, int x2) {
     }
   }
 
-  std::vector<std::vector<PointGroup> *> keymap;
-  for (auto i : config) {
-    auto k = i.first;
-    keymap.push_back(&series[k]);
-  }
-
   std::vector<range> pixel_ranges;
   auto ns_per_pixel = (stop_ns - start_ns) / w();
   for (auto k = x1; k <= x2; k++) {
@@ -129,55 +92,60 @@ void LogView::recompute_pointgroups(int x1, int x2) {
   }
 
   auto start = std::lower_bound(
-      cache.points.begin(), cache.points.end(), pixel_ranges[0].start_ns,
+      cache.times.begin(), cache.times.end(), pixel_ranges[0].start_ns,
       [](const auto &point, uint64_t time) {
         return std::chrono::duration_cast<std::chrono::nanoseconds>(
-                   point.time.time_since_epoch())
+                   point.time_since_epoch())
                    .count() < time;
       });
   auto stop = std::upper_bound(
-      start, cache.points.end(), pixel_ranges[pixel_ranges.size() - 1].stop_ns,
+      start, cache.times.end(), pixel_ranges[pixel_ranges.size() - 1].stop_ns,
       [](uint64_t time, const auto &point) {
         return time < std::chrono::duration_cast<std::chrono::nanoseconds>(
-                          point.time.time_since_epoch())
+                          point.time_since_epoch())
                           .count();
       });
 
-  int pixel = x1;
-  for (auto i = start; i < stop; i++) {
-    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 i->time.time_since_epoch())
-                 .count();
-    while ((t >= pixel_ranges[pixel - x1].stop_ns) && pixel < w()) {
-      pixel++;
-    }
-    if (pixel == w()) {
-      break;
-    }
+  int series_index = 0;
+  for (auto &[_, s] : series) {
+    int pixel = x1;
+    for (int point_index = (start - cache.times.begin()); 
+          point_index < (stop - cache.times.begin()); 
+            point_index++) {
+      auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          cache.times[point_index].time_since_epoch())
+        .count();
 
-    for (int k = 0; k < keymap.size(); k++) {
-      auto &s = keymap[k]->at(pixel);
-      viaems::FeedValue fv = i->values[k];
+      while ((t >= pixel_ranges[pixel - x1].stop_ns) && pixel < w()) {
+        pixel++;
+      }
+      if (pixel == w()) {
+        series_index++;
+        break;
+      }
+
+      viaems::FeedValue fv = cache.values[series_index].second[point_index];
       float v;
       if (std::holds_alternative<uint32_t>(fv)) {
         v = std::get<uint32_t>(fv);
       } else {
         v = std::get<float>(fv);
       }
-      if (!s.set) {
-        s.first = v;
-        s.min = v;
-        s.max = v;
+      if (!s[pixel].set) {
+        s[pixel].first = v;
+        s[pixel].min = v;
+        s[pixel].max = v;
       }
-      if (v < s.min) {
-        s.min = v;
+      if (v < s[pixel].min) {
+        s[pixel].min = v;
       }
-      if (v > s.max) {
-        s.max = v;
+      if (v > s[pixel].max) {
+        s[pixel].max = v;
       }
-      s.last = v;
-      s.set = true;
+      s[pixel].last = v;
+      s[pixel].set = true;
     }
+    series_index++;
   }
 }
 
@@ -378,5 +346,5 @@ void LogView::resize(int X, int Y, int W, int H) {
 
 void LogView::SetLog(std::weak_ptr<Log> log) {
   this->log = log;
-  this->cache = viaems::LogChunk{};
+  this->cache = viaems::LogRange{};
 };

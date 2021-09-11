@@ -41,7 +41,7 @@ private:
 
   std::map<std::string, SeriesConfig> config;
   std::map<std::string, std::vector<PointGroup>> series;
-  viaems::LogChunk cache;
+  viaems::LogRange cache;
 
   int handle(int);
   void recompute_pointgroups(int x1, int x2);

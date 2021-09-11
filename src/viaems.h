@@ -21,15 +21,43 @@ typedef std::chrono::time_point<std::chrono::system_clock> FeedTime;
 typedef std::variant<uint32_t, float> FeedValue;
 
 typedef std::vector<std::variant<int, std::string>> StructurePath;
+using time_point = std::chrono::system_clock::time_point;
 
 struct LogPoint {
-  std::chrono::system_clock::time_point time;
+  time_point time;
   std::vector<viaems::FeedValue> values;
 };
 
 struct LogChunk {
   std::vector<LogPoint> points;
   std::vector<std::string> keys;
+};
+
+struct LogRange {
+  std::vector<time_point> times;
+  std::vector<std::pair<std::string, std::vector<FeedValue>>> values;
+
+  const std::vector<FeedValue>* valuesForKey(std::string key) {
+    for (const auto &elem : values) {
+      if (key == elem.first) {
+        return &elem.second;
+      }
+    }
+    return nullptr;
+  }
+
+  void add_point(time_point time, std::vector<FeedValue> points) {
+    if (points.size() != values.size()) {
+      return;
+    }
+
+    times.push_back(time);
+    for (int i = 0; i < values.size(); i++) {
+      values[i].second.push_back(points[i]);
+    }
+  }
+
+  size_t size() const { return times.size(); };
 };
 
 struct TableAxis {
