@@ -24,7 +24,7 @@ public:
   Log &operator=(const Log &) = delete;
   ~Log() {
     if (db != nullptr) {
-      auto res = sqlite3_close(db);
+      sqlite3_close(db);
     }
   };
 
