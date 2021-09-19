@@ -18,7 +18,7 @@ struct AnalysisPoint {
   double ego;
 };
 
-std::vector<AnalysisPoint> get_points() {
+std::vector<AnalysisPoint> get_points(Log& log) {
   std::vector<std::string> keys{"realtime_ns",
                                 "rpm",
                                 "ve",
@@ -28,8 +28,8 @@ std::vector<AnalysisPoint> get_points() {
                                 "sensor.map",
                                 "sensor.ego"};
 
-  auto log = std::make_shared<Log>("log.vlog");
-  auto data = log->GetRange(keys, {}, log->EndTime());
+  auto end = log.EndTime();
+  auto data = log.GetRange(keys, {}, end);
   std::vector<AnalysisPoint> points;
   for (int index = 0; index < data.times.size(); index++) {
     AnalysisPoint p;
@@ -160,12 +160,32 @@ struct PointBuckets {
   }
 };
 
+void apply(viaems::TableValue& table, const PointBuckets& buckets) {
+  for (int c = 0; c < buckets.cols.size(); c++) {
+    for (int r = 0; r < buckets.rows.size(); r++) {
+      double avg = buckets.table[r][c].size() == 0 ? 0 : std::accumulate(buckets.table[r][c].begin(), buckets.table[r][c].end(), 0.0) / buckets.table[r][c].size();
+      if (avg > 1.0) {
+        table.two[c][r] = (float)avg;
+      }
+    }
+  }
+}
+
 int main() {
-  std::vector<double> rows{500, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600, 3900, 4200, 4500, 4800, 5100, 5400, 5700, 6000, 6300, 6600};
-  std::vector<double> cols{23, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230};
+  auto log = std::make_shared<Log>("log.vlog");
+  auto config = log->LoadConfigs()[0];
+
+  config.name = "log analysis";
+  config.save_time = std::chrono::system_clock::now();
+  auto ve = std::get<viaems::TableValue>(config.values[{"tables", "ve"}]);
+
+  std::vector<double> rows{250, 500, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600, 3900, 4200, 4500, 4800, 5100, 5400, 5700, 6000, 6300, 6600};
+  std::vector<double> cols{23, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 100, 120,  140, 160, 180, 200, 220, 240};
+
   std::cerr << "retrieving..." << std::endl;;
-  auto original = get_points();
+  auto original = get_points(*log);
   std::cerr << "retrieved " << original.size() << " points" << std::endl;;
+
   std::vector<AnalysisPoint> window;
   PointBuckets buckets{rows, cols, 100, 3};
   for (const auto &point : original) {
@@ -175,5 +195,9 @@ int main() {
       buckets.insert(point.rpm, point.map, new_ve);
     }
   }
+
   buckets.report();
+  apply(ve, buckets);
+  config.values[{"tables", "ve"}] = ve;
+  log->SaveConfig(config);
 }
