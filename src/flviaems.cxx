@@ -143,20 +143,20 @@ class FLViaems {
     auto v = static_cast<FLViaems *>(ptr);
 
     auto updates =
-        v->protocol ? v->protocol->FeedUpdates() : viaems::LogChunk{};
+        v->protocol ? v->protocol->FeedUpdates() : viaems::LogRange{};
     static std::deque<int> rates;
 
     /* Keep average over 1 second */
-    rates.push_back(updates.points.size());
+    rates.push_back(updates.size());
     if (rates.size() > 20) {
       rates.erase(rates.begin());
     }
 
-    if (updates.points.size() > 0) {
+    if (updates.size() > 0) {
       std::map<std::string, viaems::FeedValue> status;
       for (unsigned int i = 0; i < updates.keys.size(); i++) {
         status.insert(
-            std::make_pair(updates.keys[i], updates.points[0].values[i]));
+            std::make_pair(updates.keys[i], updates.values[i][0]));
       }
 
       v->ui.feed_update(status);

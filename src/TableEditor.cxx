@@ -1,5 +1,6 @@
 #include "TableEditor.h"
 #include <iostream>
+#include <algorithm>
 
 #include <FL/Fl_Window.H>
 #include <FL/fl_draw.H>

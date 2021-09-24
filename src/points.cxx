@@ -29,7 +29,8 @@ std::vector<AnalysisPoint> get_points(Log& log) {
                                 "sensor.ego"};
 
   auto end = log.EndTime();
-  auto data = log.GetRange(keys, {}, end);
+//  auto data = log.GetRange(keys, {}, end);
+  auto data = log.GetRange(keys, end - std::chrono::minutes{20}, end);
   std::vector<AnalysisPoint> points;
   for (int index = 0; index < data.times.size(); index++) {
     AnalysisPoint p;
@@ -171,6 +172,22 @@ void apply(viaems::TableValue& table, const PointBuckets& buckets) {
   }
 }
 
+PointBuckets compare(viaems::TableValue& table, const PointBuckets& buckets) {
+  PointBuckets ret = buckets;
+  for (int c = 0; c < buckets.cols.size(); c++) {
+    for (int r = 0; r < buckets.rows.size(); r++) {
+      double avg = buckets.table[r][c].size() == 0 ? 0 : std::accumulate(buckets.table[r][c].begin(), buckets.table[r][c].end(), 0.0) / buckets.table[r][c].size();
+      if (avg > 1.0) {
+        ret.table[r][c] = {avg - table.two[c][r]};
+      } else {
+        ret.table[r][c] = {0};
+      }
+
+    }
+  }
+  return ret;
+}
+
 int main() {
   auto log = std::make_shared<Log>("log.vlog");
   auto config = log->LoadConfigs()[0];
@@ -197,7 +214,9 @@ int main() {
   }
 
   buckets.report();
+  auto difference = compare(ve, buckets);
+  difference.report();
   apply(ve, buckets);
   config.values[{"tables", "ve"}] = ve;
-  log->SaveConfig(config);
+//  log->SaveConfig(config);
 }

@@ -11,10 +11,9 @@ using json = json;
 
 using namespace viaems;
 
-LogChunk Protocol::FeedUpdates() {
+LogRange Protocol::FeedUpdates() {
   auto updates = std::move(m_feed_updates);
-  m_feed_updates = LogChunk{};
-  m_feed_updates.keys = m_feed_vars;
+  m_feed_updates = LogRange{m_feed_vars};
   return updates;
 }
 
@@ -44,7 +43,6 @@ void Protocol::handle_feed_message_from_ems(const json &a) {
   if (a.size() != m_feed_vars.size()) {
     return;
   }
-  LogPoint update;
   unsigned int i;
   for (i = 0; i < m_feed_vars.size(); i++) {
     if (m_feed_vars[i] == "cputime") {
@@ -54,21 +52,23 @@ void Protocol::handle_feed_message_from_ems(const json &a) {
   if (i == m_feed_vars.size()) {
     return;
   }
-  auto cputime = a[i].get<uint32_t>();
-  if (cputime < last_feed_time) {
-    zero_time = calculate_zero_point(cputime, std::chrono::system_clock::now());
+  auto cputime_ns = a[i].get<uint32_t>();
+  if (cputime_ns < last_feed_time) {
+    zero_time = calculate_zero_point(cputime_ns, std::chrono::system_clock::now());
   }
-  update.time = calculate_real_time(cputime, zero_time);
-  last_feed_time = cputime;
+  auto time = calculate_real_time(cputime_ns, zero_time);
+  last_feed_time = cputime_ns;
+
+  std::vector<FeedValue> values;
   for (size_t i = 0; i < a.size(); i++) {
     const json &val = a[i];
     if (val.is_number_integer()) {
-      update.values.push_back(FeedValue(val.get<uint32_t>()));
+      values.push_back(val.get<uint32_t>());
     } else if (val.is_number_float()) {
-      update.values.push_back(FeedValue(val.get<float>()));
+      values.push_back(val.get<float>());
     }
   }
-  m_feed_updates.points.emplace_back(update);
+  m_feed_updates.add_point(time, values);
 }
 
 static StructureLeaf generate_config_node(const json &entry,

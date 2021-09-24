@@ -6,7 +6,7 @@
 #include "Log.h"
 
 static std::string
-points_table_schema_from_update(const viaems::LogChunk &update) {
+points_table_schema_from_update(const viaems::LogRange &update) {
   std::string query;
 
   int index = 0;
@@ -14,7 +14,7 @@ points_table_schema_from_update(const viaems::LogChunk &update) {
   query += "CREATE TABLE points (realtime_ns INTEGER,";
   for (const auto &x : update.keys) {
     query += "\"" + x + "\" ";
-    if (std::holds_alternative<uint32_t>(update.points[0].values[index])) {
+    if (std::holds_alternative<uint32_t>(update.values[index][0])) {
       query += "INTEGER";
     } else {
       query += "REAL";
@@ -74,7 +74,7 @@ static std::vector<std::string> current_points_keys(sqlite3 *db) {
   return keys;
 }
 
-static void ensure_db_schema(sqlite3 *db, const viaems::LogChunk &update) {
+static void ensure_db_schema(sqlite3 *db, const viaems::LogRange &update) {
 
   auto table_keys = current_points_keys(db);
 
@@ -105,7 +105,7 @@ static void ensure_db_schema(sqlite3 *db, const viaems::LogChunk &update) {
   }
 }
 
-void Log::WriteChunk(viaems::LogChunk &&update) {
+void Log::WriteChunk(viaems::LogRange &&update) {
   if (!db) {
     return;
   }
@@ -124,17 +124,14 @@ void Log::WriteChunk(viaems::LogChunk &&update) {
 
   sqlite3_exec(db, "BEGIN;", NULL, 0, NULL);
 
-  for (const auto &point : update.points) {
+  for (int index = 0; index < update.size(); index++) {
     sqlite3_reset(insert_stmt);
     /* timestamp */
-    uint64_t time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                           point.time.time_since_epoch())
-                           .count();
+    auto [time, values] = update.valuesAtIndex(index);
+    uint64_t time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time.time_since_epoch()).count();
     sqlite3_bind_int64(insert_stmt, 1, time_ns);
     int sql_index = 2;
-    for (const auto &key : update.keys) {
-      int value_index = sql_index - 2;
-      const auto &value = point.values[value_index];
+    for (const auto &value : values) {
       if (std::holds_alternative<uint32_t>(value)) {
         sqlite3_bind_int64(insert_stmt, sql_index, std::get<uint32_t>(value));
       } else {
@@ -205,37 +202,31 @@ viaems::LogRange Log::GetRange(std::vector<std::string> keys,
   sqlite3_bind_int64(stmt, 2, stop_ns);
 
   int res;
-  viaems::LogRange retval;
-  for (auto k : keys) {
-    retval.values.push_back({k, {}});
-  }
-  for (auto &x : retval.values) {
-    x.second.reserve(50000);
-  }
+  viaems::LogRange retval{keys};
   while (true) {
     res = sqlite3_step(stmt);
     if ((res == SQLITE_DONE) || (res == SQLITE_MISUSE)) {
       break;
     }
 
-    viaems::LogPoint point;
-    uint64_t ts = sqlite3_column_int64(stmt, 0);
-    auto since_epoch = std::chrono::nanoseconds{ts};
-    retval.times.push_back(std::chrono::system_clock::time_point{since_epoch});
+    std::vector<viaems::FeedValue> point;
+    uint64_t time_ns = sqlite3_column_int64(stmt, 0);
+    auto time = std::chrono::system_clock::time_point{std::chrono::nanoseconds{time_ns}};
 
     for (int i = 1; i < sqlite3_column_count(stmt); i++) {
       auto coltype = sqlite3_column_type(stmt, i);
       switch (coltype) {
       case SQLITE_INTEGER:
-        retval.values[i - 1].second.push_back((uint32_t)sqlite3_column_int64(stmt, i));
+        point.push_back((uint32_t)sqlite3_column_int64(stmt, i));
         break;
       case SQLITE_FLOAT:
-        retval.values[i - 1].second.push_back((float)sqlite3_column_double(stmt, i));
+        point.push_back((float)sqlite3_column_double(stmt, i));
         break;
       default:
         break;
       }
     }
+    retval.add_point(time, point);
   }
   sqlite3_finalize(stmt);
   return retval;
@@ -348,7 +339,7 @@ std::vector<viaems::Configuration> Log::LoadConfigs() {
   return configs;
 }
 
-void ThreadedWriteLog::WriteChunk(viaems::LogChunk &&chunk) {
+void ThreadedWriteLog::WriteChunk(viaems::LogRange &&chunk) {
   std::unique_lock<std::mutex> lock(mutex);
   chunks.emplace_back(chunk);
   cv.notify_one();

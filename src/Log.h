@@ -28,7 +28,7 @@ public:
     }
   };
 
-  void WriteChunk(viaems::LogChunk &&);
+  void WriteChunk(viaems::LogRange &&);
 
   viaems::LogRange GetRange(std::vector<std::string> keys,
                             viaems::time_point start,
@@ -43,7 +43,7 @@ public:
 class ThreadedWriteLog : public Log {
   std::mutex mutex;
   std::condition_variable cv;
-  std::deque<viaems::LogChunk> chunks;
+  std::deque<viaems::LogRange> chunks;
   std::thread thread;
   std::atomic<bool> running;
 
@@ -63,5 +63,5 @@ public:
     thread = std::thread([](ThreadedWriteLog *w) { w->write_loop(); }, this);
   }
 
-  void WriteChunk(viaems::LogChunk &&);
+  void WriteChunk(viaems::LogRange &&);
 };

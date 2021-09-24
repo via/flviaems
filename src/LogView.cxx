@@ -58,7 +58,27 @@ void LogView::update_cache_time_range() {
   if (!log_locked) {
     return;
   }
-  cache = log_locked->GetRange(keys, new_start, new_stop);
+  if (!cache.size()) {
+    cache = log_locked->GetRange(keys, new_start, new_stop);
+  } else {
+    auto cached_start = cache.times[0];
+    if (new_start < cached_start) {
+      auto updates = log_locked->GetRange(keys, new_start, cached_start);
+      cache.prepend(updates);
+    }
+    auto cached_stop = cache.times[cache.size() - 1];
+    if (new_stop > cached_stop) {
+      auto updates = log_locked->GetRange(keys, cached_stop, new_stop);
+			cache.append(updates);
+    }
+  }
+ 
+  if (!cache.size()) {
+     return;
+   }
+
+  cache.erase_after(new_stop);
+  cache.erase_before(new_start);
 
   if (!cache.size()) {
     return;
@@ -124,7 +144,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
         break;
       }
 
-      viaems::FeedValue fv = cache.values[series_index].second[point_index];
+      viaems::FeedValue fv = cache.values[series_index][point_index];
       float v;
       if (std::holds_alternative<uint32_t>(fv)) {
         v = std::get<uint32_t>(fv);

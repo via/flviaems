@@ -35,13 +35,31 @@ struct LogChunk {
 
 struct LogRange {
   std::vector<time_point> times;
-  std::vector<std::pair<std::string, std::vector<FeedValue>>> values;
+  std::vector<std::string> keys;
+  std::vector<std::vector<FeedValue>> values;
 
-  const std::vector<FeedValue>* valuesForKey(std::string key) {
-    for (const auto &elem : values) {
-      if (key == elem.first) {
-        return &elem.second;
+  LogRange() = default;
+  LogRange(const std::vector<std::string> &keys) : keys{keys} {
+    for (auto k : keys) {
+      this->values.push_back({});
+    }
+  }
+
+  std::pair<time_point, std::vector<FeedValue>> valuesAtIndex(int index) {
+    std::vector<FeedValue> res;
+    for (const auto &i : values) {
+      res.push_back(i[index]);
+    }
+    return {times[index], res};
+  }
+
+  std::vector<FeedValue>* valuesForKey(std::string key) {
+    int index = 0;
+    for (const auto &k : keys) {
+      if (key == k) {
+        return &values[index];
       }
+      index += 1;
     }
     return nullptr;
   }
@@ -53,9 +71,41 @@ struct LogRange {
 
     times.push_back(time);
     for (int i = 0; i < values.size(); i++) {
-      values[i].second.push_back(points[i]);
+      values[i].push_back(points[i]);
     }
-  }
+	}
+
+	void prepend(const LogRange &r) {
+    times.insert(times.begin(), r.times.begin(), r.times.end());
+		for (int i = 0; i < r.keys.size(); i++) {
+			values[i].insert(values[i].begin(), r.values[i].begin(), r.values[i].end());
+		}
+	}
+
+	void append(const LogRange &r) {
+    times.insert(times.end(), r.times.begin(), r.times.end());
+		for (int i = 0; i < r.keys.size(); i++) {
+			values[i].insert(values[i].end(), r.values[i].begin(), r.values[i].end());
+		}
+	}
+
+  void erase_before(time_point at) {
+    auto last = std::lower_bound(times.begin(), times.end(), at);
+    auto last_index = last - times.begin();
+		for (int i = 0; i < keys.size(); i++) {
+			values[i].erase(values[i].begin(), values[i].begin() + last_index);
+		}
+    times.erase(times.begin(), last);
+	}
+
+  void erase_after(time_point at) {
+    auto last = std::upper_bound(times.begin(), times.end(), at);
+    auto last_index = last - times.begin();
+		for (int i = 0; i < keys.size(); i++) {
+			values[i].erase(values[i].begin() + last_index, values[i].end());
+		}
+    times.erase(last, times.end());
+	}
 
   size_t size() const { return times.size(); };
 };
@@ -215,7 +265,7 @@ class Protocol {
 public:
   Protocol(std::unique_ptr<Connection> conn) : connection{std::move(conn)} {};
 
-  LogChunk FeedUpdates();
+  LogRange FeedUpdates();
   void NewData();
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
@@ -230,7 +280,7 @@ private:
   std::unique_ptr<Connection> connection;
 
   std::vector<std::string> m_feed_vars;
-  LogChunk m_feed_updates;
+  LogRange m_feed_updates;
   std::function<void(const json &)> write_cb;
   std::deque<std::shared_ptr<Request>> m_requests;
 
