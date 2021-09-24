@@ -18,6 +18,11 @@ struct AnalysisPoint {
   double ego;
 };
 
+struct AnalysisWindow {
+  std::vector<AnalysisPoint> values;
+  AnalysisPoint sum = {0};
+};
+
 std::vector<AnalysisPoint> get_points(Log& log) {
   std::vector<std::string> keys{"realtime_ns",
                                 "rpm",
@@ -56,31 +61,40 @@ std::vector<AnalysisPoint> get_points(Log& log) {
   return points;
 }
 
-void add_to_window(std::vector<AnalysisPoint> &window, uint64_t window_size_ns, const AnalysisPoint point) {
-  window.push_back(point);
-  while((window.size() > 0) && point.realtime_ns - window[0].realtime_ns > window_size_ns) {
-    window.erase(window.begin());
+void add_to_window(AnalysisWindow &window, uint64_t window_size_ns, const AnalysisPoint point) {
+  window.values.push_back(point);
+
+  window.sum.rpm += point.rpm;
+  window.sum.ve += point.ve;
+  window.sum.lambda += point.lambda;
+  window.sum.accel_enrich_percent += point.accel_enrich_percent;
+  window.sum.temp_enrich_percent += point.temp_enrich_percent;
+  window.sum.map += point.map;
+  window.sum.ego += point.ego;
+
+  while((window.values.size() > 0) && point.realtime_ns - window.values[0].realtime_ns > window_size_ns) {
+    auto deleted = window.values[0];
+    window.values.erase(window.values.begin());
+
+    window.sum.rpm -= deleted.rpm;
+    window.sum.ve -= deleted.ve;
+    window.sum.lambda -= deleted.lambda;
+    window.sum.accel_enrich_percent -= deleted.accel_enrich_percent;
+    window.sum.temp_enrich_percent -= deleted.temp_enrich_percent;
+    window.sum.map -= deleted.map;
+    window.sum.ego -= deleted.ego;
   }
 }
 
-AnalysisPoint average(const std::vector<AnalysisPoint> &window) {
-  AnalysisPoint average{};
-  for (const auto &p : window) {
-    average.rpm += p.rpm;
-    average.ve += p.ve;
-    average.lambda += p.lambda;
-    average.accel_enrich_percent += p.accel_enrich_percent;
-    average.temp_enrich_percent += p.temp_enrich_percent;
-    average.map += p.map;
-    average.ego += p.ego;
-  }
-  average.rpm /= window.size();
-  average.ve /= window.size();
-  average.lambda /= window.size();
-  average.accel_enrich_percent /= window.size();
-  average.temp_enrich_percent /= window.size(); 
-  average.map /= window.size();
-  average.ego /= window.size();
+AnalysisPoint average(const AnalysisWindow &window) {
+  AnalysisPoint average = window.sum;
+  average.rpm /= window.values.size();
+  average.ve /= window.values.size();
+  average.lambda /= window.values.size();
+  average.accel_enrich_percent /= window.values.size();
+  average.temp_enrich_percent /= window.values.size(); 
+  average.map /= window.values.size();
+  average.ego /= window.values.size();
   return average;
 }
   
@@ -89,7 +103,7 @@ bool within_percent(double a, double b, double percent) {
 }
 
 
-bool window_is_stable(const std::vector<AnalysisPoint> &window) {
+bool window_is_stable(const AnalysisWindow &window) {
   auto avg = average(window);
   if (avg.temp_enrich_percent != 1.0) {
     return false;
@@ -97,7 +111,7 @@ bool window_is_stable(const std::vector<AnalysisPoint> &window) {
   if (avg.accel_enrich_percent != 0.0) {
     return false;
   }
-  for (const auto &p : window) {
+  for (const auto &p : window.values) {
     if (!within_percent(p.rpm, avg.rpm, 5)) {
       return false;
     }
@@ -202,7 +216,7 @@ int main() {
   auto original = get_points(*log);
   std::cerr << "retrieved " << original.size() << " points" << std::endl;;
 
-  std::vector<AnalysisPoint> window;
+  AnalysisWindow window;
   PointBuckets buckets{rows, cols, 100, 3};
   for (const auto &point : original) {
     add_to_window(window, 250000000, point);
