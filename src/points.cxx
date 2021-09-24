@@ -32,26 +32,25 @@ std::vector<AnalysisPoint> get_points(Log& log) {
 //  auto data = log.GetRange(keys, {}, end);
   auto data = log.GetRange(keys, end - std::chrono::minutes{20}, end);
   std::vector<AnalysisPoint> points;
+
+  auto *rpms = data.valuesForKey("rpm");
+  auto *lambdas = data.valuesForKey("lambda");
+  auto *ves = data.valuesForKey("ve");
+  auto *aeps = data.valuesForKey("accel_enrich_percent");
+  auto *teps = data.valuesForKey("temp_enrich_percent");
+  auto *maps = data.valuesForKey("sensor.map");
+  auto *egos = data.valuesForKey("sensor.ego");
+
   for (int index = 0; index < data.times.size(); index++) {
     AnalysisPoint p;
     p.realtime_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(data.times[index].time_since_epoch()).count();
-    for (const auto & [k, v] : data.values) {
-      if (k == "rpm") {
-        p.rpm = std::get<uint32_t>(v[index]);
-      } else if (k == "ve") {
-        p.ve = std::get<float>(v[index]);
-      } else if (k == "lambda") {
-        p.lambda = std::get<float>(v[index]);
-      } else if (k == "accel_enrich_percent") {
-        p.accel_enrich_percent = std::get<float>(v[index]);
-      } else if (k == "temp_enrich_percent") {
-        p.temp_enrich_percent = std::get<float>(v[index]);
-      } else if (k == "sensor.map") {
-        p.map = std::get<float>(v[index]);
-      } else if (k == "sensor.ego") {
-        p.ego = std::get<float>(v[index]);
-      } 
-    }
+    p.rpm = std::get<uint32_t>((*rpms)[index]);
+    p.ve = std::get<float>((*ves)[index]);
+    p.lambda = std::get<float>((*lambdas)[index]);
+    p.accel_enrich_percent = std::get<float>((*aeps)[index]);
+    p.temp_enrich_percent = std::get<float>((*teps)[index]);
+    p.map = std::get<float>((*maps)[index]);
+    p.ego = std::get<float>((*egos)[index]);
     points.push_back(p);
   }
   return points;
