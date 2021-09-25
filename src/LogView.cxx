@@ -200,7 +200,7 @@ void LogView::draw() {
 
         fl_line(x() + cx, y() + h() - cymin, x() + cx, y() + h() - cymax);
         if (last_y >= 0) {
-          fl_line(x() + last_x, y() + h() - last_y, x() + cx - 1,
+          fl_line(x() + last_x, y() + h() - last_y, x() + cx ,
                   y() + h() - cyfirst);
         }
         /* Save this pointgroup to use with the mouse cursor */

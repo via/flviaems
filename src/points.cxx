@@ -34,8 +34,8 @@ std::vector<AnalysisPoint> get_points(Log& log) {
                                 "sensor.ego"};
 
   auto end = log.EndTime();
-//  auto data = log.GetRange(keys, {}, end);
-  auto data = log.GetRange(keys, end - std::chrono::minutes{20}, end);
+  auto data = log.GetRange(keys, {}, end);
+//  auto data = log.GetRange(keys, end - std::chrono::minutes{20}, end);
   std::vector<AnalysisPoint> points;
 
   auto *rpms = data.valuesForKey("rpm");
@@ -46,6 +46,7 @@ std::vector<AnalysisPoint> get_points(Log& log) {
   auto *maps = data.valuesForKey("sensor.map");
   auto *egos = data.valuesForKey("sensor.ego");
 
+  points.reserve(data.times.size());
   for (int index = 0; index < data.times.size(); index++) {
     AnalysisPoint p;
     p.realtime_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(data.times[index].time_since_epoch()).count();
