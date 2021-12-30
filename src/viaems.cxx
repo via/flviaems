@@ -179,7 +179,7 @@ static ConfigValue generate_table_value_from_cbor(const json &map) {
 static ConfigValue generate_output_value_from_cbor(const json &map) {
   OutputValue v;
   v.angle = map.at("angle");
-  v.inverted = map.at("inverted") != 0;
+  v.inverted = map.at("inverted");
   v.pin = map.at("pin");
   v.type = map.at("type");
   return v;
@@ -245,6 +245,9 @@ static ConfigValue generate_node_value_from_cbor(const json &value) {
   if (value.is_number_float()) {
     return value.get<float>();
   }
+  if (value.is_boolean()) {
+    return value.get<bool>();
+  }
   if (value.is_string()) {
     return value.get<std::string>();
   }
@@ -290,7 +293,7 @@ static json cbor_from_value(const OutputValue &v) {
       {"type", v.type},
       {"angle", v.angle},
       {"pin", v.pin},
-      {"inverted", v.inverted ? 1 : 0},
+      {"inverted", v.inverted},
   };
 }
 

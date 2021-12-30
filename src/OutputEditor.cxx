@@ -25,7 +25,7 @@ std::vector<viaems::OutputValue> OutputEditor::get_outputs() {
     value.type = widget.type->text();
     value.pin = widget.pin->value();
     value.angle = widget.angle->value();
-    value.inverted = widget.inverted->value() ? true : false;
+    value.inverted = widget.inverted->value();
     result.push_back(value);
   }
   return result;

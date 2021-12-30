@@ -83,7 +83,7 @@ struct OutputValue {
   std::string type;
 };
 
-typedef std::variant<uint32_t, float, std::string, TableValue, SensorValue,
+typedef std::variant<uint32_t, float, bool, std::string, TableValue, SensorValue,
                      OutputValue>
     ConfigValue;
 
