@@ -179,7 +179,12 @@ static ConfigValue generate_table_value_from_cbor(const json &map) {
 static ConfigValue generate_output_value_from_cbor(const json &map) {
   OutputValue v;
   v.angle = map.at("angle");
-  v.inverted = map.at("inverted");
+  auto inverted = map.at("inverted");
+  if (inverted.is_boolean()) {
+    v.inverted = inverted;
+  } else {
+    v.inverted = inverted == 1 ? true : false;
+  }
   v.pin = map.at("pin");
   v.type = map.at("type");
   return v;

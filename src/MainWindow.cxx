@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <FL/Fl_Button.H>
+#include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Output.H>
@@ -147,6 +148,41 @@ public:
   }
 
   viaems::ConfigValue get_value() { return std::string{chooser->text()}; }
+};
+
+class BooleanTreeWidget : public SelectableTreeWidget {
+  Fl_Check_Button *checkbox;
+
+protected:
+  static void changed_callback(Fl_Widget *fl, void *p) {
+    auto ctw = static_cast<BooleanTreeWidget *>(p);
+    ctw->callback()(ctw, ctw->user_data());
+    ctw->dirty(true);
+  }
+
+public:
+  BooleanTreeWidget(int X, int Y, int W, int H, viaems::StructurePath path)
+      : SelectableTreeWidget(X, Y, W, H, path) {
+
+    begin();
+
+    this->checkbox = new Fl_Check_Button{X + id_box->w(), Y, 100, H};
+    this->checkbox->callback(changed_callback, this);
+
+    end();
+  }
+
+  void update_value(viaems::ConfigValue value) {
+    try {
+      bool checked = std::get<bool>(value);
+      this->checkbox->value(checked ? 1 : 0);
+      dirty(false);
+    } catch (std::exception &_) {
+      std::cerr << "Exception!" << std::endl;
+    }
+  }
+
+  viaems::ConfigValue get_value() { return this->checkbox->value() ? true : false; }
 };
 
 static SelectableTreeWidget *
@@ -511,6 +547,10 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
           w->callback(structure_value_update_callback, this);
         } else if (leaf.type == "float") {
           w = new NumericTreeWidget<float>(0, 0, 300, 18, leaf.path);
+          w->update_value(value);
+          w->callback(structure_value_update_callback, this);
+        } else if (leaf.type == "bool") {
+          w = new BooleanTreeWidget(0, 0, 300, 18, leaf.path);
           w->update_value(value);
           w->callback(structure_value_update_callback, this);
         } else if (leaf.type == "string") {
