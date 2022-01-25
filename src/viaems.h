@@ -28,7 +28,7 @@ struct LogPoint {
 };
 
 struct LogChunk {
-  std::deque<LogPoint> points;
+  std::vector<LogPoint> points;
   std::vector<std::string> keys;
 };
 
@@ -179,7 +179,7 @@ struct Request {
 class Connection {
 public:
   virtual void Write(const json &msg) = 0;
-  virtual std::optional<json> Read() = 0;
+  virtual std::vector<json> Read() = 0;
   virtual ~Connection() {}
 };
 
@@ -202,6 +202,7 @@ private:
   std::unique_ptr<Connection> connection;
 
   std::vector<std::string> m_feed_vars;
+  int feed_time_position;
   LogChunk m_feed_updates;
   std::function<void(const json &)> write_cb;
   std::deque<std::shared_ptr<Request>> m_requests;

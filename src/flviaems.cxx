@@ -25,7 +25,7 @@ struct ThreadedJsonInterface {
   std::shared_ptr<std::istream> reader;
 
   std::thread reader_thread;
-  std::deque<json> in_messages;
+  std::vector<json> messages;
   std::mutex in_mutex;
   Fl_Awake_Handler handler;
   void *handler_ptr;
@@ -33,13 +33,13 @@ struct ThreadedJsonInterface {
   std::atomic<bool> running;
 
   static void do_reader_thread(ThreadedJsonInterface *self) {
+    int i = 0;
     while (self->running) {
       try {
         auto msg = json::from_cbor(*self->reader, false);
         std::unique_lock<std::mutex> lock(self->in_mutex);
-        self->in_messages.push_back(std::move(msg));
+        self->messages.push_back(std::move(msg));
         lock.unlock();
-        Fl::awake(self->handler, self->handler_ptr);
       } catch (json::parse_error &e) {
       }
     }
@@ -65,13 +65,11 @@ public:
     writer->flush();
   }
 
-  std::optional<json> Read() {
+  std::vector<json> Read() {
     std::unique_lock<std::mutex> lock(in_mutex);
-    if (in_messages.empty()) {
-      return {};
-    }
-    auto msg = std::move(in_messages[0]);
-    in_messages.pop_front();
+    auto msg = std::move(messages);
+    messages = std::vector<json>{};
+    messages.reserve(msg.size());
     return msg;
   }
 };
@@ -88,7 +86,7 @@ public:
   }
 
   virtual void Write(const json &msg) { conn->Write(msg); }
-  virtual std::optional<json> Read() { return conn->Read(); }
+  virtual std::vector<json> Read() { return conn->Read(); }
 };
 
 class DevConnection : public viaems::Connection {
@@ -125,7 +123,7 @@ public:
 
   virtual ~DevConnection() { close(fd); }
   virtual void Write(const json &msg) { conn->Write(msg); }
-  virtual std::optional<json> Read() { return conn->Read(); }
+  virtual std::vector<json> Read() { return conn->Read(); }
 };
 
 class FLViaems {
@@ -142,9 +140,13 @@ class FLViaems {
   static void feed_refresh_handler(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
 
+    if (v->protocol) {
+      v->protocol->NewData();
+    }
+
     auto updates =
         v->protocol ? v->protocol->FeedUpdates() : viaems::LogChunk{};
-    static std::deque<int> rates;
+    static std::vector<int> rates;
 
     /* Keep average over 1 second */
     rates.push_back(updates.points.size());
@@ -285,9 +287,6 @@ class FLViaems {
 
   static void message_available(void *ptr) {
     FLViaems *v = static_cast<FLViaems *>(ptr);
-    if (v->protocol) {
-      v->protocol->NewData();
-    }
   }
 
   void load_config(viaems::Configuration conf) {

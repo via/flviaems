@@ -20,8 +20,13 @@ LogChunk Protocol::FeedUpdates() {
 
 void Protocol::handle_description_message_from_ems(const json &a) {
   m_feed_vars.clear();
+  int x = 0;
   for (json i : a) {
     m_feed_vars.push_back(i);
+    if (i == "cputime") {
+      feed_time_position = x;
+    }
+    x++;
   }
   m_feed_updates.keys = m_feed_vars;
 }
@@ -44,28 +49,20 @@ void Protocol::handle_feed_message_from_ems(const json &a) {
   if (a.size() != m_feed_vars.size()) {
     return;
   }
-  LogPoint update;
-  unsigned int i;
-  for (i = 0; i < m_feed_vars.size(); i++) {
-    if (m_feed_vars[i] == "cputime") {
-      break;
-    }
-  }
-  if (i == m_feed_vars.size()) {
-    return;
-  }
-  auto cputime = a[i].get<uint32_t>();
+  auto cputime = a[feed_time_position].get<uint32_t>();
   if (cputime < last_feed_time) {
     zero_time = calculate_zero_point(cputime, std::chrono::system_clock::now());
   }
+  LogPoint update;
   update.time = calculate_real_time(cputime, zero_time);
+  update.values.reserve(a.size());
   last_feed_time = cputime;
   for (size_t i = 0; i < a.size(); i++) {
     const json &val = a[i];
     if (val.is_number_integer()) {
-      update.values.push_back(FeedValue(val.get<uint32_t>()));
+      update.values.push_back(val.get<uint32_t>());
     } else if (val.is_number_float()) {
-      update.values.push_back(FeedValue(val.get<float>()));
+      update.values.push_back(val.get<float>());
     }
   }
   m_feed_updates.points.emplace_back(update);
@@ -359,8 +356,7 @@ void Protocol::handle_response_message_from_ems(const json &msg) {
 }
 
 void Protocol::NewData() {
-  while (const auto &maybe_msg = connection->Read()) {
-    const auto &msg = maybe_msg.value();
+  for (auto &msg : connection->Read()) {
     if (!msg.is_object()) {
       return;
     }
@@ -379,7 +375,7 @@ void Protocol::NewData() {
     } else if (type == "description" && msg.contains("keys")) {
       handle_description_message_from_ems(msg["keys"]);
     } else if (type == "response" && msg.contains("id") &&
-               msg.contains("response")) {
+        msg.contains("response")) {
       handle_response_message_from_ems(msg);
     }
   }
