@@ -14,8 +14,10 @@ target_compile_features(flviaems PUBLIC cxx_std_17)
 find_package(Threads REQUIRED)
 target_link_libraries(flviaems Threads::Threads)
 
-find_library(FLTK fltk)
-target_link_libraries(flviaems ${FLTK})
+set(FLTK_BUILD_TEST OFF CACHE BOOL " " FORCE)
+add_subdirectory(extern/fltk)
+target_include_directories(flviaems PRIVATE extern/fltk ${CMAKE_BINARY_DIR}/extern/fltk)
+target_link_libraries(flviaems fltk)
 
 find_package(SQLite3)
 target_link_libraries(flviaems ${SQLite3_LIBRARIES})

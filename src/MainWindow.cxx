@@ -544,7 +544,7 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
                                             viaems::StructureNode node) {
   if (node.is_map()) {
     for (auto child : node.map()) {
-      auto item = new Fl_Tree_Item(m_config_tree->prefs());
+      auto item = new Fl_Tree_Item(m_config_tree);
       item->label(child.first.c_str());
       parent->add(m_config_tree->prefs(), "", item);
       if (child.second.is_leaf()) {
@@ -587,7 +587,7 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
   } else if (node.is_list()) {
     int index = 0;
     for (auto child : node.list()) {
-      auto item = new Fl_Tree_Item(m_config_tree->prefs());
+      auto item = new Fl_Tree_Item(m_config_tree);
       item->label(std::to_string(index).c_str());
       parent->add(m_config_tree->prefs(), "", item);
       if (child.is_leaf()) {
@@ -611,7 +611,7 @@ void MainWindow::update_config_structure(viaems::StructureNode top) {
   }
   m_config_tree->begin();
   for (auto child : top.map()) {
-    auto item = new Fl_Tree_Item(m_config_tree->prefs());
+    auto item = new Fl_Tree_Item(m_config_tree);
     item->label(child.first.c_str());
     root->add(m_config_tree->prefs(), "", item);
     if (child.first == "outputs") {
