@@ -8,6 +8,8 @@
 #include "LogView.h"
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
+  menu = new Fl_Menu_Button(X, Y, W, H);
+  menu->type(Fl_Menu_Button::POPUP3);
   config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
   series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
 
@@ -378,5 +380,12 @@ void LogView::resize(int X, int Y, int W, int H) {
 
 void LogView::SetLog(std::weak_ptr<Log> log) {
   this->log = log;
+
+  auto log_locked = log.lock();
+  auto keys = log_locked->Keys();
+  for (auto k : keys) {
+    menu->add(k.c_str(), 0, 0, 0, FL_MENU_TOGGLE);
+  }
+
   this->cache = viaems::LogChunk{};
 };

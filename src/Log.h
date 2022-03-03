@@ -84,6 +84,7 @@ public:
   viaems::LogChunk GetRange(std::vector<std::string> keys,
                             std::chrono::system_clock::time_point start,
                             std::chrono::system_clock::time_point end);
+  std::vector<std::string> Keys() const;
 
   LogRange GetLogRange(std::vector<std::string> keys,
                             std::chrono::system_clock::time_point start,

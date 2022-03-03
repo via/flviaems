@@ -5,6 +5,7 @@
 
 #include <FL/Fl.H>
 #include <FL/Fl_Box.H>
+#include <FL/Fl_Menu_Button.H>
 
 #include "Log.h"
 #include "viaems.h"
@@ -35,6 +36,7 @@ public:
   void resize(int, int, int, int);
 
 private:
+  Fl_Menu_Button *menu;
   std::weak_ptr<Log> log;
   uint64_t start_ns, stop_ns;
   int mouse_x, mouse_y;
