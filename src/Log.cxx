@@ -338,6 +338,10 @@ std::vector<viaems::Configuration> Log::LoadConfigs() {
   return configs;
 }
 
+std::vector<std::string> Log::Keys() const {
+  return current_points_keys(db);
+}
+
 void ThreadedWriteLog::WriteChunk(viaems::LogChunk &&chunk) {
   std::unique_lock<std::mutex> lock(mutex);
   chunks.emplace_back(chunk);
