@@ -6,30 +6,6 @@
 #include "Log.h"
 
 static std::string
-points_table_schema_from_update(const viaems::LogChunk &update) {
-  std::string query;
-
-  int index = 0;
-
-  query += "CREATE TABLE points (realtime_ns INTEGER,";
-  for (const auto &x : update.keys) {
-    query += "\"" + x + "\" ";
-    if (std::holds_alternative<uint32_t>(update.points[0].values[index])) {
-      query += "INTEGER";
-    } else {
-      query += "REAL";
-    }
-    if (index < update.keys.size() - 1) {
-      query += ", ";
-    } else {
-      query += ");";
-    }
-    index += 1;
-  }
-  return query;
-}
-
-static std::string
 points_table_insert_query(const std::vector<std::string> keys) {
   std::string query;
   query += "INSERT INTO points (realtime_ns,";
@@ -82,8 +58,8 @@ static void ensure_db_schema(sqlite3 *db, const viaems::LogChunk &update) {
     /* Create a new table */
     int res;
     char *sqlerr;
-    auto create_stmt = points_table_schema_from_update(update);
-    res = sqlite3_exec(db, create_stmt.c_str(), NULL, 0, &sqlerr);
+    auto create_stmt = "CREATE TABLE points (realtime_ns INTEGER);";
+    res = sqlite3_exec(db, create_stmt, NULL, 0, &sqlerr);
     if (res) {
       std::cerr << "Log: unable to initialize log schema: " << sqlerr
                 << std::endl;
@@ -97,11 +73,29 @@ static void ensure_db_schema(sqlite3 *db, const viaems::LogChunk &update) {
       std::cerr << "Log: unable to create log index: " << sqlerr << std::endl;
       sqlite3_free(sqlerr);
     }
-  } else {
-    /*TODO: */
-    /* Determine what keys are missing, append to the list */
+  }
 
-    /* Issue an alter to add the missing columns */
+  int index = 0;
+  for (const auto &k : update.keys) {
+    if (std::find(std::begin(table_keys), std::end(table_keys), k) == std::end(table_keys)) {
+      /* k not found in table_keys, alter table to add */
+      int res;
+      char *sqlerr;
+      auto alter_stmt = "ALTER TABLE points ADD COLUMN \"" + k + "\" ";
+      if (std::holds_alternative<uint32_t>(update.points[0].values[index])) {
+        alter_stmt += "INTEGER";
+      } else {
+        alter_stmt += "REAL";
+      }
+      std::cerr << "Adding field: " << k << std::endl;
+      res = sqlite3_exec(db, alter_stmt.c_str(), NULL, 0, &sqlerr);
+      if (res) {
+        std::cerr << "Log: unable add log column: " << sqlerr << std::endl;
+        sqlite3_free(sqlerr);
+        return;
+      }
+    }
+    index += 1;
   }
 }
 
