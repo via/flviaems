@@ -8,16 +8,6 @@
 #include "LogView.h"
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
-  menu = new Fl_Menu_Button(X, Y, W, H);
-  menu->type(Fl_Menu_Button::POPUP3);
-  config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
-  series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
-
-  config.insert(std::make_pair("sensor.map", SeriesConfig{0, 250, FL_YELLOW}));
-  series.insert(std::make_pair("sensor.map", std::vector<PointGroup>{}));
-
-  config.insert(std::make_pair("sensor.ego", SeriesConfig{0.7, 1.0, FL_GREEN}));
-  series.insert(std::make_pair("sensor.ego", std::vector<PointGroup>{}));
 }
 
 struct range {
@@ -48,6 +38,9 @@ void LogView::update_cache_time_range() {
 
   std::vector<std::string> keys;
   for (auto i : config) {
+    if (!i.second.enabled) {
+      continue;
+    }
     keys.push_back(i.first);
   }
 
@@ -118,6 +111,9 @@ void LogView::recompute_pointgroups(int x1, int x2) {
 
   std::vector<std::vector<PointGroup> *> keymap;
   for (auto i : config) {
+    if (!i.second.enabled) {
+      continue;
+    }
     auto k = i.first;
     keymap.push_back(&series[k]);
   }
@@ -187,11 +183,17 @@ void LogView::draw() {
   draw_box();
   fl_push_clip(x(), y(), w(), h());
   int count = 0;
-  int total_y_space = (config.size() + 2) * 15;
+  auto enabled_count = std::count_if(config.begin(), config.end(), [](auto &x){
+      return x.second.enabled; 
+      });
+  int total_y_space = (enabled_count + 2) * 15;
   int hover_text_x_offset = (mouse_x > (x() + 0.75 * w())) ? -150 : 5;
   int hover_text_y_offset =
       (mouse_y - y() + total_y_space > h()) ? -total_y_space : 20;
   for (const auto &element : config) {
+    if (!element.second.enabled) {
+      continue;
+    }
     auto name = element.first;
     auto conf = element.second;
     int cx = 0;
@@ -289,6 +291,12 @@ int LogView::handle(int ev) {
     return ret;
   }
   if (ev == FL_PUSH) {
+    if (Fl::event_clicks() > 0) {
+      auto *m = context_menu.data()->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
+      if (m) {
+        m->do_callback(this, m->user_data());
+      }
+    }
     mouse_press_x = Fl::event_x();
     mouse_press_y = Fl::event_y();
     return 1;
@@ -323,6 +331,9 @@ int LogView::handle(int ev) {
 void LogView::shift_pointgroups(int amt) {
   /* For a given shift, preserve the pointgroups that are unaffected */
   for (auto i : config) {
+    if (!i.second.enabled) {
+      continue;
+    }
     if (amt > 0) {
       /* We're moving points to the left, start at the beginning */
       for (int pos = amt; pos < series[i.first].size(); pos++) {
@@ -384,8 +395,40 @@ void LogView::SetLog(std::weak_ptr<Log> log) {
   auto log_locked = log.lock();
   auto keys = log_locked->Keys();
   for (auto k : keys) {
-    menu->add(k.c_str(), 0, 0, 0, FL_MENU_TOGGLE);
+    config.insert(std::make_pair(k, SeriesConfig{}));
+    series.insert(std::make_pair(k, std::vector<PointGroup>{}));
   }
+
+  /* TODO: remove when complete with dynamic setup */
+  config["rpm"] = {0, 6000, FL_RED, true};
+  config["sensor.map"] = {0, 250, FL_YELLOW, true};
+  config["sensor.ego"] = {0.7, 1.0, FL_GREEN, true};
+  
+  context_menu.clear();
+  context_menu.push_back({"Add/Remove", 0, 0, 0, FL_SUBMENU});
+
+  for (const auto &x : config) {
+    Fl_Menu_Item item = {x.first.c_str(), 
+      0, 
+      [](Fl_Widget *w, void *v) {
+        LogView *lv = (LogView *)w;
+        auto k = (const char *)v;
+        lv->config[k].enabled = true;
+        lv->config[k].max_y = 100;
+        lv->config[k].color = FL_BLUE;
+        lv->update();
+      }, 
+      (void *)x.first.c_str(), 
+      FL_MENU_TOGGLE | (x.second.enabled ? FL_MENU_VALUE : 0)
+    };
+    context_menu.push_back(item);
+    if (x.second.enabled) {
+      context_menu.insert(context_menu.begin(), {x.first.c_str()});
+    }
+  }
+  context_menu.push_back({ 0 });
+  context_menu.push_back({ 0 });
+
 
   this->cache = viaems::LogChunk{};
 };
