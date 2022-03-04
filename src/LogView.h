@@ -22,6 +22,7 @@ struct SeriesConfig {
   float min_y;
   float max_y;
   Fl_Color color;
+  bool enabled;
 };
 
 class LogView : public Fl_Box {
@@ -35,7 +36,7 @@ public:
   void shift(std::chrono::system_clock::duration amt);
 
 private:
-  Fl_Menu_Button *menu;
+  std::vector<Fl_Menu_Item> context_menu;
   std::weak_ptr<Log> log;
   uint64_t start_ns, stop_ns;
   int mouse_x, mouse_y;
