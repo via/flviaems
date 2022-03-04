@@ -29,12 +29,12 @@ void LogView::update_time_range(std::chrono::system_clock::time_point start,
 }
 
 void LogView::update() {
-  update_cache_time_range();
+  update_cache_time_range(true);
   recompute_pointgroups(0, w() - 1);
   redraw();
 }
 
-void LogView::update_cache_time_range() {
+void LogView::update_cache_time_range(bool force) {
 
   std::vector<std::string> keys;
   for (auto i : config) {
@@ -56,7 +56,7 @@ void LogView::update_cache_time_range() {
   if (!log_locked) {
     return;
   }
-  if (!cache.points.size()) {
+  if (force || !cache.points.size()) {
     cache = log_locked->GetRange(keys, new_start, new_stop);
   } else {
     auto cached_start = cache.points[0].time;
@@ -409,7 +409,7 @@ void LogView::SetLog(std::weak_ptr<Log> log) {
       [](Fl_Widget *w, void *v) {
         LogView *lv = (LogView *)w;
         auto k = (const char *)v;
-        lv->config[k].enabled = true;
+        lv->config[k].enabled = !lv->config[k].enabled;
         lv->config[k].max_y = 100;
         lv->config[k].color = FL_BLUE;
         lv->update();

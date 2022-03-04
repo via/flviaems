@@ -50,6 +50,6 @@ private:
   void resize(int, int, int, int);
   void recompute_pointgroups(int x1, int x2);
   void shift_pointgroups(int amt);
-  void update_cache_time_range();
+  void update_cache_time_range(bool force = false);
   void draw();
 };
