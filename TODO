@@ -1,0 +1,4 @@
+- LogView: remove use of cache, update point groups directly from backing db for
+  the range of pixel columns that is necessary
+
+- LogView: Make menu generation dynamic in handle()
