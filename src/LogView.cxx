@@ -7,8 +7,7 @@
 
 #include "LogView.h"
 
-LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
-}
+LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {}
 
 struct range {
   uint64_t start_ns;
@@ -20,11 +19,11 @@ void LogView::update_time_range(std::chrono::system_clock::time_point start,
   auto old_start_ns = start_ns;
   auto old_stop_ns = stop_ns;
   auto new_start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 start.time_since_epoch())
-                 .count();
+                          start.time_since_epoch())
+                          .count();
   auto new_stop_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                stop.time_since_epoch())
-                .count();
+                         stop.time_since_epoch())
+                         .count();
 
   if (new_stop_ns - new_start_ns == old_stop_ns - old_start_ns) {
     auto amt = std::chrono::nanoseconds{new_start_ns - old_start_ns};
@@ -44,7 +43,6 @@ void LogView::update() {
 
 /* Recompute pointgroups for pixels x1 through x1 inclusive */
 void LogView::recompute_pointgroups(int x1, int x2) {
-  std::cerr << "recompute_pointgroups: " << x1 << " " << x2 << std::endl;
   if (stop_ns == start_ns) {
     return;
   }
@@ -86,10 +84,10 @@ void LogView::recompute_pointgroups(int x1, int x2) {
   if (!log_locked) {
     return;
   }
-  auto fetch_start =
-      std::chrono::system_clock::time_point{std::chrono::nanoseconds{pixel_ranges.front().start_ns}};
-  auto fetch_stop =
-      std::chrono::system_clock::time_point{std::chrono::nanoseconds{pixel_ranges.back().stop_ns}};
+  auto fetch_start = std::chrono::system_clock::time_point{
+      std::chrono::nanoseconds{pixel_ranges.front().start_ns}};
+  auto fetch_stop = std::chrono::system_clock::time_point{
+      std::chrono::nanoseconds{pixel_ranges.back().stop_ns}};
   auto raw_points = log_locked->GetRange(keys, fetch_start, fetch_stop);
 
   int pixel = x1;
@@ -134,9 +132,8 @@ void LogView::draw() {
   draw_box();
   fl_push_clip(x(), y(), w(), h());
   int count = 0;
-  auto enabled_count = std::count_if(config.begin(), config.end(), [](auto &x){
-      return x.second.enabled; 
-      });
+  auto enabled_count = std::count_if(config.begin(), config.end(),
+                                     [](auto &x) { return x.second.enabled; });
   int total_y_space = (enabled_count + 2) * 15;
   int hover_text_x_offset = (mouse_x > (x() + 0.75 * w())) ? -150 : 5;
   int hover_text_y_offset =
@@ -243,7 +240,8 @@ int LogView::handle(int ev) {
   }
   if (ev == FL_PUSH) {
     if (Fl::event_clicks() > 0) {
-      auto *m = context_menu.data()->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
+      auto *m =
+          context_menu.data()->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
       if (m) {
         m->do_callback(this, m->user_data());
       }
@@ -355,29 +353,28 @@ void LogView::SetLog(std::weak_ptr<Log> log) {
   config["rpm"] = {0, 6000, FL_RED, true};
   config["sensor.map"] = {0, 250, FL_YELLOW, true};
   config["sensor.ego"] = {0.7, 1.0, FL_GREEN, true};
-  
+
   context_menu.clear();
   context_menu.push_back({"Add/Remove", 0, 0, 0, FL_SUBMENU});
 
   for (const auto &x : config) {
-    Fl_Menu_Item item = {x.first.c_str(), 
-      0, 
-      [](Fl_Widget *w, void *v) {
-        LogView *lv = (LogView *)w;
-        auto k = (const char *)v;
-        lv->config[k].enabled = !lv->config[k].enabled;
-        lv->config[k].max_y = 100;
-        lv->config[k].color = FL_BLUE;
-        lv->update();
-      }, 
-      (void *)x.first.c_str(), 
-      FL_MENU_TOGGLE | (x.second.enabled ? FL_MENU_VALUE : 0)
-    };
+    Fl_Menu_Item item = {x.first.c_str(), 0,
+                         [](Fl_Widget *w, void *v) {
+                           LogView *lv = (LogView *)w;
+                           auto k = (const char *)v;
+                           lv->config[k].enabled = !lv->config[k].enabled;
+                           lv->config[k].max_y = 100;
+                           lv->config[k].color = FL_BLUE;
+                           lv->update();
+                         },
+                         (void *)x.first.c_str(),
+                         FL_MENU_TOGGLE |
+                             (x.second.enabled ? FL_MENU_VALUE : 0)};
     context_menu.push_back(item);
     if (x.second.enabled) {
       context_menu.insert(context_menu.begin(), {x.first.c_str()});
     }
   }
-  context_menu.push_back({ 0 });
-  context_menu.push_back({ 0 });
+  context_menu.push_back({0});
+  context_menu.push_back({0});
 };
