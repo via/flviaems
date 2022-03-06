@@ -40,16 +40,15 @@ private:
   std::vector<Fl_Menu_Item> context_menu;
   std::weak_ptr<Log> log;
   uint64_t start_ns, stop_ns;
+  uint64_t last_sample_ns;
   int mouse_x, mouse_y;
   int mouse_press_x, mouse_press_y;
 
   std::map<std::string, SeriesConfig> config;
   std::map<std::string, std::vector<PointGroup>> series;
-  viaems::LogChunk cache;
 
   int handle(int);
   void recompute_pointgroups(int x1, int x2);
   void shift_pointgroups(int amt);
-  void update_cache_time_range(bool force = false);
   void draw();
 };
