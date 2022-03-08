@@ -254,7 +254,7 @@ int LogView::handle(int ev) {
   if (ev == FL_DRAG) {
     int diff_x = mouse_press_x - Fl::event_x();
     auto ns_per_pixel = (stop_ns - start_ns) / w();
-    uint64_t shift_ns = diff_x * ns_per_pixel;
+    int64_t shift_ns = diff_x * ns_per_pixel;
     auto amt =
         std::chrono::system_clock::duration{std::chrono::nanoseconds{shift_ns}};
     shift(amt);
@@ -303,9 +303,9 @@ void LogView::shift(std::chrono::system_clock::duration amt) {
   stop_ns += shift_ns;
 
   int64_t ns_per_pixel = (stop_ns - start_ns) / w();
-  int shifted_pixels = ns_per_pixel > 0 ? (shift_ns / ns_per_pixel) : 0;
+  int shifted_pixels = ns_per_pixel != 0 ? (shift_ns / ns_per_pixel) : 0;
 
-  if (shift_ns >= stop_ns - start_ns) {
+  if (std::abs(shift_ns) >= stop_ns - start_ns) {
     recompute_pointgroups(0, w() - 1);
   } else {
     shift_pointgroups(shifted_pixels);
