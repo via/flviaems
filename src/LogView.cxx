@@ -1,11 +1,107 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <future>
 #include <iostream>
+#include <thread>
 
 #include <FL/fl_draw.H>
 
 #include "LogView.h"
+
+struct PGRequest {
+  std::vector<std::string> keys;
+  uint64_t start_ns;
+  uint64_t stop_ns;
+  size_t n_groups;
+};
+
+using PointGroupsMap = std::map<std::string, std::vector<PointGroup>>;
+using RequestCallback = std::function<void(PGRequest &req, PointGroupsMap &&pgm)>;
+
+class PGQuery {
+
+  std::shared_ptr<Log> log;
+  PGRequest request;
+  RequestCallback callback;
+
+  std::thread thread;
+  bool aborted = false;
+
+  void execute() {
+    std::vector<std::vector<PointGroup>> pg_per_key{request.keys.size(), std::vector<PointGroup>{}};
+    for (auto &v : pg_per_key) {
+      v = std::vector<PointGroup>{request.n_groups, PointGroup{}};
+    }
+
+    std::vector<std::pair<uint64_t, uint64_t>> pixel_ranges;
+    auto ns_per_pixel = (request.stop_ns - request.start_ns) / request.n_groups;
+    for (size_t k = 0; k < request.n_groups; k++) {
+      uint64_t start = request.start_ns + (k * ns_per_pixel);
+      uint64_t stop = request.start_ns + ((k + 1) * ns_per_pixel);
+      pixel_ranges.push_back({start, stop});
+    }
+    
+    auto fetch_start = std::chrono::system_clock::time_point{
+      std::chrono::nanoseconds{request.start_ns}};
+    auto fetch_stop = std::chrono::system_clock::time_point{
+      std::chrono::nanoseconds{request.stop_ns}};
+    auto raw_points = log->GetRange(request.keys, fetch_start, fetch_stop);
+
+    int pixel = 0;
+    for (const auto &point : raw_points.points) {
+      auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
+          point.time.time_since_epoch())
+        .count();
+      while ((t >= pixel_ranges[pixel].second) && pixel < request.n_groups) {
+        pixel++;
+      }
+      if (pixel == request.n_groups) {
+        break;
+      }
+
+      for (int k = 0; k < request.keys.size(); k++) {
+        auto &s = pg_per_key[k].at(pixel);
+        viaems::FeedValue fv = point.values[k];
+        float v;
+        if (std::holds_alternative<uint32_t>(fv)) {
+          v = std::get<uint32_t>(fv);
+        } else {
+          v = std::get<float>(fv);
+        }
+        if (!s.set) {
+          s.first = v;
+          s.min = v;
+          s.max = v;
+        }
+        if (v < s.min) {
+          s.min = v;
+        }
+        if (v > s.max) {
+          s.max = v;
+        }
+        s.last = v;
+        s.set = true;
+      }
+    }
+
+
+    PointGroupsMap pgm{};
+    for (int k = 0; k < request.keys.size(); k++) {
+      pgm.insert(std::make_pair(request.keys[k], std::move(pg_per_key[k])));
+    }
+    callback(request, std::move(pgm));
+  }
+
+public:
+  PGQuery(std::shared_ptr<Log> log, PGRequest request, RequestCallback &&cb )
+      : log{log}, request{request}, callback{cb}, thread{&PGQuery::execute, this} {}
+  ~PGQuery() {
+    thread.detach();
+  }
+
+  void abort() { aborted = true; }
+};
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {}
 
@@ -53,37 +149,25 @@ void LogView::recompute_pointgroups(int x1, int x2) {
     if (i.second.enabled) {
       keys.push_back(i.first);
     }
-    while (series[i.first].size() <= x2) {
-      PointGroup pg{};
-      series[i.first].push_back(pg);
-    }
-    /* Clear out the range we're touching */
-    for (int j = x1; j <= x2; j++) {
-      series[i.first][j] = PointGroup{};
-    }
   }
 
-  std::vector<std::vector<PointGroup> *> keymap;
-  for (auto i : config) {
-    if (!i.second.enabled) {
-      continue;
-    }
-    auto k = i.first;
-    keymap.push_back(&series[k]);
-  }
-
-  std::vector<range> pixel_ranges;
-  auto ns_per_pixel = (stop_ns - start_ns) / w();
-  for (auto k = x1; k <= x2; k++) {
-    uint64_t start = start_ns + (k * ns_per_pixel);
-    uint64_t stop = start_ns + ((k + 1) * ns_per_pixel);
-    pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
-  }
 
   auto log_locked = log.lock();
   if (!log_locked) {
     return;
   }
+
+  auto ns_per_pixel = (stop_ns - start_ns) / w();
+  size_t pixels{size_t(x2 - x1)};
+  if (pixels == 0) return;
+  auto q_start = start_ns + x1 * ns_per_pixel;
+  auto q_stop = start_ns + (x2 + 1) * ns_per_pixel;
+  PGQuery q{log_locked, PGRequest{keys, q_start, q_stop, pixels}, [&](PGRequest &r, PointGroupsMap &&map) {
+    this->update();
+    this->series = map;
+    Fl::awake();
+  }};
+#if 0
   auto fetch_start = std::chrono::system_clock::time_point{
       std::chrono::nanoseconds{pixel_ranges.front().start_ns}};
   auto fetch_stop = std::chrono::system_clock::time_point{
@@ -126,6 +210,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       s.set = true;
     }
   }
+#endif
 }
 
 void LogView::draw() {

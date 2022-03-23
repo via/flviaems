@@ -45,6 +45,7 @@ private:
 
   std::map<std::string, SeriesConfig> config;
   std::map<std::string, std::vector<PointGroup>> series;
+  std::mutex pointgroup_lock;
 
   int handle(int);
   void resize(int, int, int, int);
