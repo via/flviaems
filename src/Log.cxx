@@ -156,7 +156,8 @@ void Log::WriteChunk(viaems::LogChunk &&update) {
 }
 
 Log::Log(std::string path) {
-  int r = sqlite3_open(path.c_str(), &db);
+  int r = sqlite3_open_v2(path.c_str(), &db, SQLITE_OPEN_NOMUTEX |
+  SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
   if (r) {
     db = nullptr;
     return;
@@ -165,7 +166,7 @@ Log::Log(std::string path) {
   /* Enable WAL mode */
   char *sqlerr;
   int res =
-      sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+      sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;",
                    NULL, 0, &sqlerr);
   if (res) {
     std::cerr << "Log: unable to set WAL mode: " << sqlerr << std::endl;
