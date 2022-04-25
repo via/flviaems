@@ -322,5 +322,11 @@ std::vector<viaems::Configuration> Log::LoadConfigs() {
 }
 
 std::chrono::system_clock::time_point Log::EndTime() {
-  return std::chrono::system_clock::now();
+  if (this->index.size() > 0) {
+    auto time = this->index.back().stop_time;
+    auto since_epoch = std::chrono::nanoseconds{time};
+    return std::chrono::system_clock::time_point{since_epoch};
+  } else {
+    return std::chrono::system_clock::now();
+  }
 }
