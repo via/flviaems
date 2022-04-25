@@ -133,8 +133,7 @@ class FLViaems {
   viaems::Model model;
 
   std::shared_ptr<viaems::Protocol> protocol;
-  std::shared_ptr<Log> log_reader;
-  std::shared_ptr<ThreadedWriteLog> log_writer;
+  std::shared_ptr<Log> log;
   std::shared_ptr<viaems::Request> ping_req;
 
   bool offline = true;
@@ -161,9 +160,9 @@ class FLViaems {
 
       v->ui.feed_update(status);
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
-      v->log_writer->WriteChunk(std::move(updates));
+      v->log->WriteChunk(updates);
     }
-    Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
+    Fl::repeat_timeout(0.1, v->feed_refresh_handler, v);
   }
 
   static void failed_ping_callback(void *ptr) {
@@ -185,7 +184,7 @@ class FLViaems {
     v->ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
     if (!s.in_progress) {
       v->ui.update_model(&v->model);
-      v->log_writer->SaveConfig(v->model.configuration());
+      v->log->SaveConfig(v->model.configuration());
     }
   }
 
@@ -253,9 +252,8 @@ class FLViaems {
     if (filename == nullptr) {
       return;
     }
-    v->log_reader = std::make_shared<Log>(filename);
-    v->log_writer = std::make_shared<ThreadedWriteLog>(filename);
-    v->ui.update_log(v->log_reader);
+    v->log = std::make_shared<Log>(filename);
+    v->ui.update_log(v->log);
   }
 
   static void initialize_simulator(Fl_Widget *w, void *ptr) {
@@ -336,9 +334,8 @@ public:
   FLViaems() {
     Fl::lock(); /* Necessary to enable awake() functionality */
 
-    log_reader = std::make_shared<Log>("log.vlog");
-    log_writer = std::make_shared<ThreadedWriteLog>("log.vlog");
-    ui.update_log(log_reader);
+    this->log = std::make_shared<Log>("log.viaemslog");
+    ui.update_log(this->log);
 
     Fl::add_timeout(0.05, feed_refresh_handler, this);
     Fl::add_timeout(1, pinger, this);
