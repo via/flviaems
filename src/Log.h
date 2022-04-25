@@ -31,7 +31,7 @@ struct DataChunk {
   std::string name;
   std::vector<std::pair<std::string, ColumnType>> columns;
   json raw_header;
-  std::vector<uint32_t> raw_data;
+  std::vector<uint8_t> raw_data;
 };
 
 struct ChunkMetadata {

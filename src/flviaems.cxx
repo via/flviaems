@@ -162,7 +162,7 @@ class FLViaems {
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
       v->log->WriteChunk(updates);
     }
-    Fl::repeat_timeout(0.1, v->feed_refresh_handler, v);
+    Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
   }
 
   static void failed_ping_callback(void *ptr) {
