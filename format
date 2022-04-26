@@ -1,0 +1,72 @@
+[start header] "VIAEMSLOG1"
+[data chunk]
+  [type string]
+  [schema]
+  [flat table of data]
+  [hash]
+[data chunk]
+  [type string]
+  [schema]
+  [flat table of data]
+  [hash]
+[data chunk]
+  [type string]
+  [schema]
+  [flat table of data]
+  [hash]
+[aggr chunk]
+  [type string]
+  [schema]
+  [flat table of data]
+    [start time, stop time, min a, max a, min b, max b]
+[meta chunk]
+  [ptr to previous]
+  [chunk index]
+    [ptr to chunk]
+    [type string]
+    [time range]
+    [num rows]
+
+ignore chunk = 0x0
+data chunk = 0x1
+aggr chunk = 0x2
+meta chunk = 0x3
+
+data chunk:
+  uint64 chunksize
+  uint8 chunktype
+  uint64_t headersize
+  cborbytes header
+  bytes data
+
+data chunk header schema:
+{
+  "chunk_type": "data",
+  "name": "feed",
+  "columns": [
+    {"name": "cputime", "type": "uint32"},
+    {"name": "sensor.map", "type": "float"}
+  ],
+  "checksum": ...,
+  "compression": "zstd",
+  "uncompressed_size": 12345
+}
+
+meta chunk:
+  uint64 chunksize
+  uint8 chunktype
+  uint64_t offset_to_previous_meta
+  uint64_t chunk_count
+  [
+    uint64_t start_time
+    uint64_t stop_time
+    uint8 chunk_type
+    uint64_t chunk_offset
+    uint64_t chunk_size
+    ]
+  uint64_t chunksize
+  "meta"
+
+
+
+meta chunk schema
