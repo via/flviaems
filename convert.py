@@ -3,6 +3,7 @@ import io
 import struct
 import sqlite3
 import sys
+import zstd
 
 infilepath = sys.argv[1]
 outfile = open('out.viaemslog', 'wb')
@@ -32,8 +33,8 @@ def write_chunk(values):
     header = {
         "chunk_type": "data",
         "name": "feed",
-        "columns": columns,
-    }
+        "compression": "zstd",
+        "columns": columns, }
     headercbor = cbor.dumps(header)
 
     databuf = io.BytesIO()
@@ -46,9 +47,11 @@ def write_chunk(values):
             elif type(value) == float:
                 databuf.write(_pack_float32(value))
 
-    data = databuf.getvalue()
+    data = zstd.compress(databuf.getvalue())
+#    data = databuf.getvalue()
 
     chunksize = 17 + len(headercbor) + len(data)
+    offset = outfile.tell()
     outfile.write(_pack_uint64(chunksize))
     outfile.write(_pack_uint8(0x1))
     outfile.write(_pack_uint64(len(headercbor)))
@@ -57,8 +60,8 @@ def write_chunk(values):
 
     start_time = values[0][0][1]
     stop_time = values[-1][0][1]
+    print(f"Chunk spans {(stop_time - start_time) / 1000000} ms in {len(values)} values")
 
-    offset = outfile.tell()
     size = chunksize
     indexes.append((start_time, stop_time, offset, size))
 
@@ -81,14 +84,17 @@ def write_meta():
     outfile.write(_pack_uint64(size))
     outfile.write(b"meta")
 
-for point in cursor.execute("SELECT * from points"):
+for point in cursor.execute("SELECT * from points order by realtime_ns asc"):
   values = list(zip([x[0] for x in cursor.description], point))
   this_chunk.append(values)
-  if len(this_chunk) > 10000:
+  if len(this_chunk) > 100000:
     write_chunk(this_chunk)
     this_chunk = []
+    print(len(indexes))
+    if len(indexes) > 500:
+        write_meta()
+        outfile.close()
+        break
 
-write_meta()
-outfile.close()
 
 

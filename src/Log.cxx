@@ -7,6 +7,8 @@
 #include <iostream>
 #include "Log.h"
 
+#include <zstd.h>
+
 static constexpr std::string_view headerstr = "VIAEMSLOG1";
 static constexpr auto headerlen = headerstr.size();
 
@@ -92,7 +94,24 @@ static DataChunk read_datachunk(int fd, uint64_t position, uint64_t size) {
   uint64_t headersize = read_value<uint64_t>(raw.data() + 9);
   result.raw_header = json::from_cbor(raw.begin() + 17, raw.begin() + 17 + headersize);
   result.name = result.raw_header["name"];
-  result.raw_data.insert(result.raw_data.begin(), raw.begin() + 17 + headersize, raw.begin() + size);
+
+  if ((result.raw_header.count("compression") > 0) &&
+      (result.raw_header["compression"] == "zstd")) {
+    const uint8_t *compressed = &raw[17 + headersize];
+    uint64_t compressed_size = (uint64_t)(&raw[0] + size) - (uint64_t)compressed;
+    auto uc_size = ZSTD_getFrameContentSize(compressed, compressed_size);
+    if ((uc_size == ZSTD_CONTENTSIZE_UNKNOWN) || (uc_size == ZSTD_CONTENTSIZE_ERROR)) {
+      return {}; /* TODO throw? */
+    }
+    result.raw_data.resize(uc_size);
+    size_t const actual_size = ZSTD_decompress(result.raw_data.data(), uc_size, compressed, compressed_size);
+    if (actual_size != uc_size) {
+      return {}; /*TODO throw? */
+    }
+  } else {
+    result.raw_data.insert(result.raw_data.begin(), raw.begin() + 17 + headersize, raw.begin() + size);
+  }
+
   for (auto row : result.raw_header["columns"]) {
     result.columns.push_back({row["name"], row["type"] == "float" ?
     ColumnType::Float : ColumnType::Uint32});
@@ -198,6 +217,7 @@ keys, uint64_t start, uint64_t stop) {
 }
 
 viaems::LogChunk Log::GetRange(std::vector<std::string> keys, viaems::FeedTime start, viaems::FeedTime end) {
+  auto before = std::chrono::system_clock::now();
   viaems::LogChunk result;
   result.keys = keys;
   /* First determine what chunks we need */
@@ -205,15 +225,16 @@ viaems::LogChunk Log::GetRange(std::vector<std::string> keys, viaems::FeedTime s
   auto stop_ns = time_to_ns(end);
   int n_chunks = 0;
   for (const auto &i : this->index) {
-    if (((i.start_time >= start_ns) && (i.start_time <= stop_ns)) ||
-        ((i.stop_time >= start_ns) && (i.stop_time <= stop_ns))) {
-      auto chunk = read_datachunk(this->fd, i.offset, i.size);
-      auto points = extract_points_from_chunk(chunk, keys, start_ns, stop_ns);
-      n_chunks++;
-      result.points.insert(result.points.end(), points.begin(), points.end());
+    if ((i.stop_time < start_ns) || (i.start_time > stop_ns)) {
+      continue;
     }
+    auto chunk = read_datachunk(this->fd, i.offset, i.size);
+    auto points = extract_points_from_chunk(chunk, keys, start_ns, stop_ns);
+    n_chunks++;
+    result.points.insert(result.points.end(), points.begin(), points.end());
   }
-  std::cerr << "GetRanged scanned " << n_chunks << " chunks" << std::endl;
+  auto after = std::chrono::system_clock::now();
+  std::cerr << "GetRanged scanned " << result.points.size() << " points,  " << n_chunks << " chunks in " << std::chrono::duration_cast<std::chrono::milliseconds>(after - before).count() << std::endl;
   return result;
 }
 
