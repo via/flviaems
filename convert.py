@@ -91,7 +91,7 @@ for point in cursor.execute("SELECT * from points order by realtime_ns asc"):
     write_chunk(this_chunk)
     this_chunk = []
     print(len(indexes))
-    if len(indexes) > 500:
+    if len(indexes) > 100:
         write_meta()
         outfile.close()
         break

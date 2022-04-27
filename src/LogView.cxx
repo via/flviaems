@@ -165,6 +165,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
         v = std::get<float>(fv);
       }
       if (!s.set) {
+        s.count = 0;
         s.first = v;
         s.min = v;
         s.max = v;
@@ -177,8 +178,10 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       }
       s.last = v;
       s.set = true;
+      s.count++;
     }
   }
+  std::cerr << "count[4]: " << series["rpm"][4].count << std::endl;
 }
 
 void LogView::draw() {
@@ -211,7 +214,7 @@ void LogView::draw() {
 
         fl_line(x() + cx, y() + h() - cymin, x() + cx, y() + h() - cymax);
         if (last_y >= 0) {
-          fl_line(x() + last_x, y() + h() - last_y, x() + cx - 1,
+          fl_line(x() + last_x, y() + h() - last_y, x() + cx,
                   y() + h() - cyfirst);
         }
 

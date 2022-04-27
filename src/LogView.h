@@ -15,6 +15,7 @@ struct PointGroup {
   float min;
   float max;
   bool set;
+  int count;
 };
 
 struct SeriesConfig {

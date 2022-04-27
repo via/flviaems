@@ -1,71 +1,82 @@
-[start header] "VIAEMSLOG1"
-[data chunk]
-  [type string]
-  [schema]
-  [flat table of data]
-  [hash]
-[data chunk]
-  [type string]
-  [schema]
-  [flat table of data]
-  [hash]
-[data chunk]
-  [type string]
-  [schema]
-  [flat table of data]
-  [hash]
-[aggr chunk]
-  [type string]
-  [schema]
-  [flat table of data]
-    [start time, stop time, min a, max a, min b, max b]
+[header chunk]
+[feed data chunk]
+[feed data chunk]
+[feed data chunk]
+[feed data chunk]
+[feed data chunk]
 [meta chunk]
-  [ptr to previous]
-  [chunk index]
-    [ptr to chunk]
-    [type string]
-    [time range]
-    [num rows]
+[footer chunk]
 
+
+chunk types
+==============
 ignore chunk = 0x0
-data chunk = 0x1
-aggr chunk = 0x2
+header chunk = 0x1
+footer chunk = 0x2
 meta chunk = 0x3
+feed chunk = 0x4
+aggr chunk = 0x5
 
-data chunk:
+value types
+==============
+uint32 = 0x1
+uint64 = 0x2
+float32 = 0x3
+
+header chunk:
+  uint64_t chunksize
+  uint64_t chunktype
+  "VIAEMSLOG1"
+
+feed data chunk:
   uint64 chunksize
-  uint8 chunktype
+  uint64 chunktype
   uint64_t headersize
   cborbytes header
-  bytes data
+  bytes data [
+    [uint64 timestamp, column1, column2, ...]
+    [uint64 timestamp, column1, column2, ...]
+  ]
 
 data chunk header schema:
 {
-  "chunk_type": "data",
-  "name": "feed",
   "columns": [
-    {"name": "cputime", "type": "uint32"},
-    {"name": "sensor.map", "type": "float"}
+    ["cputime", 0x1]
+    {"sensor.map", 0x3]
   ],
   "checksum": ...,
   "compression": "zstd",
-  "uncompressed_size": 12345
 }
+
+aggr100 chunk:
+  uint64_t chunksize
+  uint64_t chunktype
+  uint64_t headersize
+  cborbytes header (identical format to feed data chunk)
+  data
+  bytes data [
+    [uint64 timestamp, min(column1), max(column1), min(column2), max(column2), ...]
+    [uint64 timestamp, min(column1), max(column1), min(column2), max(column2), ...]
+  ]
+
 
 meta chunk:
   uint64 chunksize
-  uint8 chunktype
+  uint64 chunktype = 0x3
   uint64_t offset_to_previous_meta
   uint64_t chunk_count
   [
     uint64_t start_time
     uint64_t stop_time
-    uint8 chunk_type
+    uint64_t chunk_type
     uint64_t chunk_offset
     uint64_t chunk_size
     ]
+
+footer:
   uint64_t chunksize
-  "meta"
+  uint64_t chunktype = 0x2
+  "VIAEMSLOGFOOTER1"
 
 
 
