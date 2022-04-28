@@ -77,7 +77,8 @@ static void ensure_db_schema(sqlite3 *db, const viaems::LogChunk &update) {
 
   int index = 0;
   for (const auto &k : update.keys) {
-    if (std::find(std::begin(table_keys), std::end(table_keys), k) == std::end(table_keys)) {
+    if (std::find(std::begin(table_keys), std::end(table_keys), k) ==
+        std::end(table_keys)) {
       /* k not found in table_keys, alter table to add */
       int res;
       char *sqlerr;

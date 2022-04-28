@@ -83,8 +83,8 @@ struct OutputValue {
   std::string type;
 };
 
-typedef std::variant<uint32_t, float, bool, std::string, TableValue, SensorValue,
-                     OutputValue>
+typedef std::variant<uint32_t, float, bool, std::string, TableValue,
+                     SensorValue, OutputValue>
     ConfigValue;
 
 struct StructureLeaf {

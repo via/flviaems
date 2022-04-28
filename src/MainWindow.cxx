@@ -182,7 +182,9 @@ public:
     }
   }
 
-  viaems::ConfigValue get_value() { return this->checkbox->value() ? true : false; }
+  viaems::ConfigValue get_value() {
+    return this->checkbox->value() ? true : false;
+  }
 };
 
 static SelectableTreeWidget *
