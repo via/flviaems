@@ -42,7 +42,7 @@ data chunk header schema:
 {
   "columns": [
     ["cputime", 0x1]
-    {"sensor.map", 0x3]
+    ["sensor.map", 0x3]
   ],
   "checksum": ...,
   "compression": "zstd",
@@ -76,6 +76,7 @@ meta chunk:
 footer:
   uint64_t chunksize
   uint64_t chunktype = 0x2
+  uint64_t offset_to_previous_meta
   "VIAEMSLOGFOOTER1"
 
 

@@ -15,20 +15,21 @@
 
 #include "viaems.h"
 
-enum class ChunkType : uint8_t {
+enum class ChunkType : uint64_t {
   Ignore = 0x00,
-  Data = 0x01,
-  Aggr = 0x02,
+  Header = 0x01,
+  Footer = 0x02,
   Meta = 0x03,
+  Feed = 0x03,
 };
 
 enum class ColumnType {
-  Uint32,
-  Float,
+  Unknown = 0x0, 
+  Uint32 = 0x1,
+  Float = 0x2,
 };
 
 struct DataChunk {
-  std::string name;
   std::vector<std::pair<std::string, ColumnType>> columns;
   json raw_header;
   std::vector<uint8_t> raw_data;

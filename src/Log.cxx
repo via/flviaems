@@ -10,7 +10,8 @@
 #include <zstd.h>
 
 static constexpr std::string_view headerstr = "VIAEMSLOG1";
-static constexpr auto headerlen = headerstr.size();
+
+static constexpr std::string_view footerstr = "VIAEMSLOGFOOTER1";
 
 template<typename T>
 static T read_value(const uint8_t *data) {
@@ -43,43 +44,44 @@ uint64_t time_to_ns(std::chrono::system_clock::time_point tp) {
 }
 
 static bool has_file_header(int fd) {
+  constexpr size_t headerlen = 8 + 8 + headerstr.size();
   char headerbuf[headerlen];
   int res = pread(fd, headerbuf, headerlen, 0); 
   if (res != headerlen) {
     return false;
   }
-  return std::memcmp(headerbuf, headerstr.data(), headerlen) == 0;
+  return std::memcmp(headerbuf + 16, headerstr.data(), headerstr.size()) == 0;
 }
 
 static void write_file_header(int fd) {
-  int res = write(fd, headerstr.data(), headerlen);
-  if (res != headerlen) {
+  int res = write(fd, headerstr.data(), headerstr.size());
+  if (res != headerstr.size()) {
     throw std::runtime_error{"Unable to write log header"};
   }
 }
 
-static uint64_t get_last_index_position(int fd) {
-  /* First attempt to read the last 12 bytes of the file, which would be an
-   * 8-byte size + "meta" */
+static uint64_t read_footer(int fd) {
+  constexpr size_t footerlen = 8 + 8 + 8 + footerstr.size();
+  /* First attempt to read the footer from the end */
   auto current_position = lseek(fd, 0, SEEK_END);
-  if (current_position < 12) {
-    return {};
+  if (current_position < footerlen) {
+    return 0;
   }
 
-  constexpr size_t readamt = 12;
-  uint8_t buf[readamt];
-  int res = pread(fd, buf, readamt, current_position - readamt);
-  if (res != readamt) {
+  uint8_t buf[footerlen];
+  int res = pread(fd, buf, footerlen, current_position - footerlen);
+  if (res != footerlen) {
     throw std::runtime_error{"Unable to read final metadata chunk"};
   }
-  if (memcmp(&buf[8], "meta", 4) != 0) {
-    return {};
+  if (memcmp(&buf[24], footerstr.data(), footerstr.size()) != 0) {
+    std::cerr << "Failed to match footer string" << std::endl;
+    return 0;
   }
-
-  auto metachunk_size = read_value<uint64_t>(buf);
-  auto this_metachunk_offset = current_position - metachunk_size; 
-
-  return this_metachunk_offset;
+  if (read_value<uint64_t>(&buf[8]) != static_cast<uint64_t>(ChunkType::Footer)) {
+    std::cerr << "Failed to match footer type" << std::endl;
+    return 0;
+  }
+  return read_value<uint64_t>(&buf[16]);
 }
 
 static DataChunk read_datachunk(int fd, uint64_t position, uint64_t size) {
@@ -91,30 +93,30 @@ static DataChunk read_datachunk(int fd, uint64_t position, uint64_t size) {
   }
 
   DataChunk result;
-  uint64_t headersize = read_value<uint64_t>(raw.data() + 9);
-  result.raw_header = json::from_cbor(raw.begin() + 17, raw.begin() + 17 + headersize);
-  result.name = result.raw_header["name"];
+  uint64_t headersize = read_value<uint64_t>(raw.data() + 16);
+  result.raw_header = json::from_cbor(raw.begin() + 24, raw.begin() + 24 + headersize);
 
   if ((result.raw_header.count("compression") > 0) &&
       (result.raw_header["compression"] == "zstd")) {
-    const uint8_t *compressed = &raw[17 + headersize];
+    const uint8_t *compressed = &raw[24 + headersize];
     uint64_t compressed_size = (uint64_t)(&raw[0] + size) - (uint64_t)compressed;
     auto uc_size = ZSTD_getFrameContentSize(compressed, compressed_size);
     if ((uc_size == ZSTD_CONTENTSIZE_UNKNOWN) || (uc_size == ZSTD_CONTENTSIZE_ERROR)) {
+      std::cerr << "unknown size" << std::endl;
       return {}; /* TODO throw? */
     }
     result.raw_data.resize(uc_size);
     size_t const actual_size = ZSTD_decompress(result.raw_data.data(), uc_size, compressed, compressed_size);
     if (actual_size != uc_size) {
       return {}; /*TODO throw? */
+      std::cerr << "failed to decomrpess" << std::endl;
     }
   } else {
-    result.raw_data.insert(result.raw_data.begin(), raw.begin() + 17 + headersize, raw.begin() + size);
+    result.raw_data.insert(result.raw_data.begin(), raw.begin() + 24 + headersize, raw.begin() + size);
   }
 
   for (auto row : result.raw_header["columns"]) {
-    result.columns.push_back({row["name"], row["type"] == "float" ?
-    ColumnType::Float : ColumnType::Uint32});
+    result.columns.push_back({row[0], row[1]});
   }
   return result;
 }
@@ -132,21 +134,21 @@ static std::vector<ChunkMetadata> read_indexes(int fd, uint64_t position) {
     buffer.reserve(chunklen);
     pread(fd, buffer.data(), chunklen, this_metachunk_offset);
 
-    auto count = read_value<uint64_t>(&buffer[17]);
+    auto count = read_value<uint64_t>(&buffer[24]);
     std::vector<ChunkMetadata> this_metachunk_list;
     this_metachunk_list.reserve(count);
     for (int i = 0; i < count; i++) {
-      off_t offset = 25 + i * 33;
+      off_t offset = 32 + i * 40;
       ChunkMetadata this_md;
       this_md.start_time = read_value<uint64_t>(&buffer[offset]);
       this_md.stop_time = read_value<uint64_t>(&buffer[offset + 8]);
-      this_md.chunk_type = static_cast<ChunkType>(buffer[offset + 16]);
-      this_md.offset = read_value<uint64_t>(&buffer[offset + 17]);
-      this_md.size = read_value<uint64_t>(&buffer[offset + 25]);
+      this_md.chunk_type = static_cast<ChunkType>(read_value<uint64_t>(&buffer[offset + 16]));
+      this_md.offset = read_value<uint64_t>(&buffer[offset + 24]);
+      this_md.size = read_value<uint64_t>(&buffer[offset + 32]);
       this_metachunk_list.push_back(this_md);
     }
 
-    this_metachunk_offset = read_value<uint64_t>(&buffer[9]);
+    this_metachunk_offset = read_value<uint64_t>(&buffer[16]);
     result.insert(result.begin(), this_metachunk_list.begin(), this_metachunk_list.end());
   } while (this_metachunk_offset > 0);
 
@@ -165,14 +167,14 @@ Log::Log(std::string path) {
   if (has_file_header(this->fd)) {
     std::cerr << "has file header" << std::endl;
     /* Scan for a meta index at the end and load the chain */
-    this->last_meta_index_position = get_last_index_position(this->fd);
+    this->last_meta_index_position = read_footer(this->fd);
     if (this->last_meta_index_position > 0) {
       this->index = read_indexes(this->fd, this->last_meta_index_position);
       this->num_indexes_at_open = this->index.size();
     }
   } else {
     /* Write a file header */
-    write_file_header(this->fd);
+//    write_file_header(this->fd);
   }
 }
 
@@ -201,13 +203,16 @@ keys, uint64_t start, uint64_t stop) {
       for (auto col : mapping) {
         uint64_t val_offset = current_offset + 8 + 4 * col.first;
         switch (col.second) {
-          case ColumnType::Uint32:
-            lp.values.push_back(read_value<uint32_t>(&chunk.raw_data[val_offset]));
+          case ColumnType::Uint32: {
+            auto value = read_value<uint32_t>(&chunk.raw_data[val_offset]);
+            lp.values.push_back(value);
             break;
-          case ColumnType::Float:
+          }
+          case ColumnType::Float: {
             auto value = read_value<float>(&chunk.raw_data[val_offset]);
             lp.values.push_back(value);
             break;
+          }
         }
       }
       results.push_back(lp);
@@ -245,22 +250,20 @@ generate_meta_chunk(uint64_t last_meta_offset,
   std::vector<uint8_t> buffer;
 
   size_t rows = end - begin;
-  size_t indexbytes = 33 * rows;
-  size_t chunksize = 25 + indexbytes + 8 + 4;
+  size_t indexbytes = 40 * rows;
+  size_t chunksize = 32 + indexbytes + 8 + 4;
 
   buffer_write<uint64_t>(buffer, chunksize);
-  buffer_write<uint8_t>(buffer, static_cast<uint8_t>(ChunkType::Meta));
+  buffer_write<uint64_t>(buffer, static_cast<uint64_t>(ChunkType::Meta));
   buffer_write<uint64_t>(buffer, last_meta_offset);
   buffer_write<uint64_t>(buffer, rows);
   for (auto it = begin; it != end; it++) {
     buffer_write<uint64_t>(buffer, it->start_time);
     buffer_write<uint64_t>(buffer, it->stop_time);
-    buffer_write<uint8_t>(buffer, static_cast<uint8_t>(it->chunk_type));
+    buffer_write<uint64_t>(buffer, static_cast<uint64_t>(it->chunk_type));
     buffer_write<uint64_t>(buffer, it->offset);
     buffer_write<uint64_t>(buffer, it->size);
   }
-  buffer_write<uint64_t>(buffer, chunksize);
-  buffer_write<std::string>(buffer, "meta");
 
   assert(buffer.size() == chunksize);
   return buffer;
@@ -304,7 +307,7 @@ void Log::WriteChunk(const viaems::LogChunk &lc) {
   std::vector<uint8_t> buffer(chunksize, 0);
 
   write_value(buffer.data(), chunksize);
-  buffer[8] = static_cast<uint8_t>(ChunkType::Data);
+  buffer[8] = static_cast<uint8_t>(ChunkType::Feed);
   write_value<uint64_t>(buffer.data() + 9, header_cbor.size());
   memcpy(buffer.data() + 17, header_cbor.data(), header_cbor.size());
   
@@ -329,7 +332,7 @@ void Log::WriteChunk(const viaems::LogChunk &lc) {
   this->index.push_back({
     .start_time = time_to_ns(lc.points.front().time),
     .stop_time = time_to_ns(lc.points.back().time),
-    .chunk_type = ChunkType::Data,
+    .chunk_type = ChunkType::Feed,
     .offset = chunkoffset,
     .size = chunksize,
   });
