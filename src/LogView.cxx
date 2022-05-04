@@ -181,7 +181,6 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       s.count++;
     }
   }
-  std::cerr << "count[4]: " << series["rpm"][4].count << std::endl;
 }
 
 void LogView::draw() {

@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cstring>
+#include <memory>
 
 #include <iostream>
 #include "Log.h"
@@ -12,36 +13,6 @@
 static constexpr std::string_view headerstr = "VIAEMSLOG1";
 
 static constexpr std::string_view footerstr = "VIAEMSLOGFOOTER1";
-
-template<typename T>
-static T read_value(const uint8_t *data) {
-  T result;
-  memcpy(&result, data, sizeof(T));
-  return result;
-}
-
-template<typename T>
-static void write_value(uint8_t *data, T value) {
-  memcpy(data, &value, sizeof(T));
-}
-
-template<typename T>
-static void buffer_write(std::vector<uint8_t> &buffer, T value) {
-  uint8_t bytes[sizeof(T)];
-  memcpy(bytes, &value, sizeof(T));
-  buffer.insert(buffer.end(), bytes, bytes + sizeof(T));
-}
-
-template<>
-void buffer_write<std::string>(std::vector<uint8_t> &buffer, std::string value) {
-  buffer.insert(buffer.end(), value.data(), value.data() + value.size());
-}
-
-uint64_t time_to_ns(std::chrono::system_clock::time_point tp) {
-  uint64_t time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      tp.time_since_epoch()).count();
-  return time_ns;
-}
 
 static bool has_file_header(int fd) {
   constexpr size_t headerlen = 8 + 8 + headerstr.size();
@@ -221,25 +192,31 @@ keys, uint64_t start, uint64_t stop) {
   return results;
 }
 
-viaems::LogChunk Log::GetRange(std::vector<std::string> keys, viaems::FeedTime start, viaems::FeedTime end) {
-  auto before = std::chrono::system_clock::now();
-  viaems::LogChunk result;
-  result.keys = keys;
+Log::View::View(Log &log, const std::vector<std::string> keys, uint64_t start, uint64_t stop)
+  : log{log}, keys{keys}, start{start}, stop{stop} {
+
+  int n_chunks = 0;
+  for (const auto &i : this->log.index) {
+    if ((i.stop_time < start) || (i.start_time > stop)) {
+      continue;
+    }
+    this->index.push_back(i);
+  }
+}
+
+const DataChunk& Log::View::next_chunk() {
+
+  const auto &meta = this->index[next_chunk_idx];
+  this->current = std::make_shared<DataChunk>(read_datachunk(this->log.fd, meta.offset, meta.size));
+}
+
+Log::View Log::GetRange(std::vector<std::string> keys, viaems::FeedTime start, viaems::FeedTime end) {
   /* First determine what chunks we need */
   auto start_ns = time_to_ns(start);
   auto stop_ns = time_to_ns(end);
-  int n_chunks = 0;
-  for (const auto &i : this->index) {
-    if ((i.stop_time < start_ns) || (i.start_time > stop_ns)) {
-      continue;
-    }
-    auto chunk = read_datachunk(this->fd, i.offset, i.size);
-    auto points = extract_points_from_chunk(chunk, keys, start_ns, stop_ns);
-    n_chunks++;
-    result.points.insert(result.points.end(), points.begin(), points.end());
-  }
-  auto after = std::chrono::system_clock::now();
-  std::cerr << "GetRanged scanned " << result.points.size() << " points,  " << n_chunks << " chunks in " << std::chrono::duration_cast<std::chrono::milliseconds>(after - before).count() << std::endl;
+
+  View result{*this, keys, start_ns, stop_ns};
+
   return result;
 }
 
