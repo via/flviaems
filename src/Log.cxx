@@ -83,12 +83,18 @@ static DataChunk read_datachunk(int fd, uint64_t position, uint64_t size) {
       std::cerr << "failed to decomrpess" << std::endl;
     }
   } else {
-    result.raw_data.insert(result.raw_data.begin(), raw.begin() + 24 + headersize, raw.begin() + size);
+    result.raw_data.resize(size - headersize - 24);
+    memcpy(result.raw_data.data(), raw.data() + 24 + headersize, size - headersize - 24);
+//    result.raw_data.insert(result.raw_data.begin(), raw.begin() + 24 + headersize, raw.begin() + size);
   }
 
+  size_t offset = 8; /* Start after time */
   for (auto row : result.raw_header["columns"]) {
-    result.columns.push_back({row[0], row[1]});
+    result.columns.push_back({row[0], row[1], offset});
+    offset += 4; /* TODO: Handle possible different type sizes */
   }
+  result.rowsize = offset;
+  result.count = result.raw_data.size() / offset;
   return result;
 }
 
@@ -149,48 +155,6 @@ Log::Log(std::string path) {
   }
 }
 
-std::vector<viaems::LogPoint> extract_points_from_chunk(const DataChunk &chunk, std::vector<std::string>
-keys, uint64_t start, uint64_t stop) {
-  std::vector<viaems::LogPoint> results;
-  std::vector<std::pair<int, ColumnType>> mapping;
-  for (auto key : keys) {
-    for (int i = 0; i < chunk.columns.size(); i++) {
-      if (key == chunk.columns[i].first) {
-        mapping.push_back({i, chunk.columns[i].second});
-        break;
-      }
-      /* TODO: handle if the key isn't there? */
-    }
-  }
-
-  for (uint64_t current_offset = 0; current_offset < chunk.raw_data.size();
-  current_offset += (8 + chunk.columns.size() * 4)) {
-    viaems::LogPoint lp;
-    auto time = read_value<uint64_t>(&chunk.raw_data[current_offset]);
-    auto since_epoch = std::chrono::nanoseconds{time};
-    lp.time = std::chrono::system_clock::time_point{since_epoch};
-
-    if (time >= start && time <= stop) {
-      for (auto col : mapping) {
-        uint64_t val_offset = current_offset + 8 + 4 * col.first;
-        switch (col.second) {
-          case ColumnType::Uint32: {
-            auto value = read_value<uint32_t>(&chunk.raw_data[val_offset]);
-            lp.values.push_back(value);
-            break;
-          }
-          case ColumnType::Float: {
-            auto value = read_value<float>(&chunk.raw_data[val_offset]);
-            lp.values.push_back(value);
-            break;
-          }
-        }
-      }
-      results.push_back(lp);
-    }
-  }
-  return results;
-}
 
 Log::View::View(Log &log, const std::vector<std::string> keys, uint64_t start, uint64_t stop)
   : log{log}, keys{keys}, start{start}, stop{stop} {
@@ -204,19 +168,54 @@ Log::View::View(Log &log, const std::vector<std::string> keys, uint64_t start, u
   }
 }
 
-const DataChunk& Log::View::next_chunk() {
+void Log::View::next_chunk() {
 
-  const auto &meta = this->index[next_chunk_idx];
-  this->current = std::make_shared<DataChunk>(read_datachunk(this->log.fd, meta.offset, meta.size));
+  if (this->next_chunk_idx >= this->index.size()) {
+    this->current.reset();
+    return;
+  }
+  const auto &meta = this->index[this->next_chunk_idx];
+  if (this->log.cache.count(meta.offset) > 0) {
+    this->current = this->log.cache[meta.offset];
+  } else {
+    this->current = std::make_shared<DataChunk>(read_datachunk(this->log.fd, meta.offset, meta.size));
+    this->log.cache[meta.offset] = this->current;
+  }
+  std::cerr << "cached " << log.cache.size() << " results" << std::endl;
+  
+  this->next_chunk_idx += 1;
+  this->next_chunk_row = 0;
+
+  this->mapping.resize(0);
+  for (const auto &k : this->keys) {
+    int index = 0;
+    for (const auto &c : this->current->columns) {
+      if (k == c.name) {
+        this->mapping.push_back(index);
+      }
+      index += 1;
+    }
+  }
 }
 
-Log::View Log::GetRange(std::vector<std::string> keys, viaems::FeedTime start, viaems::FeedTime end) {
-  /* First determine what chunks we need */
-  auto start_ns = time_to_ns(start);
-  auto stop_ns = time_to_ns(end);
+const std::optional<LogRow> Log::View::next_row() {
+  this->next_chunk_row += 1;
+  if (!this->current || this->next_chunk_row >= this->current->count) {
+    next_chunk();
+    if (!this->current) {
+      return {};
+    }
+  }
+  auto row = LogRow{*this->current, this->next_chunk_row};
+  if (row.time() > this->stop) {
+    return {};
+  } else {
+    return row;
+  }
+}
 
+Log::View Log::GetRange(std::vector<std::string> keys, uint64_t start_ns, uint64_t stop_ns) {
   View result{*this, keys, start_ns, stop_ns};
-
   return result;
 }
 

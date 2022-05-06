@@ -31,69 +31,13 @@ void LogView::update_time_range(std::chrono::system_clock::time_point start,
   stop_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
                 stop.time_since_epoch())
                 .count();
-  update_cache_time_range();
   recompute_pointgroups(0, w() - 1);
   redraw();
 }
 
 void LogView::update() {
-  update_cache_time_range();
   recompute_pointgroups(0, w() - 1);
   redraw();
-}
-
-void LogView::update_cache_time_range() {
-
-  std::vector<std::string> keys;
-  for (auto i : config) {
-    keys.push_back(i.first);
-  }
-
-  auto new_start =
-      std::chrono::system_clock::time_point{std::chrono::nanoseconds{start_ns}};
-  auto new_stop =
-      std::chrono::system_clock::time_point{std::chrono::nanoseconds{stop_ns}};
-
-  /* Is new start before potentially cached start? Determine a range to fetch
-   * and fetch it (either newstart ->cachedstart or newstart -> newend. */
-
-  auto log_locked = log.lock();
-  if (!log_locked) {
-    return;
-  }
-  if (!cache.points.size()) {
-    cache = log_locked->GetRange(keys, new_start, new_stop);
-  } else {
-    auto cached_start = cache.points[0].time;
-    if (new_start < cached_start) {
-      auto updates = log_locked->GetRange(keys, new_start, cached_start);
-      cache.points.insert(cache.points.begin(), updates.points.begin(),
-                          updates.points.end());
-    }
-    auto cached_stop = cache.points[cache.points.size() - 1].time;
-    if (new_stop > cached_stop) {
-      auto updates = log_locked->GetRange(keys, cached_stop, new_stop);
-      cache.points.insert(cache.points.end(), updates.points.begin(),
-                          updates.points.end());
-    }
-  }
-
-  if (!cache.points.size()) {
-    return;
-  }
-
-  for (auto i = cache.points.begin(); i != cache.points.end(); i++) {
-    if (i->time >= new_start) {
-      cache.points.erase(cache.points.begin(), i);
-      break;
-    }
-  }
-  for (auto i = cache.points.end() - 1; i != cache.points.begin(); i--) {
-    if (i->time < new_stop) {
-      cache.points.erase(i + 1, cache.points.end());
-      break;
-    }
-  }
 }
 
 /* Recompute pointgroups for pixels x1 through x1 inclusive */
@@ -101,6 +45,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
   if (stop_ns == start_ns) {
     return;
   }
+  auto before = std::chrono::system_clock::now();
 
   /* Ensure pointgroups exist for all pixels */
   for (auto i : config) {
@@ -114,11 +59,11 @@ void LogView::recompute_pointgroups(int x1, int x2) {
     }
   }
 
-  std::vector<std::vector<PointGroup> *> keymap;
+  std::vector<std::string> keys;
   for (auto i : config) {
-    auto k = i.first;
-    keymap.push_back(&series[k]);
+    keys.push_back(i.first);
   }
+
 
   std::vector<range> pixel_ranges;
   auto ns_per_pixel = (stop_ns - start_ns) / w();
@@ -128,26 +73,25 @@ void LogView::recompute_pointgroups(int x1, int x2) {
     pixel_ranges.push_back(range{.start_ns = start, .stop_ns = stop});
   }
 
-  auto start = std::lower_bound(
-      cache.points.begin(), cache.points.end(), pixel_ranges[0].start_ns,
-      [](const auto &point, uint64_t time) {
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(
-                   point.time.time_since_epoch())
-                   .count() < time;
-      });
-  auto stop = std::upper_bound(
-      start, cache.points.end(), pixel_ranges[pixel_ranges.size() - 1].stop_ns,
-      [](uint64_t time, const auto &point) {
-        return time < std::chrono::duration_cast<std::chrono::nanoseconds>(
-                          point.time.time_since_epoch())
-                          .count();
-      });
+  auto log_locked = log.lock();
+  if (!log_locked) {
+    return;
+  }
+  auto view = log_locked->GetRange(keys, pixel_ranges.front().start_ns,
+  pixel_ranges.back().stop_ns);
+  std::vector<std::vector<PointGroup> *> keymap;
+   for (auto i : config) {
+    auto k = i.first;
+    keymap.push_back(&series[k]);
+   }
 
   int pixel = x1;
-  for (auto i = start; i < stop; i++) {
-    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 i->time.time_since_epoch())
-                 .count();
+  while (const auto &mayberow = view.next_row()) {
+    const auto &row = mayberow.value();
+    auto t = row.time();
+    if (t < pixel_ranges[pixel - x1].start_ns) {
+      continue;
+    }
     while ((t >= pixel_ranges[pixel - x1].stop_ns) && pixel < w()) {
       pixel++;
     }
@@ -155,9 +99,10 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       break;
     }
 
-    for (int k = 0; k < keymap.size(); k++) {
-      auto &s = keymap[k]->at(pixel);
-      viaems::FeedValue fv = i->values[k];
+    for (int k = 0; k < keys.size(); k++) {
+      int rowindex = view.mapping[k];
+      viaems::FeedValue fv = row.get(rowindex).value();
+      auto &s = (*keymap[k])[pixel];
       float v;
       if (std::holds_alternative<uint32_t>(fv)) {
         v = std::get<uint32_t>(fv);
@@ -181,6 +126,10 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       s.count++;
     }
   }
+  auto after = std::chrono::system_clock::now();
+  std::cerr << "recompute took " <<
+  std::chrono::duration_cast<std::chrono::milliseconds>(after - before).count()
+  << std::endl;
 }
 
 void LogView::draw() {
@@ -345,7 +294,6 @@ void LogView::shift(std::chrono::system_clock::duration amt) {
   int shifted_pixels = shift_ns / ns_per_pixel;
 
   if (shifted_pixels != 0) {
-    update_cache_time_range();
     shift_pointgroups(shifted_pixels);
     if (shift_ns > 0) {
       recompute_pointgroups(w() - 1 - shifted_pixels, w() - 1);
@@ -364,7 +312,6 @@ void LogView::zoom(double amt, double centerpoint) {
 
   start_ns -= delta * centerpoint;
   stop_ns += delta * (1.0 - centerpoint);
-  update_cache_time_range();
   recompute_pointgroups(0, w() - 1);
   redraw();
 }

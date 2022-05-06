@@ -39,7 +39,7 @@ void buffer_write<std::string>(std::vector<uint8_t> &buffer, std::string value) 
   buffer.insert(buffer.end(), value.data(), value.data() + value.size());
 }
 
-uint64_t time_to_ns(std::chrono::system_clock::time_point tp) {
+static uint64_t time_to_ns(std::chrono::system_clock::time_point tp) {
   uint64_t time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
       tp.time_since_epoch()).count();
   return time_ns;
@@ -104,10 +104,10 @@ struct LogRow {
   const DataChunk &chunk;
   int row;
 
-  uint64_t time() {
+  uint64_t time() const {
     return chunk.time(row);
   }
-  LogValue get(size_t index) {
+  LogValue get(size_t index) const {
     return chunk.get(row, index);
   }
 };
@@ -124,9 +124,12 @@ class Log {
 
     std::vector<ChunkMetadata> index;
     std::shared_ptr<DataChunk> current;
-    int next_chunk_idx;
+    std::vector<int> mapping;
+    int next_chunk_idx = 0;
+    int next_chunk_row = 0;
 
-    const DataChunk & next_chunk();
+    void next_chunk();
+    const std::optional<LogRow> next_row();
   };
 
 private:
@@ -134,6 +137,7 @@ private:
   uint64_t last_meta_index_position;
   uint64_t num_indexes_at_open;
   std::vector<ChunkMetadata> index;
+  std::map<uint64_t, std::shared_ptr<DataChunk>> cache;
 
   struct std::shared_ptr<DataChunk> active_chunk;
   struct ChunkMetadata active_chunk_meta;
@@ -148,7 +152,7 @@ public:
   void WriteChunk(const viaems::LogChunk &);
 
   View GetRange(std::vector<std::string> keys,
-                            viaems::FeedTime start, viaems::FeedTime end);
+                            uint64_t start_ns, uint64_t stop_ns);
 
   void SaveConfig(viaems::Configuration);
   std::vector<viaems::Configuration> LoadConfigs();
