@@ -346,6 +346,10 @@ void MainWindow::sensor_value_changed_callback(Fl_Widget *w, void *ptr) {
   sensor.therm.c = mw->m_sensor_therm_C->value();
   sensor.therm.bias = mw->m_sensor_therm_bias->value();
 
+  sensor.window.capture_width = mw->m_sensor_window_width->value();
+  sensor.window.total_width = mw->m_sensor_window_total->value();
+  sensor.window.offset = mw->m_sensor_window_offset->value();
+
   sensor.const_value = mw->m_sensor_const->value();
 
   mw->m_model->set_value(mw->detail_path, sensor);

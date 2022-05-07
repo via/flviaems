@@ -226,7 +226,7 @@ void LogView::draw() {
     if ((mouse_x > x()) && (mouse_x < x() + w()) &&
         (series[element.first].size() == w())) {
       char txt[32];
-      sprintf(txt, "%s  %.2f", name.c_str(),
+      sprintf(txt, "%s  %.3f", name.c_str(),
               series[element.first][mouse_x - x()].max);
       fl_draw(txt, mouse_x + hover_text_x_offset,
               mouse_y + hover_text_y_offset + (count + 2) * 15);
