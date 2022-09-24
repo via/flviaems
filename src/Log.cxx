@@ -178,11 +178,11 @@ static std::string table_search_statement(std::vector<std::string> keys) {
   return query;
 }
 
-LogRange Log::GetLogRange(std::vector<std::string> keys,
+std::optional<LogRange> Log::GetLogRange(std::vector<std::string> keys,
                                std::chrono::system_clock::time_point start,
                                std::chrono::system_clock::time_point stop) {
   if (db == nullptr) {
-    return {nullptr, {}};
+    return std::nullopt;
   }
   uint64_t start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
                           start.time_since_epoch())

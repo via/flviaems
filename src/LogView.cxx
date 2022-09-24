@@ -89,14 +89,22 @@ void LogView::recompute_pointgroups(int x1, int x2) {
   auto fetch_stop = std::chrono::system_clock::time_point{
       std::chrono::nanoseconds{pixel_ranges.back().stop_ns}};
   auto before = std::chrono::system_clock::now();
-  auto raw_points = log_locked->GetRange(keys, fetch_start, fetch_stop);
+  auto maybe_points = log_locked->GetLogRange(keys, fetch_start, fetch_stop);
+  if (!maybe_points) {
+    return;
+  };
+
+  auto points = std::move(maybe_points.value());
   auto after = std::chrono::system_clock::now();
 
+  std::vector<ResultColumn> resultmap;
+  for (int i = 0; i < keys.size(); i++) {
+    resultmap.push_back(points.Column(i));
+  }
+
   int pixel = x1;
-  for (const auto &point : raw_points.points) {
-    auto t = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                 point.time.time_since_epoch())
-                 .count();
+  while (points.next()) {
+    auto t = points.row_time();
     while ((t >= pixel_ranges[pixel - x1].stop_ns) && pixel < w()) {
       pixel++;
     }
@@ -106,7 +114,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
 
     for (int k = 0; k < keymap.size(); k++) {
       auto &s = keymap[k]->at(pixel);
-      viaems::FeedValue fv = point.values[k];
+      viaems::FeedValue fv = points.row_value(resultmap[k]);
       float v;
       if (std::holds_alternative<uint32_t>(fv)) {
         v = std::get<uint32_t>(fv);

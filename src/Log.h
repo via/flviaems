@@ -28,20 +28,23 @@ class LogRange {
     LogRange(sqlite3_stmt *stmt, std::vector<std::string> cols) : stmt{stmt}, column_names{cols} { }
 
     LogRange(const LogRange &) = delete;
-    LogRange(const LogRange &&rhs) {
+    LogRange(LogRange &&rhs) {
       this->stmt = rhs.stmt;
       this->column_names = std::move(rhs.column_names);
+      rhs.stmt = nullptr;
     }
     ~LogRange() {
-      sqlite3_finalize(this->stmt);
+      if (this->stmt) {
+        sqlite3_finalize(this->stmt);
+      }
     }
 
     ResultColumn Column(int index) const {
-      auto coltype = sqlite3_column_type(this->stmt, index);
+      auto coltype = sqlite3_column_type(this->stmt, index + 1);
       if (coltype == SQLITE_FLOAT) {
-        return ResultColumn{index, true};
+        return ResultColumn{index + 1, true};
       } else {
-        return ResultColumn{index, false};
+        return ResultColumn{index + 1, false};
       }
     }
       
@@ -86,7 +89,7 @@ public:
                             std::chrono::system_clock::time_point end);
   std::vector<std::string> Keys() const;
 
-  LogRange GetLogRange(std::vector<std::string> keys,
+  std::optional<LogRange> GetLogRange(std::vector<std::string> keys,
                             std::chrono::system_clock::time_point start,
                             std::chrono::system_clock::time_point end);
 
