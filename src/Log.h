@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <set>
 #include <thread>
