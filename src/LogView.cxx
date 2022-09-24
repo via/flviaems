@@ -88,7 +88,9 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       std::chrono::nanoseconds{pixel_ranges.front().start_ns}};
   auto fetch_stop = std::chrono::system_clock::time_point{
       std::chrono::nanoseconds{pixel_ranges.back().stop_ns}};
+  auto before = std::chrono::system_clock::now();
   auto raw_points = log_locked->GetRange(keys, fetch_start, fetch_stop);
+  auto after = std::chrono::system_clock::now();
 
   int pixel = x1;
   for (const auto &point : raw_points.points) {
@@ -126,6 +128,11 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       s.set = true;
     }
   }
+  auto after_more = std::chrono::system_clock::now();
+
+  auto fetch_ns = std::chrono::duration_cast<std::chrono::milliseconds>(after - before).count();
+  auto calc_ns = std::chrono::duration_cast<std::chrono::milliseconds>(after_more - after).count();
+  std::cerr << "fetch: " << fetch_ns << "  calc: " << calc_ns << std::endl;
 }
 
 void LogView::draw() {
