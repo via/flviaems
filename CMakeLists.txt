@@ -9,7 +9,7 @@ add_executable(flviaems src/TableEditor.cxx src/flviaems.cxx src/StatusTable.cxx
 src/MainWindow.cxx src/MainWindowUI.cxx src/viaems.cxx src/Log.cxx
 src/LogView.cxx src/OutputEditor.cxx extern/sqlite/sqlite3.c)
 
-#add_definitions(-DSQLITE_THREADSAFE=2)
+add_definitions(-DSQLITE_THREADSAFE=2)
 add_definitions(-DSQLITE_OMIT_LOAD_EXTENSION)
 target_compile_features(flviaems PUBLIC cxx_std_17)
 

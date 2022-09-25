@@ -16,22 +16,15 @@
 
 #include "viaems.h"
 
-struct ResultColumn {
-  int column;
-  bool is_real;
-};
-
 class LogRange {
   sqlite3_stmt *stmt;
-  std::vector<std::string> column_names;
 
   public:
-    LogRange(sqlite3_stmt *stmt, std::vector<std::string> cols) : stmt{stmt}, column_names{cols} { }
+    LogRange(sqlite3_stmt *stmt, std::vector<std::string> cols) : stmt{stmt} { }
 
     LogRange(const LogRange &) = delete;
     LogRange(LogRange &&rhs) {
       this->stmt = rhs.stmt;
-      this->column_names = std::move(rhs.column_names);
       rhs.stmt = nullptr;
     }
     ~LogRange() {
@@ -40,27 +33,14 @@ class LogRange {
       }
     }
 
-    ResultColumn Column(int index) const {
-      auto coltype = sqlite3_column_type(this->stmt, index + 1);
-      if (coltype == SQLITE_FLOAT) {
-        return ResultColumn{index + 1, true};
-      } else {
-        return ResultColumn{index + 1, false};
-      }
-    }
-      
     uint64_t row_time() const {
       return sqlite3_column_int64(this->stmt, 0);
     }
 
-    viaems::FeedValue row_value(const ResultColumn &c) const {
-      if (c.is_real) {
-        return viaems::FeedValue((float)sqlite3_column_double(this->stmt, c.column));
-      } else {
-        return viaems::FeedValue((uint32_t)sqlite3_column_int64(this->stmt, c.column));
-      }
+    double row_value(int key_index) const {
+      int sql_index = key_index + 1;
+        return sqlite3_column_double(this->stmt, sql_index);
     }
-
     bool next() {
       int res = sqlite3_step(this->stmt);
       if ((res == SQLITE_DONE) || (res == SQLITE_MISUSE)) {

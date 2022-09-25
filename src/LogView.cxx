@@ -98,16 +98,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
   auto after = std::chrono::system_clock::now();
 
   int pixel = x1;
-  if (!points.next()) {
-    return;
-  }
-
-  std::vector<ResultColumn> resultmap;
-  for (int i = 0; i < keys.size(); i++) {
-    resultmap.push_back(points.Column(i));
-  }
-
-  do {
+  while (points.next()) {
     auto t = points.row_time();
     while ((t >= pixel_ranges[pixel - x1].stop_ns) && pixel < w()) {
       pixel++;
@@ -118,13 +109,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
 
     for (int k = 0; k < keymap.size(); k++) {
       auto &s = keymap[k]->at(pixel);
-      viaems::FeedValue fv = points.row_value(resultmap[k]);
-      float v;
-      if (std::holds_alternative<uint32_t>(fv)) {
-        v = std::get<uint32_t>(fv);
-      } else {
-        v = std::get<float>(fv);
-      }
+      auto v = points.row_value(k);
       if (!s.set) {
         s.first = v;
         s.min = v;
@@ -139,7 +124,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       s.last = v;
       s.set = true;
     }
-  } while(points.next());
+  };
   auto after_more = std::chrono::system_clock::now();
 
   auto fetch_ns = std::chrono::duration_cast<std::chrono::milliseconds>(after - before).count();

@@ -278,7 +278,7 @@ void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
     auto log = l.value();
     m_logview->SetLog(log);
     auto stop_time = l.value()->EndTime();
-    auto start_time = stop_time - std::chrono::seconds{1800};
+    auto start_time = stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
     auto old_configs = log->LoadConfigs();
 
