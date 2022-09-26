@@ -7,7 +7,9 @@
 
 #include "LogView.h"
 
-LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {}
+LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
+
+}
 
 struct range {
   uint64_t start_ns;
@@ -135,6 +137,7 @@ void LogView::recompute_pointgroups(int x1, int x2) {
 void LogView::draw() {
   draw_box();
   fl_push_clip(x(), y(), w(), h());
+
   int count = 0;
   auto enabled_count = std::count_if(config.begin(), config.end(),
                                      [](auto &x) { return x.second.enabled; });
@@ -142,6 +145,12 @@ void LogView::draw() {
   int hover_text_x_offset = (mouse_x > (x() + 0.75 * w())) ? -150 : 5;
   int hover_text_y_offset =
       (mouse_y - y() + total_y_space > h()) ? -total_y_space : 20;
+
+  /* Draw selection box */
+  if (selecting) {
+    fl_draw_box(FL_FLAT_BOX, selection_x1, y(), selection_x2 - selection_x1, h(), FL_BLUE);
+  }
+
   for (const auto &element : config) {
     if (!element.second.enabled) {
       continue;
@@ -243,15 +252,17 @@ int LogView::handle(int ev) {
     return ret;
   }
   if (ev == FL_PUSH) {
-    if (Fl::event_clicks() > 0) {
+    if (Fl::event_button() == FL_RIGHT_MOUSE) {
       auto *m =
           context_menu.data()->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
       if (m) {
         m->do_callback(this, m->user_data());
       }
+    } else {
+      mouse_press_x = Fl::event_x();
+      mouse_press_y = Fl::event_y();
+      selecting = false;
     }
-    mouse_press_x = Fl::event_x();
-    mouse_press_y = Fl::event_y();
     return 1;
   }
   if (ev == FL_MOVE) {
@@ -259,20 +270,39 @@ int LogView::handle(int ev) {
     mouse_y = Fl::event_y();
     redraw();
   }
-  if (ev == FL_DRAG) {
-    int diff_x = mouse_press_x - Fl::event_x();
-    auto ns_per_pixel = (stop_ns - start_ns) / w();
-    int64_t shift_ns = diff_x * ns_per_pixel;
-    auto amt =
+  if (ev == FL_DRAG && Fl::event_button() == FL_LEFT_MOUSE) {
+    if (Fl::event_clicks() == 0) {
+      /* Single left click -- drag */
+      int diff_x = mouse_press_x - Fl::event_x();
+      auto ns_per_pixel = (stop_ns - start_ns) / w();
+      int64_t shift_ns = diff_x * ns_per_pixel;
+      auto amt =
         std::chrono::system_clock::duration{std::chrono::nanoseconds{shift_ns}};
-    shift(amt);
-    mouse_press_x = Fl::event_x();
-    mouse_press_y = Fl::event_y();
-    do_callback();
+      shift(amt);
+      mouse_press_x = Fl::event_x();
+      mouse_press_y = Fl::event_y();
+      selecting = false;
+      do_callback();
+    } else if (Fl::event_clicks() == 1) {
+      /* Double left click means initiate selection */
+      mouse_press_x = Fl::event_x();
+      mouse_press_y = Fl::event_y();
+      if (mouse_x < mouse_press_x) {
+        selection_x1 = mouse_x;
+        selection_x2 = mouse_press_x;
+      } else {
+        selection_x1 = mouse_press_x;
+        selection_x2 = mouse_x;
+      }
+      selecting = true;
+      redraw();
+    }
+
   }
   if (ev == FL_MOUSEWHEEL) {
     float amt = Fl::event_dy() * 0.2; /* 20% up or down */
     float centerpoint = (Fl::event_x() - x()) / (float)w();
+    selecting = false;
     zoom(amt, centerpoint);
     do_callback();
     return 1;
@@ -343,15 +373,26 @@ void LogView::resize(int X, int Y, int W, int H) {
   recompute_pointgroups(0, w() - 1);
 }
 
+void LogView::zoom_selection(Fl_Widget *w, void *p) {
+  LogView *lv = (LogView *)w;
+
+  uint64_t total_range = lv->stop_ns - lv->start_ns;
+  double x1 = (lv->selection_x1 - lv->x()) / (double)lv->w();
+  double x2 = (lv->selection_x2 - lv->x()) / (double)lv->w();
+  lv->stop_ns = lv->start_ns + (x2 * total_range);
+  lv->start_ns = lv->start_ns + (x1 * total_range);
+  lv->selecting = false;
+  lv->recompute_pointgroups(0, lv->w() - 1);
+  lv->redraw();
+}
+
+void LogView::open_editor(Fl_Widget *w, void *p) {
+}
+
 void LogView::SetLog(std::weak_ptr<Log> log) {
   this->log = log;
 
   auto log_locked = log.lock();
-  auto keys = log_locked->Keys();
-  for (auto k : keys) {
-    config.insert(std::make_pair(k, SeriesConfig{}));
-    series.insert(std::make_pair(k, std::vector<PointGroup>{}));
-  }
 
   /* TODO: remove when complete with dynamic setup */
   config["rpm"] = {0, 6000, FL_RED, true};
@@ -359,26 +400,7 @@ void LogView::SetLog(std::weak_ptr<Log> log) {
   config["sensor.ego"] = {0.7, 1.0, FL_GREEN, true};
 
   context_menu.clear();
-  context_menu.push_back({"Add/Remove", 0, 0, 0, FL_SUBMENU});
-
-  for (const auto &x : config) {
-    Fl_Menu_Item item = {x.first.c_str(), 0,
-                         [](Fl_Widget *w, void *v) {
-                           LogView *lv = (LogView *)w;
-                           auto k = (const char *)v;
-                           lv->config[k].enabled = !lv->config[k].enabled;
-                           lv->config[k].max_y = 100;
-                           lv->config[k].color = FL_BLUE;
-                           lv->update();
-                         },
-                         (void *)x.first.c_str(),
-                         FL_MENU_TOGGLE |
-                             (x.second.enabled ? FL_MENU_VALUE : 0)};
-    context_menu.push_back(item);
-    if (x.second.enabled) {
-      context_menu.insert(context_menu.begin(), {x.first.c_str()});
-    }
-  }
-  context_menu.push_back({0});
+  context_menu.push_back({"Zoom to selection", 0, zoom_selection, 0, 0});
+  context_menu.push_back({"Edit Viewer...", 0, open_editor, 0, 0});
   context_menu.push_back({0});
 };

@@ -44,6 +44,9 @@ private:
   int mouse_x, mouse_y;
   int mouse_press_x, mouse_press_y;
 
+  bool selecting;
+  int selection_x1, selection_x2;
+
   std::map<std::string, SeriesConfig> config;
   std::map<std::string, std::vector<PointGroup>> series;
 
@@ -51,4 +54,7 @@ private:
   void recompute_pointgroups(int x1, int x2);
   void shift_pointgroups(int amt);
   void draw();
+
+  static void zoom_selection(Fl_Widget *w, void *p);
+  static void open_editor(Fl_Widget *w, void *p);
 };
