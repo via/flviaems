@@ -38,6 +38,7 @@ public:
 
 private:
   std::vector<Fl_Menu_Item> context_menu;
+  std::unique_ptr<Fl_Window> editor_window;
   std::weak_ptr<Log> log;
   uint64_t start_ns, stop_ns;
   uint64_t last_sample_ns;
@@ -57,4 +58,6 @@ private:
 
   static void zoom_selection(Fl_Widget *w, void *p);
   static void open_editor(Fl_Widget *w, void *p);
+
+  friend class LogViewEditor;
 };

@@ -4,11 +4,12 @@
 #include <iostream>
 
 #include <FL/fl_draw.H>
+#include <FL/Fl_Window.H>
 
 #include "LogView.h"
+#include "LogViewEditor.h"
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
-
 }
 
 struct range {
@@ -387,12 +388,20 @@ void LogView::zoom_selection(Fl_Widget *w, void *p) {
 }
 
 void LogView::open_editor(Fl_Widget *w, void *p) {
+  LogView *lv = (LogView *)w;
+  if (lv->editor_window) {
+    lv->editor_window->show();
+  }
 }
 
 void LogView::SetLog(std::weak_ptr<Log> log) {
   this->log = log;
 
   auto log_locked = log.lock();
+
+  for (const auto &k : log_locked->Keys()) {
+    config[k] = {0, 100, FL_WHITE, false};
+  }
 
   /* TODO: remove when complete with dynamic setup */
   config["rpm"] = {0, 6000, FL_RED, true};
@@ -403,4 +412,12 @@ void LogView::SetLog(std::weak_ptr<Log> log) {
   context_menu.push_back({"Zoom to selection", 0, zoom_selection, 0, 0});
   context_menu.push_back({"Edit Viewer...", 0, open_editor, 0, 0});
   context_menu.push_back({0});
+
+  editor_window = std::make_unique<LogViewEditorWindow>(100, 100, 400, 800, *this);
+  editor_window->callback([](Fl_Widget *w, void *p){
+    LogView *lv = (LogView *)p;
+    lv->update();
+
+  }, this);
+
 };
