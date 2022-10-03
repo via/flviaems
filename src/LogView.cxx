@@ -413,11 +413,5 @@ void LogView::SetLog(std::weak_ptr<Log> log) {
   context_menu.push_back({"Edit Viewer...", 0, open_editor, 0, 0});
   context_menu.push_back({0});
 
-  editor_window = std::make_unique<LogViewEditorWindow>(100, 100, 400, 800, *this);
-  editor_window->callback([](Fl_Widget *w, void *p){
-    LogView *lv = (LogView *)p;
-    lv->update();
-
-  }, this);
-
+  editor_window = std::make_unique<LogViewEditorWindow>(100, 100, 600, 1000, *this);
 };

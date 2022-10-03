@@ -26,7 +26,25 @@ LogViewEditor::LogViewEditor(int X, int Y, int W, int H, LogView &lh) : Fl_Table
     this->feed.push_back(row);
 
     row.min->value(conf.min_y);
+    row.min->callback([](Fl_Widget *w, void *p){
+      LogViewEditor *lve = (LogViewEditor *)p;
+      int row = lve->find(w) / lve->cols();
+      const struct LogViewFeedRow &r = lve->feed[row];
+
+      lve->lh.config[r.name].min_y = r.min->value();
+      lve->lh.update();
+    }, this);
+
     row.max->value(conf.max_y);
+    row.max->callback([](Fl_Widget *w, void *p){
+      LogViewEditor *lve = (LogViewEditor *)p;
+      int row = lve->find(w) / lve->cols();
+      const struct LogViewFeedRow &r = lve->feed[row];
+
+      lve->lh.config[r.name].max_y = r.max->value();
+      lve->lh.update();
+    }, this);
+
     row.enabled->value(conf.enabled ? 1 : 0);
     row.enabled->callback([](Fl_Widget *w, void *p){
       LogViewEditor *lve = (LogViewEditor *)p;
@@ -34,7 +52,7 @@ LogViewEditor::LogViewEditor(int X, int Y, int W, int H, LogView &lh) : Fl_Table
       const struct LogViewFeedRow &r = lve->feed[row];
 
       lve->lh.config[r.name].enabled = r.enabled->value() ? true : false;
-      lve->parent()->do_callback();
+      lve->lh.update();
     }, this);
 
   }
