@@ -23,9 +23,10 @@ struct LogViewFeedRow {
 
 class LogViewEditor : public Fl_Table {
 public:
-  LogViewEditor(int X, int Y, int W, int H, LogView &lv);
+  LogViewEditor(int X, int Y, int W, int H);
+  void set_logview(LogView *);
 private:
-  LogView &lh;
+  LogView *lv;
   std::vector<LogViewFeedRow> feed;
   
 
@@ -34,12 +35,15 @@ private:
 };
 
 class LogViewEditorWindow : public Fl_Window {
-  public:
-  LogViewEditorWindow(int X, int Y, int W, int H, LogView &lh) : Fl_Window(X, Y,
-  W, H, "Edit Log View") { 
-    editor = new LogViewEditor(0, 0, w(), h(), lh);
+public:
+  LogViewEditorWindow(int X, int Y, int W, int H) : Fl_Window(X, Y, W, H, "Edit Log View") { 
+    editor = new LogViewEditor(0, 0, w(), h());
     resizable(editor);
-    }
+  }
+
+  void set_logview(LogView *lv) {
+    this->editor->set_logview(lv);
+  }
 
   private:
     LogViewEditor *editor;

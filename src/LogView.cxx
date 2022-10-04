@@ -388,10 +388,6 @@ void LogView::zoom_selection(Fl_Widget *w, void *p) {
 }
 
 void LogView::open_editor(Fl_Widget *w, void *p) {
-  LogView *lv = (LogView *)w;
-  if (lv->editor_window) {
-    lv->editor_window->show();
-  }
 }
 
 void LogView::SetLog(std::weak_ptr<Log> log) {
@@ -412,6 +408,4 @@ void LogView::SetLog(std::weak_ptr<Log> log) {
   context_menu.push_back({"Zoom to selection", 0, zoom_selection, 0, 0});
   context_menu.push_back({"Edit Viewer...", 0, open_editor, 0, 0});
   context_menu.push_back({0});
-
-  editor_window = std::make_unique<LogViewEditorWindow>(100, 100, 600, 1000, *this);
 };

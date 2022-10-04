@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0305
+version 1.0308
 header_name {.h}
 code_name {.cxx}
 class MainWindowUI {open
@@ -10,10 +10,6 @@ class MainWindowUI {open
       label mainWindow open
       protected xywh {642 490 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
-      Fl_Tree m_config_tree {
-        label Configuration
-        protected xywh {20 40 400 345}
-      }
       Fl_Table m_status_table {
         label Status
         protected xywh {20 415 405 270}
@@ -262,6 +258,29 @@ class MainWindowUI {open
       Fl_Button m_logview_out {
         label {@2UpArrow}
         xywh {670 685 25 20}
+      }
+      Fl_Tabs {} {open
+        xywh {25 40 400 350}
+      } {
+        Fl_Group {} {
+          label tab1 open
+          xywh {25 65 400 325} hide resizable
+        } {
+          Fl_Tree m_config_tree {
+            label Configuration
+            protected xywh {25 65 400 325}
+          }
+        }
+        Fl_Group {} {
+          label tab2 open
+          xywh {25 65 400 325}
+        } {
+          Fl_Table m_logview_editor {selected
+            xywh {25 70 400 320}
+            code0 {\#include "LogViewEditor.h"}
+            class LogViewEditor
+          } {}
+        }
       }
     }
     code {m_main_window->show();} {}
