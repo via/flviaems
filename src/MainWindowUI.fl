@@ -263,7 +263,7 @@ class MainWindowUI {open
         xywh {10 25 430 365}
       } {
         Fl_Group {} {
-          label Target open
+          label {Target Configuration} open
           xywh {10 45 430 345} hide resizable
         } {
           Fl_Tree m_config_tree {
@@ -275,7 +275,7 @@ class MainWindowUI {open
           xywh {10 45 430 345}
         } {
           Fl_Table m_logview_editor {
-            xywh {10 70 430 320}
+            xywh {10 45 430 345}
             code0 {\#include "LogViewEditor.h"}
             class LogViewEditor
           } {}

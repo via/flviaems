@@ -222,7 +222,7 @@ MainWindowUI::MainWindowUI() {
     { m_logview_out = new Fl_Button(670, 695, 25, 20, "@2UpArrow");
     } // Fl_Button* m_logview_out
     { Fl_Tabs* o = new Fl_Tabs(10, 25, 430, 365);
-      { Fl_Group* o = new Fl_Group(10, 45, 430, 345, "Target");
+      { Fl_Group* o = new Fl_Group(10, 45, 430, 345, "Target Configuration");
         o->hide();
         { m_config_tree = new Fl_Tree(10, 45, 430, 345);
         } // Fl_Tree* m_config_tree
@@ -230,7 +230,7 @@ MainWindowUI::MainWindowUI() {
         Fl_Group::current()->resizable(o);
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(10, 45, 430, 345, "Log View");
-        { m_logview_editor = new LogViewEditor(10, 70, 430, 320);
+        { m_logview_editor = new LogViewEditor(10, 45, 430, 345);
           m_logview_editor->box(FL_THIN_DOWN_FRAME);
           m_logview_editor->color(FL_BACKGROUND_COLOR);
           m_logview_editor->selection_color(FL_BACKGROUND_COLOR);

@@ -91,7 +91,7 @@ void LogViewEditor::place_widgets() {
   }
 }
 
-static std::vector<std::string> headers = {"Enabled", "Min", "Max", ""};
+static std::vector<std::string> headers = {"Show", "Min", "Max", ""};
 
 void LogViewEditor::draw_cell(TableContext c, int R, int C, int X, int Y, int W,
                              int H) {
