@@ -37,7 +37,7 @@ MainWindowUI::MainWindowUI() {
   { m_main_window = new Fl_Double_Window(1020, 750, "mainWindow");
     m_main_window->box(FL_THIN_DOWN_BOX);
     m_main_window->user_data((void*)(this));
-    { m_status_table = new StatusTable(20, 415, 405, 270, "Status");
+    { m_status_table = new StatusTable(10, 415, 430, 295, "Status");
       m_status_table->box(FL_THIN_DOWN_FRAME);
       m_status_table->color(FL_BACKGROUND_COLOR);
       m_status_table->selection_color(FL_BACKGROUND_COLOR);
@@ -176,7 +176,7 @@ MainWindowUI::MainWindowUI() {
     { m_status_text = new Fl_Output(450, 720, 415, 25);
       m_status_text->box(FL_NO_BOX);
     } // Fl_Output* m_status_text
-    { m_logview = new LogView(460, 423, 525, 264);
+    { m_logview = new LogView(460, 423, 525, 271);
       m_logview->box(FL_DOWN_BOX);
       m_logview->color(FL_FOREGROUND_COLOR);
       m_logview->selection_color(FL_BACKGROUND_COLOR);
@@ -190,7 +190,7 @@ MainWindowUI::MainWindowUI() {
     { m_offline = new Fl_Output(215, 720, 80, 25);
       m_offline->box(FL_NO_BOX);
     } // Fl_Output* m_offline
-    { m_logview_follow = new Fl_Button(810, 685, 25, 20, "@>|");
+    { m_logview_follow = new Fl_Button(810, 695, 25, 20, "@>|");
     } // Fl_Button* m_logview_follow
     { m_output_editor_box = new Fl_Group(455, 40, 525, 345);
       m_output_editor_box->box(FL_DOWN_BOX);
@@ -211,26 +211,26 @@ MainWindowUI::MainWindowUI() {
       m_output_editor_box->end();
       Fl_Group::current()->resizable(m_output_editor_box);
     } // Fl_Group* m_output_editor_box
-    { m_logview_forward = new Fl_Button(785, 685, 25, 20, "@>>");
+    { m_logview_forward = new Fl_Button(785, 695, 25, 20, "@>>");
     } // Fl_Button* m_logview_forward
-    { m_logview_pause = new Fl_Button(760, 685, 25, 20, "@||");
+    { m_logview_pause = new Fl_Button(760, 695, 25, 20, "@||");
     } // Fl_Button* m_logview_pause
-    { m_logview_back = new Fl_Button(735, 685, 25, 20, "@<<");
+    { m_logview_back = new Fl_Button(735, 695, 25, 20, "@<<");
     } // Fl_Button* m_logview_back
-    { m_logview_in = new Fl_Button(695, 685, 25, 20, "@8UpArrow");
+    { m_logview_in = new Fl_Button(695, 695, 25, 20, "@8UpArrow");
     } // Fl_Button* m_logview_in
-    { m_logview_out = new Fl_Button(670, 685, 25, 20, "@2UpArrow");
+    { m_logview_out = new Fl_Button(670, 695, 25, 20, "@2UpArrow");
     } // Fl_Button* m_logview_out
-    { Fl_Tabs* o = new Fl_Tabs(25, 40, 400, 350);
-      { Fl_Group* o = new Fl_Group(25, 65, 400, 325, "tab1");
+    { Fl_Tabs* o = new Fl_Tabs(10, 25, 430, 365);
+      { Fl_Group* o = new Fl_Group(10, 45, 430, 345, "Target");
         o->hide();
-        { m_config_tree = new Fl_Tree(25, 65, 400, 325, "Configuration");
+        { m_config_tree = new Fl_Tree(10, 45, 430, 345);
         } // Fl_Tree* m_config_tree
         o->end();
         Fl_Group::current()->resizable(o);
       } // Fl_Group* o
-      { Fl_Group* o = new Fl_Group(25, 65, 400, 325, "tab2");
-        { m_logview_editor = new LogViewEditor(25, 70, 400, 320);
+      { Fl_Group* o = new Fl_Group(10, 45, 430, 345, "Log View");
+        { m_logview_editor = new LogViewEditor(10, 70, 430, 320);
           m_logview_editor->box(FL_THIN_DOWN_FRAME);
           m_logview_editor->color(FL_BACKGROUND_COLOR);
           m_logview_editor->selection_color(FL_BACKGROUND_COLOR);
