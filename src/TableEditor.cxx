@@ -11,11 +11,11 @@ void TableEditor::cell_select_callback(Fl_Widget *w, void *ptr) {
   switch (editor->callback_context()) {
   case CONTEXT_TABLE:
   case CONTEXT_ROW_HEADER:
+    break;
   case CONTEXT_COL_HEADER:
-    editor->stop_editor();
     break;
   case CONTEXT_CELL:
-    switch (Fl::event()) {
+    switch(Fl::event()) {
     case FL_PUSH:
       editor->stop_editor();
       editor->start_editor(R, C);
@@ -95,11 +95,20 @@ void TableEditor::start_editor(int r, int c) {
   set_selection(r, c, r, c);
 
   int X, Y, W, H;
-  find_cell(CONTEXT_CELL, r, c, X, Y, W, H);
-  input->resize(X, Y, W, H);
-  auto v = cell_value(r, c);
-  input->value(v.c_str());
-  input->position(0, v.size());
+  if (r == -1) {
+    /* Find Column header */
+    find_cell(CONTEXT_COL_HEADER, 0, c, X, Y, W, H);
+    input->resize(X, Y, W, H);
+    input->value("100");
+  } else if (c == -1) {
+    /* Find Row header */
+  } else {
+    find_cell(CONTEXT_CELL, r, c, X, Y, W, H);
+    input->resize(X, Y, W, H);
+    auto v = cell_value(r, c);
+    input->value(v.c_str());
+    input->position(0, v.size());
+  }
   input->show();
   input->take_focus();
   edit_r = r;

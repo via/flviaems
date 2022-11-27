@@ -44,7 +44,10 @@ struct TableValue {
   std::vector<TableAxis> axis;
   std::vector<float> one;
   std::vector<std::vector<float>> two;
+
+  void resize(int R, int C);
 };
+
 
 struct SensorValue {
   std::string source;
