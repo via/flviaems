@@ -61,7 +61,8 @@ public:
   }
 
   void Write(const json &msg) {
-    json::to_cbor(msg, *writer);
+    auto bytes = json::to_cbor(msg);
+    writer->write((const char *)bytes.data(), bytes.size());
     writer->flush();
   }
 
@@ -191,7 +192,7 @@ class FLViaems {
 
   void start_interrogation() {
     model.interrogate(interrogate_update, this);
-    Fl::add_timeout(60, failed_structure_callback, this);
+    Fl::add_timeout(8, failed_structure_callback, this);
   }
 
   static void value_update(viaems::StructurePath path, void *ptr) {
