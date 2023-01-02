@@ -344,7 +344,7 @@ void LogView::shift(std::chrono::system_clock::duration amt) {
   stop_ns += shift_ns;
 
   int64_t ns_per_pixel = (stop_ns - start_ns) / w();
-  int shifted_pixels = shift_ns / ns_per_pixel;
+  int shifted_pixels = (ns_per_pixel == 0) ? 0 : (shift_ns / ns_per_pixel);
 
   if (shifted_pixels != 0) {
     update_cache_time_range();

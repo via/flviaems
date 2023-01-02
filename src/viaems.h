@@ -10,8 +10,10 @@
 #include <memory>
 #include <sstream>
 #include <variant>
+#include <optional>
 #include <vector>
 
+#include <iostream>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -190,6 +192,10 @@ public:
   LogChunk FeedUpdates();
   void NewData();
 
+  void SetTrace(int level) {
+    this->trace = level;
+  }
+
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
   std::shared_ptr<Request> Structure(structure_cb, void *);
   std::shared_ptr<Request> Ping(ping_cb, void *);
@@ -200,6 +206,7 @@ public:
 
 private:
   std::unique_ptr<Connection> connection;
+  int trace = 0;
 
   std::vector<std::string> m_feed_vars;
   LogChunk m_feed_updates;

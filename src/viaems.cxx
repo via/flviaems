@@ -376,11 +376,20 @@ void Protocol::NewData() {
     if (!msg.contains("type")) {
       return;
     }
-    if ((msg.contains("success") == 1) && (msg["success"] != true)) {
-      return;
+    std::string type = msg["type"];
+    if ((this->trace > 1) || 
+        ((this->trace > 0) && (type != "feed" && type != "description"))) {
+      std::cerr << "recv: " << msg.dump() << std::endl;
     }
 
-    std::string type = msg["type"];
+#if 0
+    if ((msg.contains("success") == 1) && (msg["success"] != true)) {
+      std::cerr << "repeating request" << std::endl;
+      m_requests.front()->is_sent = false;
+      ensure_sent();
+    }
+#endif
+
 
     if (type == "feed" && msg.contains("values")) {
       handle_feed_message_from_ems(msg["values"]);
@@ -535,6 +544,10 @@ void Protocol::ensure_sent() {
     return;
   }
   first->is_sent = true;
+
+  if (this->trace > 0) {
+    std::cerr << "send: " << first->repr << std::endl;
+  }
   this->connection->Write(first->repr);
 }
 

@@ -41,6 +41,7 @@ struct ThreadedJsonInterface {
         lock.unlock();
         Fl::awake(self->handler, self->handler_ptr);
       } catch (json::parse_error &e) {
+        std::cerr << "parse_error: " << e.what() << std::endl;
       }
     }
   }
@@ -139,6 +140,7 @@ class FLViaems {
   std::shared_ptr<viaems::Request> ping_req;
 
   bool offline = true;
+  int trace_level = 0;
 
   static void feed_refresh_handler(void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
@@ -162,7 +164,9 @@ class FLViaems {
 
       v->ui.feed_update(status);
       v->ui.update_feed_hz(std::accumulate(rates.begin(), rates.end(), 0));
-      v->log_writer->WriteChunk(std::move(updates));
+      if (v->log_writer) {
+        v->log_writer->WriteChunk(std::move(updates));
+      }
     }
     Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
   }
@@ -186,7 +190,9 @@ class FLViaems {
     v->ui.update_interrogation(s.in_progress, s.complete_nodes, s.total_nodes);
     if (!s.in_progress) {
       v->ui.update_model(&v->model);
-      v->log_writer->SaveConfig(v->model.configuration());
+      if (v->log_writer) {
+        v->log_writer->SaveConfig(v->model.configuration());
+      }
     }
   }
 
@@ -254,27 +260,17 @@ class FLViaems {
     if (filename == nullptr) {
       return;
     }
-    v->log_reader = std::make_shared<Log>(filename);
-    v->log_writer = std::make_shared<ThreadedWriteLog>(filename);
-    v->ui.update_log(v->log_reader);
+    v->set_logfile(filename);
   }
 
-  static void initialize_simulator(Fl_Widget *w, void *ptr) {
+  static void select_sim_cb(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    auto conn = std::make_unique<ExecConnection>(
-        v->message_available, v, "/home/via/dev/viaems/obj/hosted/viaems");
-    v->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
-    v->model.set_protocol(v->protocol);
-    v->offline = false;
+    v->connect_sim("/home/via/dev/viaems/obj/hosted/viaems");
   }
 
-  static void initialize_device(Fl_Widget *w, void *ptr) {
+  static void select_device_cb(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    auto conn = std::make_unique<DevConnection>(v->message_available, v,
-                                                "/dev/ttyACM0");
-    v->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
-    v->model.set_protocol(v->protocol);
-    v->offline = false;
+    v->connect_device("/dev/ttyACM0");
   }
 
   static void initialize_offline(Fl_Widget *w, void *ptr) {
@@ -334,12 +330,40 @@ class FLViaems {
   }
 
 public:
+
+  void set_trace(int t) {
+    this->trace_level = t;
+    if (this->protocol) {
+      this->protocol->SetTrace(t);
+    }
+  }
+
+  void set_logfile(std::string filename) {
+    log_reader = std::make_shared<Log>(filename);
+    log_writer = std::make_shared<ThreadedWriteLog>(filename);
+    ui.update_log(log_reader);
+  }
+
+  void connect_device(std::string device) {
+    auto conn = std::make_unique<DevConnection>(this->message_available, this,
+                                                device);
+    this->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
+    this->protocol->SetTrace(this->trace_level);
+    this->model.set_protocol(this->protocol);
+    this->offline = false;
+  }
+
+  void connect_sim(std::string path) {
+    auto conn = std::make_unique<ExecConnection>(
+        this->message_available, this, path);
+    this->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
+    this->protocol->SetTrace(this->trace_level);
+    this->model.set_protocol(this->protocol);
+    this->offline = false;
+  }
+
   FLViaems() {
     Fl::lock(); /* Necessary to enable awake() functionality */
-
-    log_reader = std::make_shared<Log>("log.vlog");
-    log_writer = std::make_shared<ThreadedWriteLog>("log.vlog");
-    ui.update_log(log_reader);
 
     Fl::add_timeout(0.05, feed_refresh_handler, this);
     Fl::add_timeout(1, pinger, this);
@@ -349,8 +373,8 @@ public:
     ui.m_file_open->callback(select_log, this);
     ui.m_file_export->callback(export_config, this);
     ui.m_file_import->callback(import_config, this);
-    ui.m_connection_simulator->callback(initialize_simulator, this);
-    ui.m_connection_device->callback(initialize_device, this);
+    ui.m_connection_simulator->callback(select_sim_cb, this);
+    ui.m_connection_device->callback(select_device_cb, this);
     ui.m_connection_offline->callback(initialize_offline, this);
     ui.set_load_config_callback(
         std::bind(&FLViaems::load_config, this, std::placeholders::_1));
@@ -360,8 +384,30 @@ public:
   ~FLViaems(){};
 };
 
-int main() {
+int main(int argc, char *argv[]) {
   FLViaems controller{};
+
+  int opt;
+  int tracelevel = 0;
+  while ((opt = getopt(argc, argv, "d:s:f:t:")) != -1) {
+    switch (opt) {
+      case 'd':
+        controller.connect_device(optarg);
+        break;
+      case 's':
+        controller.connect_sim(optarg);
+        break;
+      case 'f':
+        controller.set_logfile(optarg);
+        break;
+      case 't':
+        tracelevel = atoi(optarg);
+        controller.set_trace(tracelevel);
+        break;
+    }
+  }
+
+
   Fl::run();
   return 0;
 }

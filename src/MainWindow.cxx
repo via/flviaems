@@ -315,6 +315,9 @@ void MainWindow::update_feed_hz(int hz) {
 
 void MainWindow::feed_update(std::map<std::string, viaems::FeedValue> status) {
   m_status_table->feed_update(status);
+  if (!log) {
+    return;
+  }
   if (!logview_paused) {
     auto stop_time = log.value()->EndTime();
     auto start_time = stop_time - std::chrono::seconds{20};
