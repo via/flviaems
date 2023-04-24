@@ -255,7 +255,7 @@ void LogView::draw() {
                        .count() *
                    1000);
   char ms[32];
-  sprintf(ms, ".%ld", point_ms);
+  sprintf(ms, ".%03ld", point_ms);
 
   auto point_ctime = std::chrono::system_clock::to_time_t(point_time);
   std::strftime(buf, 32, "%F %T", std::localtime(&point_ctime));

@@ -203,14 +203,16 @@ static ConfigValue generate_sensor_value_from_cbor(const json &map) {
 
   if (v.source == "const") {
     v.const_value = map.at("fixed-value");
-  } else if (v.source == "therm") {
-    v.therm.a = map.at("therm-a");
-    v.therm.b = map.at("therm-b");
-    v.therm.c = map.at("therm-c");
-    v.therm.bias = map.at("therm-bias");
   } else {
-    v.range_min = map.at("range-min");
-    v.range_max = map.at("range-max");
+    if (v.method == "therm") {
+      v.therm.a = map.at("therm-a");
+      v.therm.b = map.at("therm-b");
+      v.therm.c = map.at("therm-c");
+      v.therm.bias = map.at("therm-bias");
+    } else if (v.method == "linear") {
+      v.range_min = map.at("range-min");
+      v.range_max = map.at("range-max");
+    }
   }
 
   v.window.offset = map.at("window-offset");
@@ -318,14 +320,16 @@ static json cbor_from_value(const SensorValue &v) {
 
   if (v.source == "const") {
     j["fixed-value"] = v.const_value;
-  } else if (v.source == "therm") {
-    j["therm-a"] = v.therm.a;
-    j["therm-b"] = v.therm.b;
-    j["therm-c"] = v.therm.c;
-    j["therm-bias"] = v.therm.bias;
   } else {
-    j["range-max"] = v.range_max;
-    j["range-min"] = v.range_min;
+    if (v.method == "therm") {
+      j["therm-a"] = v.therm.a;
+      j["therm-b"] = v.therm.b;
+      j["therm-c"] = v.therm.c;
+      j["therm-bias"] = v.therm.bias;
+    } else if (v.method == "linear") {
+      j["range-max"] = v.range_max;
+      j["range-min"] = v.range_min;
+    }
   }
   return j;
 }
@@ -731,7 +735,11 @@ void Configuration::from_json(const json &j) {
         val = val.at(std::get<int>(p));
       }
     }
-    auto value = generate_node_value_from_cbor(val);
-    values.insert_or_assign(path, value);
+    try {
+      auto value = generate_node_value_from_cbor(val);
+      values.insert_or_assign(path, value);
+    } catch (nlohmann::detail::out_of_range &e) {
+      std::cerr << "Unable to parse config value: " << val << std::endl;
+    }
   }
 }
