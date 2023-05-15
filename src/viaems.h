@@ -64,6 +64,8 @@ struct SensorValue {
 
   float range_min;
   float range_max;
+  float raw_min;
+  float raw_max;
 
   float const_value;
 
