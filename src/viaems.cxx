@@ -212,6 +212,8 @@ static ConfigValue generate_sensor_value_from_cbor(const json &map) {
     } else if (v.method == "linear") {
       v.range_min = map.at("range-min");
       v.range_max = map.at("range-max");
+      v.raw_min = map.at("raw-min");
+      v.raw_max = map.at("raw-max");
     }
   }
 
@@ -329,6 +331,8 @@ static json cbor_from_value(const SensorValue &v) {
     } else if (v.method == "linear") {
       j["range-max"] = v.range_max;
       j["range-min"] = v.range_min;
+      j["raw-max"] = v.raw_max;
+      j["raw-min"] = v.raw_min;
     }
   }
   return j;
