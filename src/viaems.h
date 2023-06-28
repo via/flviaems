@@ -12,9 +12,12 @@
 #include <variant>
 #include <optional>
 #include <vector>
+#include <thread>
+#include <mutex>
 
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <libusb-1.0/libusb.h>
 using json = nlohmann::json;
 
 namespace viaems {
@@ -188,6 +191,110 @@ public:
   virtual void Write(const json &msg) = 0;
   virtual std::optional<json> Read() = 0;
   virtual ~Connection() {}
+};
+
+class UsbConnection : public Connection {
+
+public:
+  UsbConnection() {
+  }
+  virtual ~UsbConnection() {
+    stopped = true;
+    read_thread.join();
+    if (devh) {
+      libusb_close(devh);
+    }
+    libusb_exit(NULL);
+  }
+
+  bool Connect(uint16_t vid = USB_VID, uint16_t pid = USB_PID) {
+    int rc = libusb_init(NULL);
+    if (rc < 0) {
+      return false;
+    }
+    devh = libusb_open_device_with_vid_pid(NULL, vid, pid);
+    if (!devh) {
+      return false;
+    }
+
+    for (int if_num = 0; if_num < 2; if_num++) {
+        if (libusb_kernel_driver_active(devh, if_num)) {
+            libusb_detach_kernel_driver(devh, if_num);
+        }
+        rc = libusb_claim_interface(devh, if_num);
+        if (rc < 0) {
+            return false;
+        }
+    }
+    /* Start configuring the device:
+     * - set line state
+     */
+    constexpr uint32_t ACM_CTRL_DTR = 0x01;
+    constexpr uint32_t ACM_CTRL_RTS = 0x02;
+    rc = libusb_control_transfer(devh, 0x21, 0x22, ACM_CTRL_DTR | ACM_CTRL_RTS,
+                                0, NULL, 0, 0);
+    if (rc < 0) {
+      return false;
+    }
+
+    /* - set line encoding: here 9600 8N1
+     * 9600 = 0x2580 ~> 0x80, 0x25 in little endian
+     */
+    unsigned char encoding[] = { 0x80, 0x25, 0x00, 0x00, 0x00, 0x00, 0x08 };
+    rc = libusb_control_transfer(devh, 0x21, 0x20, 0, 0, encoding,
+                                sizeof(encoding), 0);
+    if (rc < 0) {
+      return false;
+    }
+
+    read_thread = std::thread(read_thread_entrypoint, this);
+    return true;
+  }
+
+  virtual void Write(const json &msg) { }
+  virtual std::optional<json> Read() { 
+    if (outgoing.size() == 0) {
+      std::lock_guard<std::mutex> l{incoming_lock};
+      if (incoming.size() == 0) {
+        return nullptr;
+      }
+      outgoing = std::move(incoming);
+    }
+
+    auto res = std::move(outgoing[0]);
+    outgoing.erase(outgoing.begin()); // TODO: do better
+    return res;
+  }
+
+
+private:
+   std::thread read_thread;
+   std::mutex incoming_lock;
+   bool stopped;
+   std::vector<json> incoming;
+   std::vector<json> outgoing;
+   struct libusb_device_handle *devh;
+   static constexpr uint16_t USB_VID = 0x1209;
+   static constexpr uint16_t USB_PID = 0x2041;
+
+   static void read_thread_entrypoint(UsbConnection *self) {
+     while (!self->stopped) {
+       uint8_t rxbuf[16384];
+       int length;
+       int rc = libusb_bulk_transfer(self->devh, 0x81, rxbuf, sizeof(rxbuf), &length, 1000);
+       if (rc == LIBUSB_ERROR_TIMEOUT) {
+         /* ??? */
+       } else if (rc < 0) {
+         break;
+       }
+
+       json obj = json::from_cbor(rxbuf, rxbuf + length);
+       {
+         std::lock_guard<std::mutex> l{self->incoming_lock};
+         self->incoming.push_back(obj);
+       }
+     }
+   }
 };
 
 class Protocol {

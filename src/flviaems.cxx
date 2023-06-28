@@ -168,6 +168,10 @@ class FLViaems {
         v->log_writer->WriteChunk(std::move(updates));
       }
     }
+    if (v->protocol) {
+      v->protocol->NewData();
+    }
+
     Fl::repeat_timeout(0.05, v->feed_refresh_handler, v);
   }
 
@@ -362,6 +366,15 @@ public:
     this->offline = false;
   }
 
+  void connect_usb() {
+    auto conn = std::make_unique<viaems::UsbConnection>();
+    std::cerr << "connect usb" << conn->Connect() << std::endl;
+    this->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
+    this->protocol->SetTrace(this->trace_level);
+    this->model.set_protocol(this->protocol);
+    this->offline = false;
+  }
+
   FLViaems() {
     Fl::lock(); /* Necessary to enable awake() functionality */
 
@@ -389,13 +402,16 @@ int main(int argc, char *argv[]) {
 
   int opt;
   int tracelevel = 0;
-  while ((opt = getopt(argc, argv, "d:s:f:t:")) != -1) {
+  while ((opt = getopt(argc, argv, "ud:s:f:t:")) != -1) {
     switch (opt) {
       case 'd':
         controller.connect_device(optarg);
         break;
       case 's':
         controller.connect_sim(optarg);
+        break;
+      case 'u':
+        controller.connect_usb();
         break;
       case 'f':
         controller.set_logfile(optarg);
