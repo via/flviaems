@@ -422,7 +422,6 @@ void Protocol::handle_response_message_from_ems(const json &msg) {
 }
 
 void Protocol::NewData() {
-  std::cerr << "message: " << std::endl;
   while (const auto &maybe_msg = connection->Read()) {
     const auto &msg = maybe_msg.value();
     if (!msg.is_object()) {

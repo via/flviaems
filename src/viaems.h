@@ -251,7 +251,15 @@ public:
     return true;
   }
 
-  virtual void Write(const json &msg) { }
+  virtual void Write(const json &msg) {
+    auto payload = json::to_cbor(msg);
+    int actual_length;
+    if (libusb_bulk_transfer(devh, 0x1, payload.data(), payload.size(),
+                             &actual_length, 0) < 0) {
+        fprintf(stderr, "Error while sending char\n");
+    }
+  }
+
   virtual std::optional<json> Read() { 
     if (outgoing.size() == 0) {
       std::lock_guard<std::mutex> l{incoming_lock};
@@ -277,22 +285,47 @@ private:
    static constexpr uint16_t USB_VID = 0x1209;
    static constexpr uint16_t USB_PID = 0x2041;
 
-   static void read_thread_entrypoint(UsbConnection *self) {
-     while (!self->stopped) {
-       uint8_t rxbuf[16384];
-       int length;
-       int rc = libusb_bulk_transfer(self->devh, 0x81, rxbuf, sizeof(rxbuf), &length, 1000);
-       if (rc == LIBUSB_ERROR_TIMEOUT) {
-         /* ??? */
-       } else if (rc < 0) {
-         break;
-       }
+   static void read_callback(struct libusb_transfer *xfer) {
+     const uint8_t *rxbuf = xfer->buffer;
+     const size_t length = xfer->actual_length;
+     UsbConnection *self = (UsbConnection *)xfer->user_data;
 
-       json obj = json::from_cbor(rxbuf, rxbuf + length);
-       {
-         std::lock_guard<std::mutex> l{self->incoming_lock};
-         self->incoming.push_back(obj);
+     try {
+       json obj = json::from_cbor(rxbuf, rxbuf + length, false);
+       std::lock_guard<std::mutex> l{self->incoming_lock};
+       self->incoming.push_back(obj);
+     } catch (...) {
+       std::cerr << "exception reading" << std::endl;
+     }
+
+     libusb_fill_bulk_transfer(xfer, self->devh, 0x81, xfer->buffer, xfer->length, read_callback, self, 1000);
+
+     int rc = libusb_submit_transfer(xfer);
+
+   }
+
+   static void read_thread_entrypoint(UsbConnection *self) {
+     struct {
+       struct libusb_transfer *xfer;
+       uint8_t buf[16384];
+     } xfers[4];
+       
+
+     for (auto &x : xfers) {
+       x.xfer = libusb_alloc_transfer(0);
+       if (!x.xfer) {
+         return;
        }
+       libusb_fill_bulk_transfer(x.xfer, self->devh, 0x81, x.buf, sizeof(x.buf), read_callback, self, 1000);
+
+       int rc = libusb_submit_transfer(x.xfer);
+       if (rc != 0) {
+         return;
+       }
+     }
+
+     while (!self->stopped) {
+       libusb_handle_events(NULL);
      }
    }
 };
