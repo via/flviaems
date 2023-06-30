@@ -9,7 +9,8 @@ add_executable(flviaems src/TableEditor.cxx src/flviaems.cxx src/StatusTable.cxx
 src/MainWindow.cxx src/MainWindowUI.cxx src/viaems.cxx src/Log.cxx
 src/LogView.cxx src/OutputEditor.cxx src/LogViewEditor.cxx extern/sqlite/sqlite3.c)
 
-add_executable(viaems-mobile src/viaems-mobile.cxx src/viaems.cxx)
+add_executable(viaems-mobile src/viaems-mobile.cxx src/viaems.cxx
+  src/StatusTable.cxx)
 
 add_definitions(-DSQLITE_THREADSAFE=2)
 add_definitions(-DSQLITE_OMIT_LOAD_EXTENSION)
