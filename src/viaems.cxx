@@ -144,6 +144,53 @@ generate_types_from_cbor(const json &entry) {
   return types;
 }
 
+
+void TableValue::resize(int R, int C) {
+  if (axis.size() == 2) {
+    int oldC = axis[0].labels.size();
+    int oldR = axis[1].labels.size();
+
+    while (R > oldR) {
+      axis[1].labels.push_back(axis[1].labels.back());
+      two.push_back(two.back());
+      oldR++;
+    }
+    while (R < oldR) {
+      axis[1].labels.pop_back();
+      two.pop_back();
+      oldR--;
+    }
+
+    while (C > oldC) {
+      axis[0].labels.push_back(axis[0].labels.back());
+      for (auto &row : two) {
+        row.push_back(row.back());
+      }
+      oldC++;
+    }
+    while (C < oldC) {
+      axis[0].labels.pop_back();
+      for (auto &row : two) {
+        row.pop_back();
+      }
+      oldC--;
+    }
+  } else {
+    int oldR = axis[0].labels.size();
+    while (R > oldR) {
+      axis[0].labels.push_back(axis[0].labels.back());
+      one.push_back(one.back());
+      oldR++;
+    }
+    while (R < oldR) {
+      axis[0].labels.pop_back();
+      one.pop_back();
+      oldR--;
+    }
+  }
+}
+
+
 static TableAxis generate_table_axis_from_cbor(const json &axis) {
   TableAxis res{};
   res.name = axis["name"];

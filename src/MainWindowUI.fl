@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0305
+version 1.0308
 header_name {.h}
 code_name {.cxx}
 class MainWindowUI {open
@@ -10,13 +10,9 @@ class MainWindowUI {open
       label mainWindow open
       protected xywh {642 490 1020 750} type Double box THIN_DOWN_BOX resizable non_modal visible
     } {
-      Fl_Tree m_config_tree {
-        label Configuration
-        protected xywh {20 40 400 345}
-      }
       Fl_Table m_status_table {
         label Status
-        protected xywh {20 415 405 270}
+        protected xywh {10 415 430 295}
         code0 {\#include "StatusTable.h"}
         class StatusTable
       } {}
@@ -223,7 +219,7 @@ class MainWindowUI {open
         protected xywh {450 720 415 25} box NO_BOX
       }
       Fl_Box m_logview {
-        protected xywh {460 423 525 264} box DOWN_BOX color 0
+        protected xywh {460 423 525 271} box DOWN_BOX color 0
         code0 {\#include "LogView.h"}
         class LogView
       }
@@ -231,11 +227,11 @@ class MainWindowUI {open
         protected xywh {215 720 80 25} box NO_BOX
       }
       Fl_Button m_logview_follow {
-        label {@>|} selected
-        xywh {810 685 25 20}
+        label {@>|}
+        xywh {810 695 25 20}
       }
-      Fl_Group m_output_editor_box {open resizable
-        protected xywh {455 40 525 345} box DOWN_BOX hide
+      Fl_Group m_output_editor_box {open
+        protected xywh {455 40 525 345} box DOWN_BOX hide resizable
       } {
         Fl_Table m_output_editor {
           protected xywh {460 75 510 305} resizable
@@ -245,23 +241,45 @@ class MainWindowUI {open
       }
       Fl_Button m_logview_forward {
         label {@>>}
-        xywh {785 685 25 20}
+        xywh {785 695 25 20}
       }
       Fl_Button m_logview_pause {
         label {@||}
-        xywh {760 685 25 20}
+        xywh {760 695 25 20}
       }
       Fl_Button m_logview_back {
         label {@<<}
-        xywh {735 685 25 20}
+        xywh {735 695 25 20}
       }
       Fl_Button m_logview_in {
         label {@8UpArrow}
-        xywh {695 685 25 20}
+        xywh {695 695 25 20}
       }
       Fl_Button m_logview_out {
         label {@2UpArrow}
-        xywh {670 685 25 20}
+        xywh {670 695 25 20}
+      }
+      Fl_Tabs {} {open
+        xywh {10 25 430 365}
+      } {
+        Fl_Group {} {
+          label {Target Configuration} open
+          xywh {10 45 430 345} hide resizable
+        } {
+          Fl_Tree m_config_tree {
+            protected xywh {10 45 430 345}
+          }
+        }
+        Fl_Group {} {
+          label {Log View} open
+          xywh {10 45 430 345}
+        } {
+          Fl_Table m_logview_editor {
+            xywh {10 45 430 345}
+            code0 {\#include "LogViewEditor.h"}
+            class LogViewEditor
+          } {}
+        }
       }
     }
     code {m_main_window->show();} {}

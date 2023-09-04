@@ -4,18 +4,12 @@
 #include <iostream>
 
 #include <FL/fl_draw.H>
+#include <FL/Fl_Window.H>
 
 #include "LogView.h"
+#include "LogViewEditor.h"
 
 LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
-  config.insert(std::make_pair("rpm", SeriesConfig{0, 6000, FL_RED}));
-  series.insert(std::make_pair("rpm", std::vector<PointGroup>{}));
-
-  config.insert(std::make_pair("sensor.map", SeriesConfig{0, 250, FL_YELLOW}));
-  series.insert(std::make_pair("sensor.map", std::vector<PointGroup>{}));
-
-  config.insert(std::make_pair("sensor.ego", SeriesConfig{0.7, 1.0, FL_GREEN}));
-  series.insert(std::make_pair("sensor.ego", std::vector<PointGroup>{}));
 }
 
 struct range {
@@ -46,7 +40,9 @@ void LogView::update_cache_time_range() {
 
   std::vector<std::string> keys;
   for (auto i : config) {
-    keys.push_back(i.first);
+    if (i.second.enabled) {
+      keys.push_back(i.first);
+    }
   }
 
   auto new_start =
@@ -61,7 +57,7 @@ void LogView::update_cache_time_range() {
   if (!log_locked) {
     return;
   }
-  if (!cache.points.size()) {
+  if ((keys != cache.keys) || !cache.points.size()) {
     cache = log_locked->GetRange(keys, new_start, new_stop);
   } else {
     auto cached_start = cache.points[0].time;
@@ -103,7 +99,11 @@ void LogView::recompute_pointgroups(int x1, int x2) {
   }
 
   /* Ensure pointgroups exist for all pixels */
+  std::vector<std::string> keys;
   for (auto i : config) {
+    if (i.second.enabled) {
+      keys.push_back(i.first);
+    }
     while (series[i.first].size() <= x2) {
       PointGroup pg{};
       series[i.first].push_back(pg);
@@ -116,6 +116,9 @@ void LogView::recompute_pointgroups(int x1, int x2) {
 
   std::vector<std::vector<PointGroup> *> keymap;
   for (auto i : config) {
+    if (!i.second.enabled) {
+      continue;
+    }
     auto k = i.first;
     keymap.push_back(&series[k]);
   }
@@ -178,18 +181,30 @@ void LogView::recompute_pointgroups(int x1, int x2) {
       s.last = v;
       s.set = true;
     }
-  }
+  };
 }
 
 void LogView::draw() {
   draw_box();
   fl_push_clip(x(), y(), w(), h());
+
   int count = 0;
-  int total_y_space = (config.size() + 2) * 15;
+  auto enabled_count = std::count_if(config.begin(), config.end(),
+                                     [](auto &x) { return x.second.enabled; });
+  int total_y_space = (enabled_count + 2) * 15;
   int hover_text_x_offset = (mouse_x > (x() + 0.75 * w())) ? -150 : 5;
   int hover_text_y_offset =
       (mouse_y - y() + total_y_space > h()) ? -total_y_space : 20;
+
+  /* Draw selection box */
+  if (selecting) {
+    fl_draw_box(FL_FLAT_BOX, selection_x1, y(), selection_x2 - selection_x1, h(), FL_BLUE);
+  }
+
   for (const auto &element : config) {
+    if (!element.second.enabled) {
+      continue;
+    }
     auto name = element.first;
     auto conf = element.second;
     int cx = 0;
@@ -287,8 +302,17 @@ int LogView::handle(int ev) {
     return ret;
   }
   if (ev == FL_PUSH) {
-    mouse_press_x = Fl::event_x();
-    mouse_press_y = Fl::event_y();
+    if (Fl::event_button() == FL_RIGHT_MOUSE) {
+      auto *m =
+          context_menu.data()->popup(Fl::event_x(), Fl::event_y(), 0, 0, 0);
+      if (m) {
+        m->do_callback(this, m->user_data());
+      }
+    } else {
+      mouse_press_x = Fl::event_x();
+      mouse_press_y = Fl::event_y();
+      selecting = false;
+    }
     return 1;
   }
   if (ev == FL_MOVE) {
@@ -296,20 +320,39 @@ int LogView::handle(int ev) {
     mouse_y = Fl::event_y();
     redraw();
   }
-  if (ev == FL_DRAG) {
-    int diff_x = mouse_press_x - Fl::event_x();
-    auto ns_per_pixel = (stop_ns - start_ns) / w();
-    uint64_t shift_ns = diff_x * ns_per_pixel;
-    auto amt =
+  if (ev == FL_DRAG && Fl::event_button() == FL_LEFT_MOUSE) {
+    if (Fl::event_clicks() == 0) {
+      /* Single left click -- drag */
+      int diff_x = mouse_press_x - Fl::event_x();
+      auto ns_per_pixel = (stop_ns - start_ns) / w();
+      int64_t shift_ns = diff_x * ns_per_pixel;
+      auto amt =
         std::chrono::system_clock::duration{std::chrono::nanoseconds{shift_ns}};
-    shift(amt);
-    mouse_press_x = Fl::event_x();
-    mouse_press_y = Fl::event_y();
-    do_callback();
+      shift(amt);
+      mouse_press_x = Fl::event_x();
+      mouse_press_y = Fl::event_y();
+      selecting = false;
+      do_callback();
+    } else if (Fl::event_clicks() == 1) {
+      /* Double left click means initiate selection */
+      mouse_press_x = Fl::event_x();
+      mouse_press_y = Fl::event_y();
+      if (mouse_x < mouse_press_x) {
+        selection_x1 = mouse_x;
+        selection_x2 = mouse_press_x;
+      } else {
+        selection_x1 = mouse_press_x;
+        selection_x2 = mouse_x;
+      }
+      selecting = true;
+      redraw();
+    }
+
   }
   if (ev == FL_MOUSEWHEEL) {
     float amt = Fl::event_dy() * 0.2; /* 20% up or down */
     float centerpoint = (Fl::event_x() - x()) / (float)w();
+    selecting = false;
     zoom(amt, centerpoint);
     do_callback();
     return 1;
@@ -321,6 +364,9 @@ int LogView::handle(int ev) {
 void LogView::shift_pointgroups(int amt) {
   /* For a given shift, preserve the pointgroups that are unaffected */
   for (auto i : config) {
+    if (!i.second.enabled) {
+      continue;
+    }
     if (amt > 0) {
       /* We're moving points to the left, start at the beginning */
       for (int pos = amt; pos < series[i.first].size(); pos++) {
@@ -376,7 +422,39 @@ void LogView::resize(int X, int Y, int W, int H) {
   recompute_pointgroups(0, w() - 1);
 }
 
+void LogView::zoom_selection(Fl_Widget *w, void *p) {
+  LogView *lv = (LogView *)w;
+
+  uint64_t total_range = lv->stop_ns - lv->start_ns;
+  double x1 = (lv->selection_x1 - lv->x()) / (double)lv->w();
+  double x2 = (lv->selection_x2 - lv->x()) / (double)lv->w();
+  lv->stop_ns = lv->start_ns + (x2 * total_range);
+  lv->start_ns = lv->start_ns + (x1 * total_range);
+  lv->selecting = false;
+  lv->recompute_pointgroups(0, lv->w() - 1);
+  lv->redraw();
+}
+
+void LogView::open_editor(Fl_Widget *w, void *p) {
+}
+
 void LogView::SetLog(std::weak_ptr<Log> log) {
   this->log = log;
   this->cache = viaems::LogChunk{};
+
+  auto log_locked = log.lock();
+
+  for (const auto &k : log_locked->Keys()) {
+    config[k] = {0, 100, FL_WHITE, false};
+  }
+
+  /* TODO: remove when complete with dynamic setup */
+  config["rpm"] = {0, 6000, FL_RED, true};
+  config["sensor.map"] = {0, 250, FL_YELLOW, true};
+  config["sensor.ego"] = {0.7, 1.0, FL_GREEN, true};
+
+  context_menu.clear();
+  context_menu.push_back({"Zoom to selection", 0, zoom_selection, 0, 0});
+  context_menu.push_back({"Edit Viewer...", 0, open_editor, 0, 0});
+  context_menu.push_back({0});
 };

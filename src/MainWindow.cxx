@@ -277,6 +277,7 @@ void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
   if (l) {
     auto log = l.value();
     m_logview->SetLog(log);
+    m_logview_editor->set_logview(m_logview);
     auto stop_time = l.value()->EndTime();
     auto start_time = stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
@@ -508,6 +509,8 @@ void MainWindow::table_value_changed_callback(Fl_Widget *w, void *ptr) {
   auto mw = static_cast<MainWindow *>(ptr);
   auto table = mw->m_table_editor->getTable();
   table.title = mw->m_table_title->value();
+  table.resize(mw->m_table_rows->value(), mw->m_table_cols->value());
+
   mw->m_model->set_value(mw->detail_path, table);
 
   auto item = get_config_tree_widget(mw->m_config_tree, mw->detail_path);
