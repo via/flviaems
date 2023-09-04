@@ -21,6 +21,7 @@ struct SeriesConfig {
   float min_y;
   float max_y;
   Fl_Color color;
+  bool enabled;
 };
 
 class LogView : public Fl_Box {
@@ -35,10 +36,15 @@ public:
   void resize(int, int, int, int);
 
 private:
+  std::vector<Fl_Menu_Item> context_menu;
   std::weak_ptr<Log> log;
   uint64_t start_ns, stop_ns;
+  uint64_t last_sample_ns;
   int mouse_x, mouse_y;
   int mouse_press_x, mouse_press_y;
+
+  bool selecting;
+  int selection_x1, selection_x2;
 
   std::map<std::string, SeriesConfig> config;
   std::map<std::string, std::vector<PointGroup>> series;
@@ -49,4 +55,8 @@ private:
   void shift_pointgroups(int amt);
   void update_cache_time_range();
   void draw();
+
+  static void zoom_selection(Fl_Widget *w, void *p);
+
+  friend class LogViewEditor;
 };
