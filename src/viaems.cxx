@@ -144,7 +144,6 @@ generate_types_from_cbor(const json &entry) {
   return types;
 }
 
-
 void TableValue::resize(int R, int C) {
   if (axis.size() == 2) {
     int oldC = axis[0].labels.size();
@@ -189,7 +188,6 @@ void TableValue::resize(int R, int C) {
     }
   }
 }
-
 
 static TableAxis generate_table_axis_from_cbor(const json &axis) {
   TableAxis res{};
@@ -432,7 +430,7 @@ void Protocol::NewData() {
       return;
     }
     std::string type = msg["type"];
-    if ((this->trace > 1) || 
+    if ((this->trace > 1) ||
         ((this->trace > 0) && (type != "feed" && type != "description"))) {
       std::cerr << "recv: " << msg.dump() << std::endl;
     }
@@ -444,7 +442,6 @@ void Protocol::NewData() {
       ensure_sent();
     }
 #endif
-
 
     if (type == "feed" && msg.contains("values")) {
       handle_feed_message_from_ems(msg["values"]);

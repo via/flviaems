@@ -3,14 +3,13 @@
 #include <cmath>
 #include <iostream>
 
-#include <FL/fl_draw.H>
 #include <FL/Fl_Window.H>
+#include <FL/fl_draw.H>
 
 #include "LogView.h"
 #include "LogViewEditor.h"
 
-LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {
-}
+LogView::LogView(int X, int Y, int W, int H) : Fl_Box(X, Y, W, H) {}
 
 struct range {
   uint64_t start_ns;
@@ -198,7 +197,8 @@ void LogView::draw() {
 
   /* Draw selection box */
   if (selecting) {
-    fl_draw_box(FL_FLAT_BOX, selection_x1, y(), selection_x2 - selection_x1, h(), FL_BLUE);
+    fl_draw_box(FL_FLAT_BOX, selection_x1, y(), selection_x2 - selection_x1,
+                h(), FL_BLUE);
   }
 
   for (const auto &element : config) {
@@ -245,8 +245,7 @@ void LogView::draw() {
     fl_color(conf.color);
     if ((mouse_x > x()) && (mouse_x < x() + w())) {
       char txt[32];
-      sprintf(txt, "%s  %.3f", name.c_str(),
-              last_valid_before_x.max);
+      sprintf(txt, "%s  %.3f", name.c_str(), last_valid_before_x.max);
       fl_draw(txt, mouse_x + hover_text_x_offset,
               mouse_y + hover_text_y_offset + (count + 2) * 15);
     }
@@ -326,8 +325,8 @@ int LogView::handle(int ev) {
       int diff_x = mouse_press_x - Fl::event_x();
       auto ns_per_pixel = (stop_ns - start_ns) / w();
       int64_t shift_ns = diff_x * ns_per_pixel;
-      auto amt =
-        std::chrono::system_clock::duration{std::chrono::nanoseconds{shift_ns}};
+      auto amt = std::chrono::system_clock::duration{
+          std::chrono::nanoseconds{shift_ns}};
       shift(amt);
       mouse_press_x = Fl::event_x();
       mouse_press_y = Fl::event_y();
@@ -347,7 +346,6 @@ int LogView::handle(int ev) {
       selecting = true;
       redraw();
     }
-
   }
   if (ev == FL_MOUSEWHEEL) {
     float amt = Fl::event_dy() * 0.2; /* 20% up or down */

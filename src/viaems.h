@@ -8,9 +8,9 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <variant>
-#include <optional>
 #include <vector>
 
 #include <iostream>
@@ -47,7 +47,6 @@ struct TableValue {
 
   void resize(int R, int C);
 };
-
 
 struct SensorValue {
   std::string source;
@@ -197,9 +196,7 @@ public:
   LogChunk FeedUpdates();
   void NewData();
 
-  void SetTrace(int level) {
-    this->trace = level;
-  }
+  void SetTrace(int level) { this->trace = level; }
 
   std::shared_ptr<Request> Get(get_cb, StructurePath path, void *);
   std::shared_ptr<Request> Structure(structure_cb, void *);

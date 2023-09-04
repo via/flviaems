@@ -15,7 +15,7 @@ void TableEditor::cell_select_callback(Fl_Widget *w, void *ptr) {
   case CONTEXT_COL_HEADER:
     break;
   case CONTEXT_CELL:
-    switch(Fl::event()) {
+    switch (Fl::event()) {
     case FL_PUSH:
       editor->stop_editor();
       editor->start_editor(R, C);

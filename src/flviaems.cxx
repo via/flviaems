@@ -330,7 +330,6 @@ class FLViaems {
   }
 
 public:
-
   void set_trace(int t) {
     this->trace_level = t;
     if (this->protocol) {
@@ -345,8 +344,8 @@ public:
   }
 
   void connect_device(std::string device) {
-    auto conn = std::make_unique<DevConnection>(this->message_available, this,
-                                                device);
+    auto conn =
+        std::make_unique<DevConnection>(this->message_available, this, device);
     this->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
     this->protocol->SetTrace(this->trace_level);
     this->model.set_protocol(this->protocol);
@@ -354,8 +353,8 @@ public:
   }
 
   void connect_sim(std::string path) {
-    auto conn = std::make_unique<ExecConnection>(
-        this->message_available, this, path);
+    auto conn =
+        std::make_unique<ExecConnection>(this->message_available, this, path);
     this->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
     this->protocol->SetTrace(this->trace_level);
     this->model.set_protocol(this->protocol);
@@ -391,19 +390,19 @@ int main(int argc, char *argv[]) {
   int tracelevel = 0;
   while ((opt = getopt(argc, argv, "d:s:f:t:")) != -1) {
     switch (opt) {
-      case 'd':
-        controller.connect_device(optarg);
-        break;
-      case 's':
-        controller.connect_sim(optarg);
-        break;
-      case 'f':
-        controller.set_logfile(optarg);
-        break;
-      case 't':
-        tracelevel = atoi(optarg);
-        controller.set_trace(tracelevel);
-        break;
+    case 'd':
+      controller.connect_device(optarg);
+      break;
+    case 's':
+      controller.connect_sim(optarg);
+      break;
+    case 'f':
+      controller.set_logfile(optarg);
+      break;
+    case 't':
+      tracelevel = atoi(optarg);
+      controller.set_trace(tracelevel);
+      break;
     }
   }
 
