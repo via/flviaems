@@ -17,6 +17,11 @@
 #include "fdstream.h"
 #include "viaems.h"
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 #include <nlohmann/json.hpp>
 using json = json;
 
@@ -129,6 +134,48 @@ public:
   }
 
   virtual ~DevConnection() { close(fd); }
+  virtual void Write(const json &msg) { conn->Write(msg); }
+  virtual std::optional<json> Read() { return conn->Read(); }
+};
+
+class UdpConnection : public viaems::Connection {
+  std::unique_ptr<ThreadedJsonInterface> conn;
+  int fd;
+  std::shared_ptr<fdistream> istream;
+  std::shared_ptr<fdostream> ostream;
+
+public:
+  UdpConnection(Fl_Awake_Handler read_handler, void *ptr,
+                std::string local_addr = "127.0.0.1",
+                uint16_t local_port = 5556,
+                std::string target_addr = "127.0.0.1",
+                uint16_t target_port = 5555) {
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+      throw std::runtime_error{"Failed to open socket"};
+    }
+
+    struct sockaddr_in sockaddr;
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_addr.s_addr = inet_addr(local_addr.c_str());
+    sockaddr.sin_port = htons(local_port);
+    if (bind(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
+      throw std::runtime_error{"Failed to bind"};
+    }
+
+    sockaddr.sin_addr.s_addr = inet_addr(target_addr.c_str());
+    sockaddr.sin_port = htons(target_port);
+    if (connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
+      throw std::runtime_error{"Failed to connect"};
+    }
+
+    istream = std::make_unique<fdistream>(fd);
+    ostream = std::make_unique<fdostream>(fd);
+    conn = std::make_unique<ThreadedJsonInterface>(istream, ostream,
+                                                   read_handler, ptr);
+  }
+
+  virtual ~UdpConnection() { close(fd); }
   virtual void Write(const json &msg) { conn->Write(msg); }
   virtual std::optional<json> Read() { return conn->Read(); }
 };
@@ -268,7 +315,7 @@ class FLViaems {
 
   static void select_sim_cb(Fl_Widget *w, void *ptr) {
     auto v = static_cast<FLViaems *>(ptr);
-    v->connect_sim("/home/via/dev/viaems/obj/hosted/viaems");
+    v->connect_sim_exec("/home/via/dev/viaems/obj/hosted/viaems");
   }
 
   static void select_device_cb(Fl_Widget *w, void *ptr) {
@@ -355,9 +402,17 @@ public:
     this->offline = false;
   }
 
-  void connect_sim(std::string path) {
+  void connect_sim_exec(std::string path) {
     auto conn =
         std::make_unique<ExecConnection>(this->message_available, this, path);
+    this->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
+    this->protocol->SetTrace(this->trace_level);
+    this->model.set_protocol(this->protocol);
+    this->offline = false;
+  }
+
+  void connect_sim_udp() {
+    auto conn = std::make_unique<UdpConnection>(this->message_available, this);
     this->protocol = std::make_unique<viaems::Protocol>(std::move(conn));
     this->protocol->SetTrace(this->trace_level);
     this->model.set_protocol(this->protocol);
@@ -391,13 +446,16 @@ int main(int argc, char *argv[]) {
 
   int opt;
   int tracelevel = 0;
-  while ((opt = getopt(argc, argv, "d:s:f:t:")) != -1) {
+  while ((opt = getopt(argc, argv, "d:s:f:t:u")) != -1) {
     switch (opt) {
     case 'd':
       controller.connect_device(optarg);
       break;
     case 's':
-      controller.connect_sim(optarg);
+      controller.connect_sim_exec(optarg);
+      break;
+    case 'u':
+      controller.connect_sim_udp();
       break;
     case 'f':
       controller.set_logfile(optarg);

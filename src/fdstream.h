@@ -41,7 +41,7 @@ class fdinbuf : public std::streambuf {
 
 protected:
   static const int pbSize = 4;
-  static const int bufSize = 1024;
+  static const int bufSize = 16384;
   char buffer[bufSize + pbSize];
 
 public:
