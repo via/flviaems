@@ -569,7 +569,8 @@ void MainWindow::add_config_structure_entry(Fl_Tree_Item *parent,
           w = new ChoiceTreeWidget(0, 0, 300, 18, leaf.path, leaf.choices);
           w->update_value(value);
           w->callback(structure_value_update_callback, this);
-        } else if (leaf.type == "table") {
+        } else if (leaf.type == "table" || leaf.type == "table1d" ||
+                   leaf.type == "table2d") {
           w = new SelectableTreeWidget(0, 0, 300, 18, leaf.path);
           w->select_callback(select_table, this);
         } else if (leaf.type == "sensor") {

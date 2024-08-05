@@ -200,15 +200,18 @@ static TableAxis generate_table_axis_from_cbor(const json &axis) {
 
 static ConfigValue generate_table_value_from_cbor(const json &map) {
   TableValue table;
-  int n_axis = map["num-axis"];
   table.title = map["title"];
-  table.axis.push_back(generate_table_axis_from_cbor(map["horizontal-axis"]));
 
-  if (n_axis == 1) {
+  /* Handle backwards compat for when tables are one type differentiated by
+   * "num-axis". Otherwise assume a lack of vertical axis means one axis */
+  if (((map.count("num-axis") > 0) && map["num-axis"] == 1) ||
+      map.count("vertical-axis") == 0) {
+    table.axis.push_back(generate_table_axis_from_cbor(map["horizontal-axis"]));
     for (const auto &datum : map["data"]) {
       table.one.push_back(datum);
     }
-  } else if (n_axis == 2) {
+  } else {
+    table.axis.push_back(generate_table_axis_from_cbor(map["horizontal-axis"]));
     table.axis.push_back(generate_table_axis_from_cbor(map["vertical-axis"]));
     for (const auto &outter : map["data"]) {
       std::vector<float> values;
@@ -270,20 +273,17 @@ static ConfigValue generate_sensor_value_from_cbor(const json &map) {
 }
 
 bool is_valid_table_cbor(const json &value) {
-  if (!value.contains("title") || !value.contains("num-axis") ||
-      !value.contains("horizontal-axis")) {
+  if (!value.contains("title") || !value.contains("horizontal-axis")) {
     return false;
   }
   if (!value["horizontal-axis"].contains("name") ||
       !value["horizontal-axis"].contains("values")) {
     return false;
   }
-  if (value["num-axis"] == 2) {
-    if (!value.contains("vertical-axis") ||
-        !value["vertical-axis"].contains("name") ||
-        !value["vertical-axis"].contains("values")) {
-      return true;
-    }
+  if (value.contains("vertical-axis") &&
+      (!value["vertical-axis"].contains("name") ||
+       !value["vertical-axis"].contains("values"))) {
+    return false;
   }
   if (!value.contains("data")) {
     return false;
@@ -331,12 +331,13 @@ static json cbor_from_value(const TableValue &v) {
   auto result = json{
       {"num-axis", v.axis.size()},
       {"title", v.title},
-      {"horizontal-axis", cbor_from_table_axis(v.axis[0])},
   };
   if (v.axis.size() == 1) {
     result["data"] = v.one;
+    result["horizontal-axis"] = cbor_from_table_axis(v.axis[0]);
   } else {
     result["data"] = v.two;
+    result["horizontal-axis"] = cbor_from_table_axis(v.axis[0]);
     result["vertical-axis"] = cbor_from_table_axis(v.axis[1]);
   }
   return result;
