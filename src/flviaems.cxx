@@ -42,6 +42,9 @@ struct ThreadedJsonInterface {
         Fl::awake(self->handler, self->handler_ptr);
       } catch (json::parse_error &e) {
         std::cerr << "parse_error: " << e.what() << std::endl;
+        if (self->reader->fail() || self->reader->eof()) {
+          self->running = false;
+        }
       }
     }
   }
