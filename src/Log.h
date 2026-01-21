@@ -39,6 +39,7 @@ public:
   std::vector<viaems::Configuration> LoadConfigs();
 
   std::chrono::system_clock::time_point EndTime();
+  std::chrono::system_clock::time_point StartTime();
 };
 
 class ThreadedWriteLog : public Log {

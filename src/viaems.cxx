@@ -64,6 +64,8 @@ void Protocol::handle_feed_message_from_ems(const json &a) {
     const json &val = a[i];
     if (val.is_number_integer()) {
       update.values.push_back(FeedValue(val.get<uint32_t>()));
+    } else if (val.is_boolean()) {
+      update.values.push_back(FeedValue((uint32_t)val.get<bool>()));
     } else if (val.is_number_float()) {
       update.values.push_back(FeedValue(val.get<float>()));
     }
@@ -265,9 +267,11 @@ static ConfigValue generate_sensor_value_from_cbor(const json &map) {
     }
   }
 
-  v.window.offset = map.at("window-offset");
-  v.window.capture_width = map.at("window-capture-width");
-  v.window.total_width = map.at("window-total-width");
+  if (v.method == "linear-window") {
+    v.window.offset = map.at("window-offset");
+    v.window.opening = map.at("window-capture-opening");
+    v.window.windows_per_cycle = map.at("window-count");
+  }
 
   return v;
 }
@@ -361,9 +365,9 @@ static json cbor_from_value(const SensorValue &v) {
       {"method", v.method},
       {"pin", v.pin},
       {"source", v.source},
-      {"window-capture-width", v.window.capture_width},
+      {"window-capture-opening", v.window.opening},
       {"window-offset", v.window.offset},
-      {"window-total-width", v.window.total_width},
+      {"window-count", v.window.windows_per_cycle},
   };
 
   if (v.source == "const") {

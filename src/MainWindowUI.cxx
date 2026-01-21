@@ -137,11 +137,11 @@ MainWindowUI::MainWindowUI() {
       } // Fl_Group* o
       { Fl_Group* o = new Fl_Group(490, 280, 260, 80, "Windowing");
         o->box(FL_THIN_DOWN_BOX);
-        { m_sensor_window_width = new Fl_Value_Input(645, 285, 95, 20, "Capture Width");
-          m_sensor_window_width->when(FL_WHEN_RELEASE);
+        { m_sensor_window_opening = new Fl_Value_Input(645, 285, 95, 20, "Window Width");
+          m_sensor_window_opening->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_window_width
-        { m_sensor_window_total = new Fl_Value_Input(645, 308, 95, 20, "Total Width");
-          m_sensor_window_total->when(FL_WHEN_RELEASE);
+        { m_sensor_window_count = new Fl_Value_Input(645, 308, 95, 20, "Windows percycle");
+          m_sensor_window_count->when(FL_WHEN_RELEASE);
         } // Fl_Value_Input* m_sensor_window_total
         { m_sensor_window_offset = new Fl_Value_Input(645, 333, 95, 20, "Window Start Offset");
           m_sensor_window_offset->when(FL_WHEN_RELEASE);

@@ -248,6 +248,22 @@ std::chrono::system_clock::time_point Log::EndTime() {
   return time;
 }
 
+std::chrono::system_clock::time_point Log::StartTime() {
+  std::string query =
+      "SELECT realtime_ns FROM points ORDER BY realtime_ns ASC LIMIT 1";
+
+  auto time = std::chrono::system_clock::now();
+  sqlite3_stmt *stmt;
+  sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, NULL);
+  int res = sqlite3_step(stmt);
+  if (res != SQLITE_DONE) {
+    auto ns = sqlite3_column_int64(stmt, 0);
+    time = std::chrono::system_clock::time_point{std::chrono::nanoseconds{ns}};
+  }
+  sqlite3_finalize(stmt);
+  return time;
+}
+
 static void ensure_configs_table(sqlite3 *db) {
   std::string create_table_str =
       "CREATE TABLE configs (time INTEGER, name TEXT, config TEXT);";

@@ -76,9 +76,9 @@ struct SensorValue {
   } therm;
 
   struct {
-    uint32_t capture_width;
-    uint32_t total_width;
-    uint32_t offset;
+    uint32_t windows_per_cycle;
+    float opening;
+    float offset;
   } window;
 };
 

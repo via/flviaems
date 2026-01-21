@@ -215,8 +215,8 @@ MainWindow::MainWindow() : MainWindowUI() {
   m_sensor_therm_A->callback(sensor_value_changed_callback, this);
   m_sensor_therm_B->callback(sensor_value_changed_callback, this);
   m_sensor_therm_C->callback(sensor_value_changed_callback, this);
-  m_sensor_window_width->callback(sensor_value_changed_callback, this);
-  m_sensor_window_total->callback(sensor_value_changed_callback, this);
+  m_sensor_window_opening->callback(sensor_value_changed_callback, this);
+  m_sensor_window_count->callback(sensor_value_changed_callback, this);
   m_sensor_window_offset->callback(sensor_value_changed_callback, this);
   m_sensor_fault_min->callback(sensor_value_changed_callback, this);
   m_sensor_fault_max->callback(sensor_value_changed_callback, this);
@@ -279,7 +279,7 @@ void MainWindow::update_log(std::optional<std::shared_ptr<Log>> l) {
     m_logview->SetLog(log);
     m_logview_editor->set_logview(m_logview);
     auto stop_time = l.value()->EndTime();
-    auto start_time = stop_time - std::chrono::seconds{20};
+    auto start_time = l.value()->StartTime(); // stop_time - std::chrono::seconds{20};
     m_logview->update_time_range(start_time, stop_time);
     auto old_configs = log->LoadConfigs();
 
@@ -350,8 +350,8 @@ void MainWindow::sensor_value_changed_callback(Fl_Widget *w, void *ptr) {
   sensor.therm.c = mw->m_sensor_therm_C->value();
   sensor.therm.bias = mw->m_sensor_therm_bias->value();
 
-  sensor.window.capture_width = mw->m_sensor_window_width->value();
-  sensor.window.total_width = mw->m_sensor_window_total->value();
+  sensor.window.opening = mw->m_sensor_window_opening->value();
+  sensor.window.windows_per_cycle = mw->m_sensor_window_count->value();
   sensor.window.offset = mw->m_sensor_window_offset->value();
 
   sensor.const_value = mw->m_sensor_const->value();
@@ -405,12 +405,12 @@ void MainWindow::update_sensor_editor(viaems::SensorValue s) {
 
   if (s.method == "linear-window") {
     m_sensor_window_offset->activate();
-    m_sensor_window_total->activate();
-    m_sensor_window_width->activate();
+    m_sensor_window_count->activate();
+    m_sensor_window_opening->activate();
   } else {
     m_sensor_window_offset->deactivate();
-    m_sensor_window_total->deactivate();
-    m_sensor_window_width->deactivate();
+    m_sensor_window_count->deactivate();
+    m_sensor_window_opening->deactivate();
   }
 
   m_sensor_pin->value(s.pin);
@@ -424,8 +424,8 @@ void MainWindow::update_sensor_editor(viaems::SensorValue s) {
   m_sensor_therm_B->value(s.therm.b);
   m_sensor_therm_C->value(s.therm.c);
 
-  m_sensor_window_width->value(s.window.capture_width);
-  m_sensor_window_total->value(s.window.total_width);
+  m_sensor_window_opening->value(s.window.opening);
+  m_sensor_window_count->value(s.window.windows_per_cycle);
   m_sensor_window_offset->value(s.window.offset);
 
   m_sensor_fault_min->value(s.fault.min);

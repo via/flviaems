@@ -52,8 +52,8 @@ protected:
   Fl_Value_Input *m_sensor_therm_A;
   Fl_Value_Input *m_sensor_therm_B;
   Fl_Value_Input *m_sensor_therm_C;
-  Fl_Value_Input *m_sensor_window_width;
-  Fl_Value_Input *m_sensor_window_total;
+  Fl_Value_Input *m_sensor_window_opening;
+  Fl_Value_Input *m_sensor_window_count;
   Fl_Value_Input *m_sensor_window_offset;
   Fl_Value_Input *m_sensor_fault_min;
   Fl_Value_Input *m_sensor_fault_max;
